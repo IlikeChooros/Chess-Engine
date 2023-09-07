@@ -1,1 +1,1 @@
-add_library(src board.cpp ui.cpp)
+add_library(src board.cpp ui.cpp manager.cpp)

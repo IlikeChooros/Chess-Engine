@@ -5,10 +5,9 @@ extern chess::Board board;
 namespace ui
 {
     std::string matchPiece(int piece){
-        int pieceMasked = piece & chess::Piece::pieceMask;
-        int color = piece & chess::Piece::colorMask;
+        int color = chess::Piece::getColor(piece);
 
-        switch(pieceMasked){
+        switch(chess::Piece::getType(piece)){
             case chess::Piece::Empty:
                 return " ";
             

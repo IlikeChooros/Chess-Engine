@@ -4,9 +4,17 @@
 
 namespace chess
 {
+    /*
+        ### Piece representation
+
+        Bits alocation:
+            - bits 0-3 - piece type
+            - bits 3-5 - color
+
+    */ 
     namespace Piece{
-        constexpr auto pieceMask = 7;
-        constexpr auto colorMask = 24;
+        constexpr auto pieceMask = 7;  // 0b00111
+        constexpr auto colorMask = 24; // 0b11000
 
         enum Type
         {
@@ -24,11 +32,17 @@ namespace chess
 
         enum Color
         {
-            White = 8,
-            Black = 16,
+            White = 8, //  0b01000
+            Black = 16, // 0b10000
         };
 
+        inline int getColor(const int& piece){
+            return piece & colorMask;
+        }
 
+        inline int getType(const int& piece){
+            return piece & pieceMask;
+        }
     }
 }
 
