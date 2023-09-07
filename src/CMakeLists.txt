@@ -1,0 +1,1 @@
+add_library(src board.cpp ui.cpp)
