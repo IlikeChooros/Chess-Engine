@@ -8,8 +8,8 @@ namespace chess
         ### Piece representation
 
         Bits alocation:
-            - bits 0-3 - piece type
-            - bits 3-5 - color
+            - bits 1-3 - piece type
+            - bits 4-5 - color
 
     */ 
     namespace Piece{
