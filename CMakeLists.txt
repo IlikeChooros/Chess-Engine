@@ -16,6 +16,8 @@ FetchContent_MakeAvailable(SFML)
 
 add_executable(${PROJECT_NAME} main.cpp)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Ubuntu-L.ttf ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+
 add_subdirectory(src) 
 target_link_libraries(${PROJECT_NAME} PRIVATE src sfml-graphics sfml-window sfml-system) 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
