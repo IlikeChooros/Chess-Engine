@@ -1,9 +1,10 @@
 #pragma once
 
 #include "board.h"
-#include "iostream"
+#include <iostream>
+#include <SFML/Graphics.hpp>
 
 namespace ui
 {
-    void drawBoard();
+    void runWindow();
 }

@@ -4,7 +4,7 @@
     Using TSCP approach
 */
 
-extern auto board = chess::Board().init();
+auto board = chess::Board().init();
 
 namespace chess
 {

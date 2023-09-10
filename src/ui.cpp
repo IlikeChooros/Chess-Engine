@@ -2,8 +2,33 @@
 
 extern chess::Board board;
 
+
+
 namespace ui
 {
+    void runWindow(){
+        using namespace sf;
+        Window window(VideoMode(500, 500), "CEngine");
+        window.setFramerateLimit(60);
+
+        while(window.isOpen()){
+            Event event; 
+            if(window.pollEvent(event)){
+                switch (event.type)
+                {
+                case Event::Closed:
+                    window.close();
+                    break;
+                
+                default:
+                    break;
+                }
+            }
+        }
+    }
+
+    
+
     std::string matchPiece(int piece){
         int color = chess::Piece::getColor(piece);
 
