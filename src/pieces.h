@@ -12,9 +12,25 @@ namespace chess
             - bits 4-5 - color
 
     */ 
-    namespace Piece{
-        constexpr auto pieceMask = 7;  // 0b00111
-        constexpr auto colorMask = 24; // 0b11000
+    class Piece
+    {
+        public:
+        static const int pieceMask = 7;  // 0b00111
+        static const int colorMask = 24; // 0b11000
+
+        /**
+         * @brief Get the color of a piece
+         */
+        static inline int getColor(const int& piece){
+            return piece & colorMask;
+        }
+
+        /**
+         * @brief Get the type of a piece
+         */
+        static inline int getType(const int& piece){
+            return piece & pieceMask;
+        }
 
         enum Type
         {
@@ -36,14 +52,8 @@ namespace chess
             Black = 16, // 0b10000
         };
 
-        inline int getColor(const int& piece){
-            return piece & colorMask;
-        }
-
-        inline int getType(const int& piece){
-            return piece & pieceMask;
-        }
-    }
+        
+    };
 }
 
 

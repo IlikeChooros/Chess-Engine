@@ -1,22 +1,31 @@
 #include "ui.h"
 
-extern chess::Board board;
-
-sf::RenderWindow window = sf::RenderWindow(sf::VideoMode(1500, 1000), "CEngine");
-
+static sf::RenderWindow window = sf::RenderWindow(sf::VideoMode(1500, 1000), "CEngine");
+static sf::Texture pieces_texture;
+static sf::Font font;
+static sf::Sprite pieces_sprite;
 
 namespace ui
 {
-    void drawBoard();
-    void drawSquare(const int& r, const int& size, const int& offset);
+    using namespace chess;
 
+    // pre declaration
+    void drawBoard(Board& board);
 
-    void runWindow(){
+    void runWindow(Board& board){
         using namespace sf;
+
+        // Constants
+        constexpr int FPS = 60, FRAME_US = 1000000 / FPS;
+
+        // Init resources
+        Manager manager(&board);
+        pieces_texture.loadFromFile("img/ChessPiecesArray.png");
+        font.loadFromFile("font/Ubuntu-L.ttf");
+        pieces_sprite.setTexture(pieces_texture, true);
+        pieces_sprite.setScale(2, 2);
         
-        window.setFramerateLimit(60);
-        drawBoard();
-        window.display();
+        Clock timer;
 
         while(window.isOpen()){
             Event event; 
@@ -28,96 +37,94 @@ namespace ui
                     break;
                 
                 default:
+                    // Handle input
+                    handleInput(&manager, event, &window);
                     break;
                 }
+            }
+            
+            if (timer.getElapsedTime().asMicroseconds() > FRAME_US){
+                // Clear & redraw the window
+                window.clear();
+                drawBoard(board);
+                window.display();
+                timer.restart();
             }
         }
     }
 
     
+    void matchPiece(sf::Sprite* sprite, int piece){
 
-    void matchPiece(sf::Sprite& sprite, sf::Texture& texture,  const int& piece){
-        int color = chess::Piece::getColor(piece);
+        int offset_x = 0,
+            offset_y = Piece::getColor(piece) == Piece::White ? 60 : 0;
 
-        int offset_x = 0, offset_y = 0;
-
-        switch(chess::Piece::getType(piece)){
-            case chess::Piece::Empty:
+        switch(Piece::getType(piece)){
+            case Piece::Empty:
                 return;
-            
-            case chess::Piece::King:
+            case Piece::King:
                 offset_x = 60;
                 break;
-
-            case chess::Piece::Bishop:
+            case Piece::Bishop:
                 offset_x = 240;
                 break;
-
-            case chess::Piece::Knight:
+            case Piece::Knight:
                 offset_x = 180;
                 break;
-
-            case chess::Piece::Rook:
+            case Piece::Rook:
                 offset_x = 120;
                 break;
-
-            case chess::Piece::Queen:
+            case Piece::Queen:
                 offset_x = 0;
                 break;
-
             default:
                 offset_x = 300;
         }
-        offset_y = color == chess::Piece::Black ? 0 : 60;
-
-        sprite.setTexture(texture);
-        sprite.setTextureRect(sf::IntRect(offset_x, offset_y, 60, 60));
-        // sprite.setColor(color == chess::Piece::Black ? sf::Color::Black : sf::Color::White);
-        sprite.setScale(2, 2);
+        sprite->setTextureRect(sf::IntRect(offset_x, offset_y, 60, 60));
     }
 
-    void drawSquare(const int& r, const int& size, const int& offset, sf::Texture& texture){      
-        auto LIGHT = sf::Color(158, 97, 55), DARK = sf::Color(73, 25, 25);
+    void drawSquare(int r, int size, const int offset, Board* board, sf::Sprite* sprite){      
+        static auto LIGHT = sf::Color(158, 97, 55), 
+              DARK = sf::Color(73, 25, 25);
+        
         int x, y;
         x = r % 8;
         y = r / 8;
 
+        // Inverted y axis, so we need to invert the y coordinate
         sf::Vector2f position(x*size + offset, (7-y)*size);
-        sf::RectangleShape square({size, size});
+        sf::RectangleShape square({float(size), float(size)});
         square.setFillColor(y%2 != 0 ? x%2 ? DARK : LIGHT : x%2 ? LIGHT : DARK);        
         square.setPosition(position);
-        std::string str;
-        str += char('A' + x);
-        str += char('1' + y);
+        
+        // Add coordinates
+        const char str_coord[2] = {char('A' + x), char('1' + y)};
 
-        sf::Font font;
-        font.loadFromFile("Ubuntu-L.ttf");
-        sf::Text coords(str, font, 16);
+        // Draw the coordinates
+        sf::Text coords(str_coord, font, 16);
         coords.setPosition(position);
         coords.setFillColor(sf::Color::White);
         coords.setOutlineColor(sf::Color::White);
-
-        sf::Sprite piece;
-        matchPiece(piece, texture, board[r]);
         
-        piece.setPosition(position);
+
+        // Call the draw function
         window.draw(square);
         window.draw(coords);
-        window.draw(piece);
-    }
 
-    void drawBoard(){
-        sf::Texture texture;
-        texture.loadFromFile("src/img/ChessPiecesArray.png");
-        texture.setSmooth(true);
-
-        int size = window.getSize().y > window.getSize().x ? window.getSize().x : window.getSize().y;
-        int offset_x = (window.getSize().x - size)/2;
-        size /=8;        
-        for (int r = 0; r < 64; r++){
-            drawSquare(r, size, offset_x, texture);
+        // If there is a piece in the square, draw it
+        if (Piece::getType((*board)[r]) != Piece::Empty){
+            matchPiece(sprite, (*board)[r]);
+            sprite->setPosition(position);
+            window.draw(*sprite);
         }
     }
 
-
+    void drawBoard(Board& board){
+        // Get maximum size of the chess board
+        int size, offset_x;
+        getBoardSize(size, offset_x, &window);     
+        for (int r = 0; r < 64; r++){
+            drawSquare(r, size, offset_x, &board, &pieces_sprite);
+        }
+    }
 }

@@ -1,10 +1,13 @@
 #pragma once
 
-#include "board.h"
 #include <iostream>
 #include <SFML/Graphics.hpp>
 
+#include "manager.h"
+#include "input_handle.h"
+
+
 namespace ui
 {
-    void runWindow();
+    void runWindow(chess::Board& board);
 }

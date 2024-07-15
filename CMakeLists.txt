@@ -16,11 +16,18 @@ FetchContent_MakeAvailable(SFML)
 
 add_executable(${PROJECT_NAME} main.cpp)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Ubuntu-L.ttf ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
-
 add_subdirectory(src) 
 target_link_libraries(${PROJECT_NAME} PRIVATE src sfml-graphics sfml-window sfml-system) 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+
+# Custom commands to copy font and img directories
+add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/src/font $<TARGET_FILE_DIR:${PROJECT_NAME}>/font)
+
+add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/src/img $<TARGET_FILE_DIR:${PROJECT_NAME}>/img)
 
 
 if(WIN32)
