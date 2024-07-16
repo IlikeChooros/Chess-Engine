@@ -1,6 +1,8 @@
 #pragma once
 
+#include <string>
 #include "types.h"
+
 
 namespace chess
 {
@@ -32,20 +34,70 @@ namespace chess
             return piece & pieceMask;
         }
 
+        /**
+         * @brief Create a piece with a given type and color
+         */
+        static inline int createPiece(int type, int color){
+            return type | color;
+        }
+
+        /**
+         * @brief Check if the piece is a sliding piece
+         */
+        static inline bool isSliding(const int& piece){
+            return getType(piece) & 0b100;
+        }
+
+        static std::string toStr(int piece){
+            std::string str = "";
+            if (piece == Empty)
+                return "Empty";
+            if (piece & White){
+                str += "White ";
+            } else {
+                str += "Black ";
+            }
+
+            switch (piece & pieceMask)
+            {
+                case Pawn:
+                    str += "Pawn";
+                    break;
+                case Knight:
+                    str += "Knight";
+                    break;
+                case King:
+                    str += "King";
+                    break;
+                case Bishop:
+                    str += "Bishop";
+                    break;
+                case Rook:
+                    str += "Rook";
+                    break;
+                case Queen:
+                    str += "Queen";
+                    break;
+            }
+            return str;
+        }
+
+        // Piece types
         enum Type
         {
-            // non sliding pieces (0b0xx)
+            // non sliding pieces (0b000xx)
             Empty = 0,
             Pawn = 1,
             Knight = 2,
             King = 3,
 
-            // sliding pieces (0b1xx)
+            // sliding pieces (0b001xx)
             Bishop = 4, 
             Rook = 5,
             Queen = 6,
         };
 
+        // Piece colors
         enum Color
         {
             White = 8, //  0b01000

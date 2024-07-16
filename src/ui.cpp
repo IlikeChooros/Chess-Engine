@@ -4,14 +4,20 @@ static sf::RenderWindow window = sf::RenderWindow(sf::VideoMode(1500, 1000), "CE
 static sf::Texture pieces_texture;
 static sf::Font font;
 static sf::Sprite pieces_sprite;
+static chess::Manager manager;
+static BoardWindowState state = {InputState::None, -1};
 
 namespace ui
 {
     using namespace chess;
 
-    // pre declaration
     void drawBoard(Board& board);
 
+
+    /**
+     * @brief Main ui window loop, runs the window and handles the input
+     * @param board The board to run the window with
+     */
     void runWindow(Board& board){
         using namespace sf;
 
@@ -19,7 +25,8 @@ namespace ui
         constexpr int FPS = 60, FRAME_US = 1000000 / FPS;
 
         // Init resources
-        Manager manager(&board);
+        manager = Manager(&board);
+        manager.generateMoves();
         pieces_texture.loadFromFile("img/ChessPiecesArray.png");
         font.loadFromFile("font/Ubuntu-L.ttf");
         pieces_sprite.setTexture(pieces_texture, true);
@@ -35,10 +42,8 @@ namespace ui
                 case Event::Closed:
                     window.close();
                     break;
-                
                 default:
-                    // Handle input
-                    handleInput(&manager, event, &window);
+                    handleInput(&manager, event, &window, &state);
                     break;
                 }
             }
@@ -53,7 +58,9 @@ namespace ui
         }
     }
 
-    
+    /**
+     * @brief Match the sprite texture to the piece
+     */
     void matchPiece(sf::Sprite* sprite, int piece){
 
         int offset_x = 0,
@@ -83,6 +90,14 @@ namespace ui
         sprite->setTextureRect(sf::IntRect(offset_x, offset_y, 60, 60));
     }
 
+    /**
+     * @brief Draw a square on the board with coordinates and piece (if present)
+     * @param r The index of the square
+     * @param size The size of the square (in pixels)
+     * @param offset The x offset of the board (in pixels)
+     * @param board The board to draw the square from
+     * @param sprite The sprite to draw the piece from
+     */
     void drawSquare(int r, int size, const int offset, Board* board, sf::Sprite* sprite){      
         static auto LIGHT = sf::Color(158, 97, 55), 
               DARK = sf::Color(73, 25, 25);
@@ -104,8 +119,7 @@ namespace ui
         sf::Text coords(str_coord, font, 16);
         coords.setPosition(position);
         coords.setFillColor(sf::Color::White);
-        coords.setOutlineColor(sf::Color::White);
-        
+        coords.setOutlineColor(sf::Color::White);        
 
         // Call the draw function
         window.draw(square);
@@ -119,12 +133,45 @@ namespace ui
         }
     }
 
+    /**
+     * @brief Draw the chess board
+     * @param board The board to draw
+     */
     void drawBoard(Board& board){
         // Get maximum size of the chess board
         int size, offset_x;
         getBoardSize(size, offset_x, &window);     
+        // Draw the chess board
         for (int r = 0; r < 64; r++){
             drawSquare(r, size, offset_x, &board, &pieces_sprite);
+        }
+
+        // If there is a selected piece by the user, draw it
+        if (state.state == InputState::Select){
+            // Draw the selected square
+            int x = state.from % 8,
+                y = 7 - state.from / 8;
+            sf::RectangleShape square({float(size), float(size)});
+            square.setFillColor(sf::Color(255, 255, 0, 32));
+            square.setOutlineColor(sf::Color::Yellow);
+            square.setOutlineThickness(5);
+            square.setPosition(float(x*size + offset_x), float(y*size));
+            window.draw(square);
+
+            // Draw possible moves
+            square.setFillColor(sf::Color::Transparent);
+            square.setOutlineThickness(5);
+
+            auto moves = manager.getPieceMoves(state.from);
+            for(auto& move : moves){
+                sf::Color color(0, 255, 0, 128);
+                if (move.flags & Move::FLAG_CAPTURE){
+                    color = sf::Color(255, 0, 0, 128);
+                } 
+                square.setOutlineColor(color);
+                square.setPosition(float(move.x*size + offset_x), float((7 - move.y)*size));
+                window.draw(square);
+            }
         }
     }
 }

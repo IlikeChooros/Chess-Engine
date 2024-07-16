@@ -5,5 +5,17 @@
 
 #include "manager.h"
 
-void handleInput(chess::Manager* manager, sf::Event& event, sf::RenderWindow* window);
+enum class InputState
+{
+    None,
+    Select,
+    Move
+};
+
+struct BoardWindowState{
+    InputState state;
+    int from;
+};
+
+void handleInput(chess::Manager* manager, sf::Event& event, sf::RenderWindow* window, BoardWindowState* state);
 void getBoardSize(int& size, int& offset_x, sf::RenderWindow* window);

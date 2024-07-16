@@ -3,6 +3,12 @@
 using namespace chess;
 using namespace sf;
 
+/**
+ * @brief Get the board size and offset
+ * @param size The size of the board square (in pixels)
+ * @param offset The x offset of the board (in pixels)
+ * @param window The window to get the size from
+ */
 void getBoardSize(int& size, int& offset, RenderWindow* window){
     const auto window_size = window->getSize();
     size = std::min(window_size.x, window_size.y);
@@ -10,8 +16,16 @@ void getBoardSize(int& size, int& offset, RenderWindow* window){
     size /= 8;
 }
 
-void handleInput(Manager* manager, Event& event, RenderWindow* window)
+/**
+ * @brief Handle input from the ui window
+ * @param manager The manager to handle the input
+ * @param event The event to handle
+ * @param window The window to get the input from
+ */
+void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWindowState* state)
 {
+    auto prev_state = state->state;
+    state->state = InputState::None;
     static int from = -1;
 
     if(event.type == sf::Event::MouseButtonPressed){
@@ -27,13 +41,17 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window)
 
         if (from == -1){
             from = x + y*8;
+            state->state = InputState::Select;
+            state->from = from;
         } else {
+            std::cout << "From: " << char('A' + from%8) << 1 + from/8 << 
+            " to: " << char('A' + x) << 1 + y << std::endl;
+
             manager->movePiece(from, x + y*8);
             from = -1;
+            state->state = InputState::Move;
         }
-    }
-
-    if(event.type == sf::Event::MouseButtonReleased){
-        
+    } else {
+        state->state = prev_state; // Do nothing
     }
 }
