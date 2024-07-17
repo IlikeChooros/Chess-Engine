@@ -103,8 +103,6 @@ namespace chess
             White = 8, //  0b01000
             Black = 16, // 0b10000
         };
-
-        
     };
 }
 

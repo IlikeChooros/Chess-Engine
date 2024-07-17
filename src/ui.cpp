@@ -107,13 +107,13 @@ namespace ui
         y = r / 8;
 
         // Inverted y axis, so we need to invert the y coordinate
-        sf::Vector2f position(x*size + offset, (7-y)*size);
+        sf::Vector2f position(x*size + offset, y*size);
         sf::RectangleShape square({float(size), float(size)});
         square.setFillColor(y%2 != 0 ? x%2 ? DARK : LIGHT : x%2 ? LIGHT : DARK);        
         square.setPosition(position);
         
         // Add coordinates
-        const char str_coord[2] = {char('A' + x), char('1' + y)};
+        std::string str_coord = square_to_str(r);
 
         // Draw the coordinates
         sf::Text coords(str_coord, font, 16);
@@ -150,7 +150,7 @@ namespace ui
         if (state.state == InputState::Select){
             // Draw the selected square
             int x = state.from % 8,
-                y = 7 - state.from / 8;
+                y = state.from / 8;
             sf::RectangleShape square({float(size), float(size)});
             square.setFillColor(sf::Color(255, 255, 0, 32));
             square.setOutlineColor(sf::Color::Yellow);
@@ -169,7 +169,7 @@ namespace ui
                     color = sf::Color(255, 0, 0, 128);
                 } 
                 square.setOutlineColor(color);
-                square.setPosition(float(move.x*size + offset_x), float((7 - move.y)*size));
+                square.setPosition(float(move.x*size + offset_x), float(move.y)*size);
                 window.draw(square);
             }
         }

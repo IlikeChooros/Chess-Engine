@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "manager.h"
+#include "utils.h"
 
 enum class InputState
 {

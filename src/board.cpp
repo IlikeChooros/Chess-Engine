@@ -62,32 +62,32 @@ namespace chess
         board = std::unique_ptr<int[]>(new int[64]());
 
         for (auto i=0; i < 8; i++){
-            board[i + 8] = Piece::createPiece(Piece::Pawn, Piece::White);
-            board[i + 48] = Piece::createPiece(Piece::Pawn, Piece::Black); 
+            board[i + 8] = Piece::createPiece(Piece::Pawn, Piece::Black);
+            board[i + 48] = Piece::createPiece(Piece::Pawn, Piece::White); 
         }
-        board[0] = Piece::Rook | Piece::White;
-        board[7] = Piece::Rook | Piece::White;
+        board[0] = Piece::Rook | Piece::Black;
+        board[7] = Piece::Rook | Piece::Black;
 
-        board[56] = Piece::Rook | Piece::Black;
-        board[63] = Piece::Rook | Piece::Black;
+        board[56] = Piece::Rook | Piece::White;
+        board[63] = Piece::Rook | Piece::White;
 
-        board[1] = Piece::Knight | Piece::White;
-        board[6] = Piece::Knight | Piece::White;
+        board[1] = Piece::Knight | Piece::Black;
+        board[6] = Piece::Knight | Piece::Black;
 
-        board[57] = Piece::Knight | Piece::Black;
-        board[62] = Piece::Knight | Piece::Black;
+        board[57] = Piece::Knight | Piece::White;
+        board[62] = Piece::Knight | Piece::White;
 
-        board[2] = Piece::Bishop | Piece::White;
-        board[5] = Piece::Bishop | Piece::White;
+        board[2] = Piece::Bishop | Piece::Black;
+        board[5] = Piece::Bishop | Piece::Black;
 
-        board[58] = Piece::Bishop | Piece::Black;
-        board[61] = Piece::Bishop | Piece::Black;
+        board[58] = Piece::Bishop | Piece::White;
+        board[61] = Piece::Bishop | Piece::White;
 
-        board[3] = Piece::Queen | Piece::White;
-        board[4] = Piece::King | Piece::White;
+        board[3] = Piece::Queen | Piece::Black;
+        board[4] = Piece::King | Piece::Black;
 
-        board[59] = Piece::Queen | Piece::Black;
-        board[60] = Piece::King | Piece::Black;
+        board[59] = Piece::Queen | Piece::White;
+        board[60] = Piece::King | Piece::White;
         return *this;
     }
 }

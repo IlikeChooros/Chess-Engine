@@ -34,7 +34,7 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
         getBoardSize(size, offset_x, window);
 
         int x = (mouse.x - offset_x) / size;
-        int y = 7 - mouse.y / size;
+        int y = mouse.y / size;
 
         if (x < 0 || x > 7 || y < 0 || y > 7)
             return;
@@ -44,8 +44,10 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
             state->state = InputState::Select;
             state->from = from;
         } else {
-            std::cout << "From: " << char('A' + from%8) << 1 + from/8 << 
-            " to: " << char('A' + x) << 1 + y << std::endl;
+            dlogf("From: %s to: %s\n", 
+                square_to_str(from).c_str(), 
+                square_to_str(x + y*8).c_str()
+            );
 
             manager->movePiece(from, x + y*8);
             from = -1;
