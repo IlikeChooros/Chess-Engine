@@ -22,6 +22,7 @@ namespace chess
 
         /**
          * @brief Get the color of a piece
+         * @return piece & colorMask, either 0b01000 or 0b10000
          */
         static inline int getColor(const int& piece){
             return piece & colorMask;

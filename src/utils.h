@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+#include <bitset>
 #include <string>
 #include "settings.h"
 
@@ -14,14 +16,22 @@ inline std::string square_to_str(int square){
 }
 
 #if DEBUG_DETAILS
-#   define dbitboard(__bitboard64) do { \
-    for (int i = 0; i < 8; i++) { \
-        for (int j = 0; j < 8; j++) { \
-            printf("%*lu", 2, (__bitboard64 >> (i * 8 + j)) & 1); \
-        } \
-        printf("\n"); \
-    } \
-} while(0)
+
+/**
+ * @brief Prints a bitboard to the console
+ */
+inline void dbitboard(uint64_t bitboard64){
+    std::bitset<64> bitboard(bitboard64);
+    for(int i = 0; i < 64; i++){
+        printf("%*d", 2, int(bitboard[i]));
+        if(i % 8 == 7)
+            printf(" |%c \n", '8' - i / 8);
+    }
+    for(int i = 0; i < 8; i++)
+        printf("%*c", 2, 'a' + i);
+    printf("\n\n");
+}
+
 #else
-#   define dbitboard(__bitboard64) do {} while(0)
+inline void dbitboard(uint64_t bitboard64){return;}
 #endif

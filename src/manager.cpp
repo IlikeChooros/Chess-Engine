@@ -43,6 +43,8 @@ namespace chess
                 iboard[to] = iboard[from];
                 iboard[from] = Piece::Empty;
                 this->side ^= Piece::colorMask; // switch side
+                bool is_white = this->side == Piece::White;
+                attacks_to[is_white][to] ^= 1UL << from;
                 generateMoves();
                 return true;
             }
@@ -74,17 +76,22 @@ namespace chess
     {
         n_moves = 0;
         int* iboard = this->board->board.get();
-        bool is_white = this->side == Piece::White;
-
+        
         for(int i = 0; i < 64; i++){
             // reset the attacks_from array & attacks_to bitboards
-            attacks_from[is_white][i] = 0; 
-            attacks_to[is_white][i] = 0;
-            if(iboard[i] == Piece::Empty || Piece::getColor(iboard[i]) != this->side)
+            attacks_from[0][i] = 0; 
+            attacks_from[1][i] = 0; 
+            attacks_to[0][i] = 0;
+            attacks_to[1][i] = 0;
+        }
+
+        for(int i = 0; i < 64; i++){
+            if(iboard[i] == Piece::Empty)
                 continue;
             
             int type = Piece::getType(iboard[i]);
-            
+            int piece_color = Piece::getColor(iboard[i]);
+            bool is_white = piece_color == Piece::White;
 
             if (type != Piece::Pawn){
                 dlogf("Generating moves for %s at %s\n", 
@@ -104,8 +111,8 @@ namespace chess
                         }
 
                         // Update attcked squares
-                        attacks_to[is_white][n] |= 1 << i; // this creates a bitboard with the squares that the piece attacks to
-                        attacks_from[is_white][i] |= 1 << n; // this creates a bitboard with the squares that the piece attacks from
+                        attacks_to[is_white][n] |= 1UL << i; // this creates a bitboard with the squares that the piece attacks to
+                        attacks_from[is_white][i] |= 1UL << n; // this creates a bitboard with the squares that the piece attacks from
                         // basically, attacks_to[is_white][x] is usefull if you want to check how many pieces are attacking 
                         // given square x, and attacks_from[is_white][x] if you want to check how many squares are being attacked
                         // by the piece in square x. The `is_white` variable is used to differentiate between white and black pieces
@@ -114,7 +121,7 @@ namespace chess
 
                         // If the square is not empty
                         if (iboard[n] != Piece::Empty){
-                            if (Piece::getColor(iboard[n]) != this->side){
+                            if (Piece::getColor(iboard[n]) != piece_color){
                                 dlogf(
                                     "Added pseudo-legal capture\n"
                                     "Capture by %s from %s to %s\n",
@@ -135,7 +142,7 @@ namespace chess
                     }
                 }
 
-                dlog("Attacks from: \n");
+                dlogf("Attacks from: %s \n", square_to_str(i).c_str());
                 dbitboard(attacks_from[is_white][i]);
             } else {
                 // Pawn moves
@@ -143,15 +150,17 @@ namespace chess
             }
         }
 
-    // #if DEBUG_DETAILS
-    //     bool is_white = this->side == Piece::White;
-    //     for(int i = 0; i < 64; i++){
-    //         dlogf("Attacks to square %c%d\n", 'A' + i%8, 8 - i/8);
-    //         dbitboard(attacks_to[!is_white][i]);
-    //         dlogf("Attacks from square %c%d\n", 'A' + i%8, 8 - i/8);
-    //         dbitboard(attacks_from[is_white][i]);
-    //     }
-    // #endif
+    #if DEBUG_DETAILS
+        for(int i = 0; i < 64; i++){
+            if (iboard[i] == Piece::Empty)
+                continue;
+            dlogf("Piece at %s: %s\n", square_to_str(i).c_str(), Piece::toStr(iboard[i]).c_str());
+            dlogf("Attacks to square %s\n", square_to_str(i).c_str());
+            dbitboard(attacks_to[0][i] | attacks_to[1][i]);
+            dlogf("Attacks from square %s\n", square_to_str(i).c_str());
+            dbitboard(attacks_from[0][i] | attacks_from[1][i]);
+        }
+    #endif
 
         return n_moves;
     }
