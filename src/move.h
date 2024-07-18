@@ -32,12 +32,14 @@ class Move
     static const uint32_t FLAG_BISHOP_PROMOTION = 0b1001;
     static const uint32_t FLAG_ROOK_PROMOTION = 0b1010;
     static const uint32_t FLAG_QUEEN_PROMOTION = 0b1011;
+
+    // Promotion capture flags
     static const uint32_t FLAG_KNIGHT_PROMOTION_CAPTURE = 0b1100;
     static const uint32_t FLAG_BISHOP_PROMOTION_CAPTURE = 0b1101;
     static const uint32_t FLAG_ROOK_PROMOTION_CAPTURE = 0b1110;
     static const uint32_t FLAG_QUEEN_PROMOTION_CAPTURE = 0b1111;
 
-
+    Move() : m_move(0) {};
     Move(uint32_t from, uint32_t to, uint32_t flags) {
         m_move = (flags << 12) | (from << 6) | to;
         // First 6 bits: to, next 6 bits: from, rest: flags (20 bits)
@@ -51,6 +53,8 @@ class Move
 
     bool isCapture() const {return getFlags() & FLAG_CAPTURE;};
     bool isPromotion() const {return getFlags() & FLAG_PROMOTION;};
+    bool isDoubleMove() const {return getFlags() == FLAG_DOUBLE_PAWN;};
+    bool isEnPassant() const {return getFlags() == FLAG_ENPASSANT_CAPTURE;};
 
     operator int() const {return m_move;};
 

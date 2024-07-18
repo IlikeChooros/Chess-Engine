@@ -40,6 +40,9 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
             return;
 
         if (from == -1){
+            if (Piece::getColor(manager->board->board[y*8 + x]) != manager->getSide()){
+                return;
+            }
             from = x + y*8;
             state->state = InputState::Select;
             state->from = from;

@@ -34,6 +34,18 @@ namespace chess
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     };
 
+    // Pawn attack offsets, access by Piece::Color == Piece::White ([0] -> Black, [1] -> White)
+    const int Board::pawn_attack_offsets[2][2] = {
+        { 11,  9}, // Black 
+        {-11, -9}, // White 
+    };
+
+    // Pawn move offsets, access by Piece::Color == Piece::White ([0] -> Black, [1] -> White)
+    const int Board::pawn_move_offsets[2][2] = {
+        { 10,  20}, // Black 
+        {-10, -20}, // White 
+    };
+
     // Piece move offsets, access by Piece::Type - 1 (excluding the pawn)
     const int Board::piece_move_offsets[6][8] = {
         { 0,    0,   0,  0, 0,  0,  0,  0}, // Pawn (not used, Piece::Type = 1)
@@ -84,10 +96,10 @@ namespace chess
         board[61] = Piece::Bishop | Piece::White;
 
         board[3] = Piece::Queen | Piece::Black;
-        board[4] = Piece::King | Piece::Black;
+        board[4] = Piece::createPiece(Piece::King, Piece::Black, Piece::Castling);
 
         board[59] = Piece::Queen | Piece::White;
-        board[60] = Piece::King | Piece::White;
+        board[60] = Piece::createPiece(Piece::King, Piece::White, Piece::Castling);
         return *this;
     }
 }

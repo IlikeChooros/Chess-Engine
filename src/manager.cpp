@@ -40,11 +40,11 @@ namespace chess
         for(int i = 0; i < n_moves; i++){
             auto move = Move(move_list[i]);
             if (move.getFrom() == from && move.getTo() == to){
+                last_move = move;
+                handleCapture(last_move);
                 iboard[to] = iboard[from];
                 iboard[from] = Piece::Empty;
                 this->side ^= Piece::colorMask; // switch side
-                bool is_white = this->side == Piece::White;
-                attacks_to[is_white][to] ^= 1UL << from;
                 generateMoves();
                 return true;
             }
@@ -72,6 +72,10 @@ namespace chess
         return moves;
     }
 
+    /**
+     * @brief Generates all possible moves for the current board state
+     * @return The number of moves generated
+     */
     int Manager::generateMoves()
     {
         n_moves = 0;
@@ -109,14 +113,9 @@ namespace chess
                         if (n == -1){// outside of the board
                             break;
                         }
-
-                        // Update attcked squares
-                        attacks_to[is_white][n] |= 1UL << i; // this creates a bitboard with the squares that the piece attacks to
-                        attacks_from[is_white][i] |= 1UL << n; // this creates a bitboard with the squares that the piece attacks from
-                        // basically, attacks_to[is_white][x] is usefull if you want to check how many pieces are attacking 
-                        // given square x, and attacks_from[is_white][x] if you want to check how many squares are being attacked
-                        // by the piece in square x. The `is_white` variable is used to differentiate between white and black pieces
                         
+                        // Attack = possible move (these are pieces)
+                        addAttack(i, n, is_white);
                         dlogf("Attacks to: %s (%d)\n", square_to_str(n).c_str(), n);
 
                         // If the square is not empty
@@ -146,7 +145,48 @@ namespace chess
                 dbitboard(attacks_from[is_white][i]);
             } else {
                 // Pawn moves
+                int start_rank = is_white ? 6 : 1;
+                
+                // Check for pawn attacks
+                for(int j = 0; j < 2; j++){
 
+                    int n = Board::mailbox[Board::mailbox64[i] + Board::pawn_attack_offsets[is_white][j]];
+                    if(n == -1) // Out of the board
+                        continue;
+
+                    addAttack(i, n, is_white); // Update attacks_to and attacks_from bitboards
+
+                    // Normal capture
+                    if (iboard[n] != Piece::Empty && Piece::getColor(iboard[n]) != piece_color){
+                        addMove(i, n, Move::FLAG_CAPTURE);
+                        dlogf("Pawn capture to %s\n", square_to_str(n).c_str());
+                    } else {
+                        // Check if enpassant is possible, if the last move was a double pawn move and there is a pawn
+                        // in the correct position (next to the attacking pawn, n + previous_pawn_offset[0])
+                        if (last_move.isDoubleMove() && int(last_move.getTo()) == Board::mailbox[Board::mailbox64[n] + Board::pawn_move_offsets[!is_white][0]]){
+                            addMove(i, n, Move::FLAG_ENPASSANT_CAPTURE);
+                            dlogf("En passant to %s\n", square_to_str(n).c_str());
+                        }
+                    }
+                }
+
+                // Check for pawn moves
+                int n = Board::mailbox[Board::mailbox64[i] + Board::pawn_move_offsets[is_white][0]];
+                if (n == -1 || iboard[n] != Piece::Empty) 
+                    continue; // Out of the board or piece in the way
+
+                addMove(i, n, Move::FLAG_NONE);
+                dlogf("Pawn move to %s\n", square_to_str(n).c_str());
+
+                if (i / 8 == start_rank){
+                    // Check for double pawn moves
+                    n = Board::mailbox[Board::mailbox64[i] + Board::pawn_move_offsets[is_white][1]];
+                    if (iboard[n] != Piece::Empty) // Piece in the way
+                        continue;
+
+                    addMove(i, n, Move::FLAG_DOUBLE_PAWN);
+                    dlogf("Pawn double move to %s\n", square_to_str(n).c_str());
+                }
             }
         }
 
@@ -165,7 +205,52 @@ namespace chess
         return n_moves;
     }
 
+    /**
+     * @brief If the move is a capture, it correctly updates the board
+     */
+    void Manager::handleCapture(Move& move){
+        if (!move.isCapture())
+            return;
+        int* iboard = this->board->board.get();
+        int to = move.getTo();
+        int from = move.getFrom();
+        int offset = 0;
+
+        if(move.isEnPassant()){
+            offset = Piece::getColor(iboard[from]) == Piece::White ? 8 : -8;
+            dlogf("En passant capture\n");
+        }
+
+        captured_piece = iboard[to + offset];
+        iboard[to + offset] = Piece::Empty;
+    }
+
+    /**
+     * @brief Adds a move to the move list
+     */
     void Manager::addMove(int from, int to, int flags){
         move_list[n_moves++] = int(Move(from, to, flags));
+    }
+
+    /**
+     * @brief Updates `attacks_to` and `attacks_from` bitboards
+     * @param from The square from which the attack is coming
+     * @param to The square being attacked
+     * @param is_white True if the attacking piece is white, false otherwise
+     */
+    void Manager::addAttack(int from, int to, bool is_white){
+        // basically, attacks_to[is_white][x] is usefull if you want to check how many pieces are attacking 
+        // given square x, and attacks_from[is_white][x] if you want to check how many squares are being attacked
+        // by the piece in square x. The `is_white` variable is used to differentiate between white and black pieces
+        attacks_to[is_white][to] |= 1UL << from; 
+        attacks_from[is_white][from] |= 1UL << to;
+    }
+
+    /**
+     * @brief Get current side color
+     * @return Piece::Color, either Piece::White or Piece::Black
+     */
+    int Manager::getSide(){
+        return this->side;
     }
 }

@@ -14,6 +14,8 @@ namespace chess
     class Manager
     {
         void addMove(int from, int to, int flags);
+        void addAttack(int from, int to, bool piece_is_white);
+        void handleCapture(Move& move);
         public:
         typedef unsigned long uint64_t;
         typedef unsigned int uint32_t;
@@ -30,11 +32,14 @@ namespace chess
 
         bool movePiece(uint32_t from, uint32_t to);
         std::list<PieceMoveInfo> getPieceMoves(uint32_t from);
+        int getSide();
         int generateMoves();
 
         int side;
         std::unique_ptr<int[]> move_list;
         int n_moves;
         Board* board;
+        Move last_move;
+        int captured_piece;
     };
 }
