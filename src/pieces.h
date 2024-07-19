@@ -12,7 +12,7 @@ namespace chess
         Bits alocation:
             - bits 1-3 - piece type
             - bits 4-5 - color
-
+            - bits 6+  - special moves
     */ 
     class Piece
     {
@@ -20,6 +20,34 @@ namespace chess
         static const int pieceMask = 0b0000111;  // 0b00111
         static const int colorMask = 0b0011000; // 0b11000
         static const int specialMoveMask = 0b1100000;
+
+        // Piece types
+        enum Type
+        {
+            // non sliding pieces (0b00000xx)
+            Empty = 0,
+            Pawn = 1,
+            Knight = 2,
+            King = 3,
+
+            // sliding pieces (0b00001xx)
+            Bishop = 4, 
+            Rook = 5,
+            Queen = 6,
+        };
+
+        // Piece colors
+        enum Color
+        {
+            White = 8,  // 0b0001000
+            Black = 16, // 0b0010000
+        };
+
+        // Special moves
+        enum SpecialMove
+        {
+            Castling = 32, // 0b0100000
+        };
 
         /**
          * @brief Get the color of a piece
@@ -37,6 +65,13 @@ namespace chess
         }
 
         /**
+         * @brief Get the special move of a piece
+         */
+        static inline int getSpecial(const int& piece){
+            return piece & specialMoveMask;
+        }
+
+        /**
          * @brief Create a piece with a given type and color
          */
         static inline int createPiece(int type, int color, int special = 0){
@@ -50,8 +85,20 @@ namespace chess
             return getType(piece) & 0b100;
         }
 
-        static inline bool hasSpecial(const int& piece){
-            return piece & specialMoveMask;
+        static inline bool hasSpecial(const int& piece, int special = SpecialMove::Castling){
+            return (piece & specialMoveMask) == special;
+        }
+
+        static inline int deleteSpecial(int piece, int special = specialMoveMask){
+            return piece & (~specialMoveMask);
+        }
+
+        static inline int getCastleKing(int color){
+            return King | color | Castling;
+        }
+
+        static inline int getCastleRook(int color){
+            return Rook | color | Castling;
         }
 
         static std::string toStr(int piece){
@@ -87,35 +134,6 @@ namespace chess
             }
             return str;
         }
-
-        // Piece types
-        enum Type
-        {
-            // non sliding pieces (0b00000xx)
-            Empty = 0,
-            Pawn = 1,
-            Knight = 2,
-            King = 3,
-
-            // sliding pieces (0b00001xx)
-            Bishop = 4, 
-            Rook = 5,
-            Queen = 6,
-        };
-
-        // Piece colors
-        enum Color
-        {
-            White = 8,  // 0b0001000
-            Black = 16, // 0b0010000
-        };
-
-        // Special moves
-        enum SpecialMove
-        {
-            DoubleMove = 32, // 0b0100000
-            Castling = 64,   // 0b1000000
-        };
     };
 }
 

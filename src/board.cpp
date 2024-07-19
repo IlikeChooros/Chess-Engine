@@ -77,11 +77,11 @@ namespace chess
             board[i + 8] = Piece::createPiece(Piece::Pawn, Piece::Black);
             board[i + 48] = Piece::createPiece(Piece::Pawn, Piece::White); 
         }
-        board[0] = Piece::Rook | Piece::Black;
-        board[7] = Piece::Rook | Piece::Black;
+        board[0] = Piece::getCastleRook(Piece::Black);
+        board[7] = Piece::getCastleRook(Piece::Black);
 
-        board[56] = Piece::Rook | Piece::White;
-        board[63] = Piece::Rook | Piece::White;
+        board[56] = Piece::getCastleRook(Piece::White);
+        board[63] = Piece::getCastleRook(Piece::White);
 
         board[1] = Piece::Knight | Piece::Black;
         board[6] = Piece::Knight | Piece::Black;
@@ -96,11 +96,28 @@ namespace chess
         board[61] = Piece::Bishop | Piece::White;
 
         board[3] = Piece::Queen | Piece::Black;
-        board[4] = Piece::createPiece(Piece::King, Piece::Black, Piece::Castling);
+        board[4] = Piece::getCastleKing(Piece::Black);
 
         board[59] = Piece::Queen | Piece::White;
-        board[60] = Piece::createPiece(Piece::King, Piece::White, Piece::Castling);
+        board[60] = Piece::getCastleKing(Piece::White);
         return *this;
+    }
+
+    /**
+     * @brief Find the index of a piece on the board
+     * 
+     * @param piece The piece to find
+     * @param color The color of the piece
+     * @return int The index of the piece, -1 if not found
+     */
+    int Board::findPiece(int piece, int color){
+        int p = piece | color;
+        for (auto i=0; i < 64; i++){
+            if (board[i] == p){
+                return i;
+            }
+        }
+        return -1;
     }
 }
 

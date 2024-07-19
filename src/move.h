@@ -55,6 +55,8 @@ class Move
     bool isPromotion() const {return getFlags() & FLAG_PROMOTION;};
     bool isDoubleMove() const {return getFlags() == FLAG_DOUBLE_PAWN;};
     bool isEnPassant() const {return getFlags() == FLAG_ENPASSANT_CAPTURE;};
+    bool isQueenCastle() const {return getFlags() == FLAG_QUEEN_CASTLE;};
+    bool isKingCastle() const {return getFlags() == FLAG_KING_CASTLE;};
 
     operator int() const {return m_move;};
 

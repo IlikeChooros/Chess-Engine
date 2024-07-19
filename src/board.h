@@ -24,6 +24,7 @@ namespace chess{
         /**
          * @brief Get the piece at a given index
          */
-        int operator[](int index) {return this->board[index]; };
+        int& operator[](int index) {return this->board[index]; };
+        int findPiece(int piece, int color);
     };
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string.h>
 #include <memory>
 #include <list>
 #include <stdio.h>
@@ -13,10 +14,7 @@ namespace chess
 
     class Manager
     {
-        void addMove(int from, int to, int flags);
-        void addAttack(int from, int to, bool piece_is_white);
-        void handleCapture(Move& move);
-        public:
+    public:
         typedef unsigned long uint64_t;
         typedef unsigned int uint32_t;
         typedef struct {
@@ -26,6 +24,7 @@ namespace chess
 
         static uint64_t attacks_to[2][64];
         static uint64_t attacks_from[2][64];
+        static int king_pos[2];
 
         Manager(Board* board = nullptr);
         Manager& operator=(Manager&& other);
@@ -34,6 +33,14 @@ namespace chess
         std::list<PieceMoveInfo> getPieceMoves(uint32_t from);
         int getSide();
         int generateMoves();
+        int validateMove(Move& move);
+
+    
+    
+        void addMove(int from, int to, int flags, int* move_list, int& n_moves);
+        void addAttack(int from, int to, bool piece_is_white);
+        void handleCapture(Move& move);
+        void handleMove(Move& move);
 
         int side;
         std::unique_ptr<int[]> move_list;
