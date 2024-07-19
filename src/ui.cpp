@@ -18,7 +18,7 @@ namespace ui
      * @brief Main ui window loop, runs the window and handles the input
      * @param board The board to run the window with
      */
-    void runWindow(Board& board){
+    void runWindow(Board& board, int argc, char** argv){
         using namespace sf;
 
         // Constants
@@ -27,8 +27,12 @@ namespace ui
         // Init resources
         manager = Manager(&board);
         manager.generateMoves();
-        pieces_texture.loadFromFile("img/ChessPiecesArray.png");
-        font.loadFromFile("font/Ubuntu-L.ttf");
+
+        std::filesystem::path binary_path = std::filesystem::path(argv[0]).parent_path();
+        if(!pieces_texture.loadFromFile(binary_path / "img/ChessPiecesArray.png")){
+            return;
+        }
+        font.loadFromFile(binary_path / "font/Ubuntu-L.ttf");
         pieces_sprite.setTexture(pieces_texture, true);
         pieces_sprite.setScale(2, 2);
         

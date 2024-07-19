@@ -7,7 +7,20 @@ namespace chess
 
     uint64_t Manager::attacks_to[2][64] = {};
     uint64_t Manager::attacks_from[2][64] = {};
-    int Manager::king_pos[2] = {};
+
+    const int Manager::castling_rights[2][4] = {
+        {BLACK_KING_START,  0,  7, Piece::Black}, // Black (index 0 -> is_white = false)
+        {WHITE_KING_START, 56, 63, Piece::White} // White
+    };
+
+    const int Manager::castling_offsets[2][2] = {
+        { -2, 2}, // target relative position (king + offset -> target position)
+        { -1, 1}, // position offset (pos += offset while pos != king)
+    };
+
+    const int Manager::castling_flags[2] = {
+        Move::FLAG_QUEEN_CASTLE, Move::FLAG_KING_CASTLE
+    };
 
     Manager::Manager(Board* board)
     {
@@ -15,11 +28,9 @@ namespace chess
         this->n_moves = 0;
         this->move_list = std::make_unique<int[]>(256);
         this->side = Piece::White;
-        if (board != nullptr){
-            king_pos[0] = board->findPiece(Piece::King, Piece::Black);
-            king_pos[1] = board->findPiece(Piece::King, Piece::White);
+        if (board != nullptr)
             generateMoves();
-        }
+        
             
     }
 
@@ -202,17 +213,7 @@ namespace chess
 
         dlogln("Checking castle rights");
         // Check for castling
-        const int castling_rights[2][4] = {
-            {BLACK_KING_START,  0,  7, Piece::Black}, // Black (index 0 -> is_white = false)
-            {WHITE_KING_START, 56, 63, Piece::White} // White
-        };
-        const int castling_offsets[2][2] = {
-            { -2, 2}, // target relative position (king + offset -> target position)
-            { -1, 1}, // position offset (pos += offset while pos != king)
-        };
-        const int castle_flags[2] = {
-            Move::FLAG_QUEEN_CASTLE, Move::FLAG_KING_CASTLE
-        };
+        
         for(int i = 0; i < 2; i++){
             // Get starting position for the king
             int king = castling_rights[i][0]; // 0 black, 1 white
@@ -222,29 +223,7 @@ namespace chess
             dlogf("Found valid king at %s\n", square_to_str(king).c_str());
             // Check if rooks have moved / still have castling rights
             for(int j = 0; j < 2; j++){
-                int rook = iboard[castling_rights[i][j + 1]];
-                if (rook != Piece::getCastleRook(castling_rights[i][3])) // not the correct piece / doesn't have castling rights
-                    continue;
-                
-                dlogf("Valid rook at %s\n", square_to_str(castling_rights[i][j + 1]).c_str());
-                if (attacks_to[!i][king] != 0) // king at check
-                    continue;
-                // Check if the squares between the king and the rook are empty and 
-                // not attacked by the enemy color
-                int pos = king + castling_offsets[1][j];
-                int target = king + castling_offsets[0][j];
-
-                while(pos != target){
-                    dlogf("Checking position at %s\n", square_to_str(pos).c_str());
-                    if (iboard[pos] != Piece::Empty || attacks_to[!i][pos] != 0) 
-                        break;
-                    pos += castling_offsets[1][j];
-                }
-                // valid castle
-                if (pos == target){
-                    dlogf("Added possible castle at %s\n", square_to_str(target).c_str());
-                    addMove(king, target, castle_flags[j], move_list.get(), n_moves);
-                }
+                checkKingMoves(i, j, king);
             }
         }
 
@@ -266,6 +245,42 @@ namespace chess
         }
 
         return n_moves;
+    }
+
+    void Manager::checkKingMoves(bool is_white, int j, int king){
+        int *iboard = board->board.get();
+
+        int rook = iboard[castling_rights[is_white][j + 1]];
+        if (rook != Piece::getCastleRook(castling_rights[is_white][3])) // not the correct piece / doesn't have castling rights
+            return;
+        
+        dlogf("Valid rook at %s\n", square_to_str(castling_rights[is_white][j + 1]).c_str());
+        if (attacks_to[!is_white][king] != 0) // king in check
+            return;
+
+        // Check if the squares between the king and the rook are empty and 
+        // not attacked by the enemy color
+        int pos = king;
+        int rook_pos = castling_rights[is_white][j + 1];
+        int target_king_pos = king + castling_offsets[0][j];
+
+        while(pos != target_king_pos){
+            pos += castling_offsets[1][j];
+            dlogf("Checking position at %s\n", square_to_str(pos).c_str());
+            dbitboard(attacks_to[!is_white][pos]);
+            if (iboard[pos] != Piece::Empty || attacks_to[!is_white][pos] != 0) // piece in the way or attacked
+                return;
+        }
+
+        while(pos != rook_pos){
+            if (iboard[pos] != Piece::Empty)
+                return;
+            pos += castling_offsets[1][j];
+        }
+
+        // valid castle
+        dlogf("Added possible castle at %s\n", square_to_str(target_king_pos).c_str());
+        addMove(king, target_king_pos, castling_flags[j], move_list.get(), n_moves);
     }
 
     /**

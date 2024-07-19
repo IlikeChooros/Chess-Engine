@@ -24,7 +24,9 @@ namespace chess
 
         static uint64_t attacks_to[2][64];
         static uint64_t attacks_from[2][64];
-        static int king_pos[2];
+        static const int castling_rights[2][4];
+        static const int castling_offsets[2][2];
+        static const int castling_flags[2];
 
         Manager(Board* board = nullptr);
         Manager& operator=(Manager&& other);
@@ -36,11 +38,12 @@ namespace chess
         int validateMove(Move& move);
 
     
-    
+
         void addMove(int from, int to, int flags, int* move_list, int& n_moves);
         void addAttack(int from, int to, bool piece_is_white);
         void handleCapture(Move& move);
         void handleMove(Move& move);
+        void checkKingMoves(bool is_white, int j, int king_pos);
 
         int side;
         std::unique_ptr<int[]> move_list;

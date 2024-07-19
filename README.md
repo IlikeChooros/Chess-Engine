@@ -33,10 +33,17 @@ In project directory run *(where `main.cpp` file is)*:
 
 ```sh
 cmake -S . -B ./build
-
+cmake --build build
 make -C build
-
 ./build/bin/ChessEngine
+```
 
+## Test
+
+First build the project, only then run the tests.
+
+```sh
+cd build
+ctest
 ```
 

@@ -1,9 +1,9 @@
 #include "src/ui.h"
 
-int main()
+int main(int argc, char** argv)
 {
     chess::Board board;
     board.init();
-    ui::runWindow(board);
+    ui::runWindow(board, argc, argv);
     return 0;
 }
