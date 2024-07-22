@@ -28,6 +28,7 @@ namespace chess{
         
         Board& init();
         void loadFen(const char* fen);
+        std::string getFen();
 
         /**
          * @brief Get the side to move

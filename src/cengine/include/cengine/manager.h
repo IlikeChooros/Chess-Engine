@@ -60,5 +60,7 @@ namespace chess
         int prev_captured_piece;
         int black_king_pos;
         int white_king_pos;
+        int halfmove_clock;
+        int fullmove_counter;
     };
 }

@@ -205,12 +205,118 @@ namespace chess
         fullmove_counter = std::stoi(full_move);
     }
 
+    std::string Board::getFen(){
+        std::string fen;
+        fen.reserve(128);
+
+        std::unordered_map<int, char> mapping({
+            {Piece::Pawn, 'p'},
+            {Piece::Rook, 'r'},
+            {Piece::Knight, 'n'},
+            {Piece::Bishop, 'b'},
+            {Piece::Queen, 'q'},
+            {Piece::King, 'k'},            
+        });
+
+        std::pair<char, bool> castling_rights[4] = {
+            {'K', false},
+            {'Q', false},
+            {'k', false},
+            {'q', false},
+        };
+        int pos = 0;
+
+        // Write piece placement
+        for(int i = 0; i < 64; i++){
+            if(i % 8 == 0 && i != 0){
+                if(pos != 0){
+                    fen += '0' + pos;
+                    pos = 0;
+                }
+                fen += '/';
+            }
+            if(board[i] == Piece::Empty){
+                pos++;
+                continue;
+            }
+
+            if (pos != 0){
+                fen += '0' + pos;
+                pos = 0;
+            }
+
+            int p = board[i];
+            char c = mapping[Piece::getType(p)];
+            c = Piece::getColor(p) == Piece::Black ? c : toupper(c);
+            fen += c;
+
+            if(!Piece::hasSpecial(p, Piece::Castling))
+                continue;
+
+            if (Piece::getType(p) == Piece::King)
+                continue;
+            
+            // Save castling rights
+            if(Piece::getColor(p) == Piece::White){
+                if (i == 63){
+                    castling_rights[0].second = true;
+                } else {
+                    castling_rights[1].second = true;
+                }
+            } else {
+                if (i == 7){
+                    castling_rights[2].second = true;
+                } else {
+                    castling_rights[3].second = true;
+                }
+            }
+        }
+        if(pos != 0){
+            fen += '0' + pos;
+        }
+
+        // write the side
+        fen += ' ';
+        fen += side == Piece::Black ? 'b' : 'w';
+
+        // write castling rights
+        fen += ' ';
+        bool none = true;
+        for (int i = 0; i < 4; i++){
+            if(castling_rights[i].second){
+                fen += castling_rights[i].first;
+                none = false;
+            }
+        }
+        if (none){
+            fen += '-';
+        }
+
+        // write enpassant target square
+        fen += ' ';
+        if (enpassant_target == -1){
+            fen += '-';
+        } else {
+            fen += square_to_str(enpassant_target);
+        }
+
+        // write halfmove clock
+        fen += ' ';
+        fen += std::to_string(halfmove_clock);
+
+        // write fullmove counter
+        fen += ' ';
+        fen += std::to_string(fullmove_counter);
+
+        return fen;
+    }
+
     /**
-     * @brief Find the index of a piece on the board
+     * @brief Find all the indices of a piece on the board
      * 
      * @param piece The piece to find
      * @param color The color of the piece
-     * @return int The index of the piece, -1 if not found
+     * @return vector<int> The indices of the piece
      */
     std::vector<int> Board::findAll(int piece, int color){
         std::vector<int> indices;
