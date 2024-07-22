@@ -72,6 +72,13 @@ namespace chess
         }
 
         /**
+         * @brief Add a special move to a piece
+         */
+        static inline int addSpecial(int piece, int special){
+            return piece | special;
+        }
+
+        /**
          * @brief Create a piece with a given type and color
          */
         static inline int createPiece(int type, int color, int special = 0){
@@ -85,18 +92,30 @@ namespace chess
             return getType(piece) & 0b100;
         }
 
+        /**
+         * @brief Check if the piece has a special move
+         */
         static inline bool hasSpecial(const int& piece, int special = SpecialMove::Castling){
             return (piece & specialMoveMask) == special;
         }
 
+        /**
+         * @brief Delete the special move of a piece, by default deletes all special moves
+         */
         static inline int deleteSpecial(int piece, int special = specialMoveMask){
             return piece & (~specialMoveMask);
         }
 
+        /**
+         * @brief Get the piece representing the king of a given color
+         */
         static inline int getCastleKing(int color){
             return King | color | Castling;
         }
 
+        /**
+         * @brief Get the piece representing the rook of a given color
+         */
         static inline int getCastleRook(int color){
             return Rook | color | Castling;
         }

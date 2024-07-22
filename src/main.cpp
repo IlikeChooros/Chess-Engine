@@ -1,4 +1,4 @@
-#include "src/ui.h"
+#include <cengine/ui.h>
 
 int main(int argc, char** argv)
 {

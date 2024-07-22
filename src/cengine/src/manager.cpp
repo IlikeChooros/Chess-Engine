@@ -1,5 +1,4 @@
-#include "manager.h"
-
+#include <cengine/manager.h>
 
 namespace chess
 {
@@ -25,13 +24,14 @@ namespace chess
     Manager::Manager(Board* board)
     {
         this->board = board;
+        this->captured_piece = Piece::Empty;
+        this->prev_captured_piece = Piece::Empty;
         this->n_moves = 0;
-        this->move_list = std::make_unique<int[]>(256);
+        this->move_list = std::vector<int>(256, 0);
+        this->prev_move_list = std::vector<int>(256, 0);
         this->side = Piece::White;
         if (board != nullptr)
             generateMoves();
-        
-            
     }
 
     Manager& Manager::operator=(Manager&& other)
@@ -39,6 +39,11 @@ namespace chess
         this->board = other.board;
         this->n_moves = other.n_moves;
         this->move_list = std::move(other.move_list);
+        this->prev_move_list = std::move(other.prev_move_list);
+        this->captured_piece = other.captured_piece;
+        this->prev_captured_piece = other.prev_captured_piece;
+        this->curr_move = other.curr_move;
+        this->prev_move = other.prev_move;
         this->side = other.side;
         return *this;
     }
@@ -59,11 +64,7 @@ namespace chess
         for(int i = 0; i < n_moves; i++){
             auto move = Move(move_list[i]);
             if (move.getFrom() == from && move.getTo() == to){
-                last_move = move;
-                handleCapture(last_move);
-                handleMove(last_move);
-                this->side ^= Piece::colorMask; // switch side
-                generateMoves();
+                make(move);
                 return true;
             }
         }
@@ -94,12 +95,53 @@ namespace chess
      * @brief Generates all possible moves for the current board state
      * @return The number of moves generated
      */
-    int Manager::generateMoves()
+    int Manager::generateMoves(bool validate)
     {
-        n_moves = 0;
+        // Copy current moves to the previous move list
+        this->prev_move_list = this->move_list;
+        this->n_moves = 0;
         int* iboard = this->board->board.get();
-        int pseudo_moves[256] = {};
+
         int n_pseudo_moves = 0;
+        std::unique_ptr<int[]> pseudo_moves(new int[256]);
+        generatePseudoLegalMoves(n_pseudo_moves, pseudo_moves.get());
+
+    #if DEBUG_DETAILS
+        // for(int i = 0; i < 64; i++){
+        //     if (iboard[i] == Piece::Empty)
+        //         continue;
+        //     dlogf("Piece at %s: %s\n", square_to_str(i).c_str(), Piece::toStr(iboard[i]).c_str());
+        //     dlogf("Attacks to square %s\n", square_to_str(i).c_str());
+        //     dbitboard(attacks_to[0][i] | attacks_to[1][i]);
+        //     dlogf("Attacks from square %s\n", square_to_str(i).c_str());
+        //     dbitboard(attacks_from[0][i] | attacks_from[1][i]);
+        // }
+    #endif
+
+        if (!validate){
+            n_moves = n_pseudo_moves;
+            for(int i = 0; i < n_pseudo_moves; i++){
+                move_list[n_moves++] = pseudo_moves[i];
+            }
+        } else {
+            // validate pseudo moves
+            for(int i = 0; i < n_pseudo_moves; i++){
+                Move move(pseudo_moves[i]);
+                bool is_white = Piece::getColor(iboard[move.getFrom()]) == Piece::White;
+                int king = is_white ? white_king_pos : black_king_pos;
+                if (validateMove(move, king, is_white)){
+                    addMove(move.getFrom(), move.getTo(), move.getFlags(), const_cast<int*>(move_list.data()), n_moves);
+                }
+            }
+        }
+
+        return n_moves;
+    }
+
+    void Manager::generatePseudoLegalMoves(int& n_pseudo_moves, int* pseudo_moves){
+        int* iboard = this->board->board.get();
+
+        n_pseudo_moves = 0;
         
         for(int i = 0; i < 64; i++){
             // reset the attacks_from array & attacks_to bitboards
@@ -122,6 +164,15 @@ namespace chess
                     Piece::toStr(iboard[i]).c_str(), 
                     square_to_str(i).c_str()
                 );
+
+                if (type == Piece::King){
+                    if (is_white){
+                        white_king_pos = i;
+                    } else {
+                        black_king_pos = i;
+                    }
+                }
+                 
                 type--;
                 // Use the piece move offsets
                 for(int j = 0; j < Board::n_piece_rays[type]; j++){
@@ -183,7 +234,7 @@ namespace chess
                     } else {
                         // Check if enpassant is possible, if the last move was a double pawn move and there is a pawn
                         // in the correct position (next to the attacking pawn, n + previous_pawn_offset[0])
-                        if (last_move.isDoubleMove() && int(last_move.getTo()) == Board::mailbox[Board::mailbox64[n] + Board::pawn_move_offsets[!is_white][0]]){
+                        if (curr_move.isDoubleMove() && int(curr_move.getTo()) == Board::mailbox[Board::mailbox64[n] + Board::pawn_move_offsets[!is_white][0]]){
                             addMove(i, n, Move::FLAG_ENPASSANT_CAPTURE, pseudo_moves, n_pseudo_moves);
                             dlogf("En passant to %s\n", square_to_str(n).c_str());
                         }
@@ -210,7 +261,6 @@ namespace chess
             }
         }
 
-
         dlogln("Checking castle rights");
         // Check for castling
         
@@ -223,31 +273,22 @@ namespace chess
             dlogf("Found valid king at %s\n", square_to_str(king).c_str());
             // Check if rooks have moved / still have castling rights
             for(int j = 0; j < 2; j++){
-                checkKingMoves(i, j, king);
+                checkKingCastling(i, j, king);
             }
         }
-
-    #if DEBUG_DETAILS
-        // for(int i = 0; i < 64; i++){
-        //     if (iboard[i] == Piece::Empty)
-        //         continue;
-        //     dlogf("Piece at %s: %s\n", square_to_str(i).c_str(), Piece::toStr(iboard[i]).c_str());
-        //     dlogf("Attacks to square %s\n", square_to_str(i).c_str());
-        //     dbitboard(attacks_to[0][i] | attacks_to[1][i]);
-        //     dlogf("Attacks from square %s\n", square_to_str(i).c_str());
-        //     dbitboard(attacks_from[0][i] | attacks_from[1][i]);
-        // }
-    #endif
-
-        // validate pseudo moves
-        for(int i = 0; i < n_pseudo_moves; i++){
-            move_list[n_moves++] = pseudo_moves[i];
-        }
-
-        return n_moves;
     }
 
-    void Manager::checkKingMoves(bool is_white, int j, int king){
+    bool Manager::validateMove(Move& move, int king, bool is_white){
+        return true;
+    }
+
+    /**
+     * @brief Check if the king can castle to the given side.
+     * @param is_white True if the king is white, false otherwise
+     * @param j The index of the castling_rights array at position 1 or 2
+     * @param king The index of the king
+     */
+    void Manager::checkKingCastling(bool is_white, int j, int king){
         int *iboard = board->board.get();
 
         int rook = iboard[castling_rights[is_white][j + 1]];
@@ -280,7 +321,63 @@ namespace chess
 
         // valid castle
         dlogf("Added possible castle at %s\n", square_to_str(target_king_pos).c_str());
-        addMove(king, target_king_pos, castling_flags[j], move_list.get(), n_moves);
+        addMove(king, target_king_pos, castling_flags[j], const_cast<int*>(move_list.data()), n_moves);
+    }
+
+    /**
+     * @brief Makes a move, updating the board, the side to move and generating new moves
+     */
+    void Manager::make(Move& move, bool validate){
+        prev_move = curr_move;
+        curr_move = move;
+        handleCapture(move);
+        handleMove(move);
+        this->side ^= Piece::colorMask;
+        generateMoves(validate);
+    }
+
+    /**
+     * @brief Unmakes current move, restoring the board to the previous state, 
+     * may be called only once after `make()`
+     */
+    void Manager::unmake(){
+        if(!curr_move && curr_move != prev_move)
+            return;
+
+        int* iboard = board->board.get();
+        int from = curr_move.getFrom(), to = curr_move.getTo(), captured_pos = to;
+
+        if (curr_move.isCapture()){
+            int offset = 0;
+            if(curr_move.isEnPassant()){
+                offset = Piece::getColor(iboard[from]) == Piece::White ? 8 : -8;
+            }
+            captured_pos += offset;
+        } else if (curr_move.isQueenCastle()){
+            // Get rook starting position
+            int rook_from = Piece::getColor(iboard[to]) == Piece::White ? 56 : 0;
+            iboard[rook_from] = iboard[to + 1]; // move the rook back
+            iboard[to + 1] = Piece::Empty; // empty the rook's previous position
+            iboard[from] = Piece::addSpecial(iboard[from], Piece::Castling); // restore the king's special move
+            iboard[rook_from] = Piece::addSpecial(iboard[rook_from], Piece::Castling); // restore the rook's special move
+        } else if (curr_move.isKingCastle()){
+            int rook_from = Piece::getColor(iboard[to]) == Piece::White ? 63 : 7; 
+            iboard[rook_from] = iboard[to - 1];
+            iboard[to - 1] = Piece::Empty;
+            iboard[from] = Piece::addSpecial(iboard[from], Piece::Castling);
+            iboard[rook_from] = Piece::addSpecial(iboard[rook_from], Piece::Castling);
+        }
+
+        iboard[from] = iboard[to];
+        iboard[to] = Piece::Empty;
+        iboard[captured_pos] = captured_piece;
+
+        // restore other variables
+        this->side ^= Piece::colorMask;
+        this->captured_piece = prev_captured_piece;
+        this->curr_move = prev_move;
+        this->n_moves = this->prev_move_list.size();
+        this->move_list = std::move(this->prev_move_list);
     }
 
     /**
@@ -291,17 +388,8 @@ namespace chess
         int from = move.getFrom(), to = move.getTo();
 
         // If that's a castle, move the corresponding rooks
-        if (move.isQueenCastle()){
-            int rook_from = Piece::getColor(iboard[from]) == Piece::White ? 56 : 0;
-            iboard[to + 1] = Piece::deleteSpecial(iboard[rook_from], Piece::Castling);
-            iboard[rook_from] = Piece::Empty;
-            iboard[from] = Piece::deleteSpecial(iboard[from], Piece::Castling);
-        }
-        else if(move.isKingCastle()){
-            int rook_from = Piece::getColor(iboard[from]) == Piece::White ? 63 : 7;
-            iboard[to - 1] = Piece::deleteSpecial(iboard[rook_from], Piece::Castling);
-            iboard[rook_from] = Piece::Empty;
-            iboard[from] = Piece::deleteSpecial(iboard[from], Piece::Castling);
+        if (move.isCastle()){
+            handleCastlingMove(move.isKingCastle(), from, to);
         }
 
         iboard[to] = iboard[from];
@@ -309,12 +397,36 @@ namespace chess
     }
 
     /**
+     * @brief Moves the rook to the correct position after a castling move
+     * @param is_king_castle True if it's a king castle, false otherwise
+     * @param from The starting position of the king
+     * @param to The target position of the king
+     */
+    void Manager::handleCastlingMove(bool is_king_castle, int from, int to){
+        int* iboard = board->board.get();
+        int rook_from, rook_to;
+
+        if(is_king_castle){
+            // get rook starting position
+            rook_from = Piece::getColor(iboard[from]) == Piece::White ? 63 : 7;
+            rook_to = to - 1; // rook target position
+        } else {
+            rook_from = Piece::getColor(iboard[from]) == Piece::White ? 56 : 0;
+            rook_to = to + 1;
+        }
+        iboard[rook_to] = iboard[rook_from];
+        iboard[rook_from] = Piece::Empty;
+    }
+
+    /**
      * @brief If the move is a capture, it correctly updates the board
      * @attention Should be called before `handleMove()` as it won't update correctly `captured_piece`
      */
     void Manager::handleCapture(Move& move){
-        if (!move.isCapture())
+        if (!move.isCapture()){
+            captured_piece = Piece::Empty;
             return;
+        }            
         int* iboard = this->board->board.get();
         int to = move.getTo();
         int from = move.getFrom();
@@ -325,6 +437,7 @@ namespace chess
             dlogf("En passant capture\n");
         }
 
+        prev_captured_piece = captured_piece;
         captured_piece = iboard[to + offset];
         iboard[to + offset] = Piece::Empty;
     }

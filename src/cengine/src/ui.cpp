@@ -1,4 +1,4 @@
-#include "ui.h"
+#include <cengine/ui.h>
 
 static sf::RenderWindow window = sf::RenderWindow(sf::VideoMode(1500, 1000), "CEngine");
 static sf::Texture pieces_texture;

@@ -1,4 +1,4 @@
-#include "board.h"
+#include <cengine/board.h>
 
 
 namespace chess
@@ -69,7 +69,12 @@ namespace chess
     /**
      * @brief Initialize the board with the default chess pieces
      */
-    const Board& Board::init(){       
+    Board& Board::init(){     
+
+        side = Piece::White;
+        halfmove_clock = 0;
+        fullmove_counter = 1;  
+        enpassant_target = -1;
 
         board = std::unique_ptr<int[]>(new int[64]());
 
@@ -104,20 +109,119 @@ namespace chess
     }
 
     /**
+     * @brief Load a fen string into the board
+     * 
+     * @param fen The fen string to load
+     */
+    void Board::loadFen(const char* fen){
+        board = std::make_unique<int[]>(64);
+
+        std::stringstream ss(fen);
+        
+        std::unordered_map<char, int> mapping({
+            {'p', Piece::Pawn},
+            {'r', Piece::Rook},
+            {'n', Piece::Knight},
+            {'b', Piece::Bishop},
+            {'q', Piece::Queen},
+            {'k', Piece::King},            
+        });
+
+        std::string piece_placement;
+        ss >> piece_placement;
+
+        // Read piece placement
+        char c = 0;
+        size_t i = 0, pos = 0;
+        while(c != ' ' && i < piece_placement.size()){
+            c = piece_placement[i++];
+            char lower = tolower(c);
+            if (isdigit(c)){
+                pos += c - '0';   
+            }
+            else if(mapping.find(lower) != mapping.end()){
+                int piece = mapping[lower];
+                if(c == lower){
+                    piece |= Piece::Black;
+                } else {
+                    piece |= Piece::White;
+                }
+                board[pos++] = piece;
+            } else if(c == '/'){
+                continue;
+            } else {
+                return;
+            }
+        }
+
+        // Read side
+        std::string s_side;
+        ss >> s_side;
+        side = s_side == "w" ? Piece::White : Piece::Black;
+
+        std::unordered_map<int, int> castle_pos = {
+            {'k', 7},
+            {'q', 0},
+            {'K', 63},
+            {'Q', 56},
+        };
+
+        // Read castling rights
+        i = 0;
+        std::string castling_rights;
+        ss >> castling_rights;
+        while(c != ' ' && i < castling_rights.size()){
+            c = castling_rights[i++];
+            if (c == '-'){ // no castling for both sides
+                i++;
+                break;
+            }
+            if(castle_pos.find(c) == castle_pos.end()){
+                return;
+            }
+            int pos = castle_pos[c];
+            board[pos] = Piece::addSpecial(board[pos], Piece::Castling);
+            if(Piece::getColor(board[pos]) == Piece::Black){
+                // Add castling right for the king
+                board[4] = Piece::getCastleKing(Piece::Black);
+            } else {
+                board[60] = Piece::getCastleKing(Piece::White);
+            }
+        }
+
+        // Read enpassant target square
+        std::string s_target;
+        ss >> s_target;
+        enpassant_target = str_to_square(s_target);
+        
+        // Read halfmove clock
+        std::string hf;
+        ss >> hf;
+        halfmove_clock = std::stoi(hf);
+
+        // Read fullmove counter
+        std::string full_move;
+        ss >> full_move;
+        fullmove_counter = std::stoi(full_move);
+    }
+
+    /**
      * @brief Find the index of a piece on the board
      * 
      * @param piece The piece to find
      * @param color The color of the piece
      * @return int The index of the piece, -1 if not found
      */
-    int Board::findPiece(int piece, int color){
+    std::vector<int> Board::findAll(int piece, int color){
+        std::vector<int> indices;
+        indices.reserve(16);
         int p = piece | color;
         for (auto i=0; i < 64; i++){
             if (board[i] == p){
-                return i;
+                indices.push_back(i);
             }
         }
-        return -1;
+        return indices;
     }
 }
 

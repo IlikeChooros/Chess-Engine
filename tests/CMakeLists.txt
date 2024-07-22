@@ -1,8 +1,11 @@
 project(CEngineTests LANGUAGES CXX)
 
-add_executable(CEngineTests src/main.cc)
+file(GLOB_RECURSE TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc)
 
-target_link_libraries(CEngineTests PUBLIC GTest::gtest GTest::gtest_main src)
+add_executable(CEngineTests ${TEST_SOURCES})
 
+target_link_libraries(CEngineTests PUBLIC GTest::gtest GTest::gtest_main cengine)
+
+include(GoogleTest)
 gtest_discover_tests(CEngineTests)
 

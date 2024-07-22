@@ -19,8 +19,8 @@ class Move
     // fourth bit -> promotion (0bx000)
     static const uint32_t FLAG_NONE = 0b0000; // No flags
     static const uint32_t FLAG_DOUBLE_PAWN = 0b0001; // Double pawn move
-    static const uint32_t FLAG_KING_CASTLE = 0b0010; // King castle
-    static const uint32_t FLAG_QUEEN_CASTLE = 0b0011; // Queen castle
+    static const uint32_t FLAG_KING_CASTLE = 0b0010; // King castle 0b0010
+    static const uint32_t FLAG_QUEEN_CASTLE = 0b0011; // Queen castle 0b0011
 
     // Capture flags
     static const uint32_t FLAG_CAPTURE = 0b0100;
@@ -57,12 +57,22 @@ class Move
     bool isEnPassant() const {return getFlags() == FLAG_ENPASSANT_CAPTURE;};
     bool isQueenCastle() const {return getFlags() == FLAG_QUEEN_CASTLE;};
     bool isKingCastle() const {return getFlags() == FLAG_KING_CASTLE;};
+    bool isCastle() const {return isQueenCastle() || isKingCastle();};
 
     operator int() const {return m_move;};
+    operator bool() const {return m_move != 0;};
 
     Move& operator=(const Move& other) {
         m_move = other.m_move;
         return *this;
+    };
+
+    bool operator==(const Move& other) const {
+        return m_move == other.m_move;
+    };
+
+    bool operator!=(const Move& other) const {
+        return m_move != other.m_move;
     };
     
     private:

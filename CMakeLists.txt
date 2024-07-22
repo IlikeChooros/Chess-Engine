@@ -6,18 +6,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-Wall")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-add_executable(${PROJECT_NAME} main.cpp)
-
-# Custom commands to copy font and img directories
-add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_SOURCE_DIR}/src/font $<TARGET_FILE_DIR:${PROJECT_NAME}>/font)
-
-add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_SOURCE_DIR}/src/img $<TARGET_FILE_DIR:${PROJECT_NAME}>/img)
-
-
 # Download SFML & gtest
 include(FetchContent)
 FetchContent_Declare(SFML
@@ -35,8 +23,7 @@ if(WIN32)
 endif()
 FetchContent_MakeAvailable(googletest)
 
-add_subdirectory(src) 
-target_link_libraries(${PROJECT_NAME} PRIVATE src sfml-graphics sfml-window sfml-system) 
+add_subdirectory(src)
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 
@@ -50,12 +37,6 @@ endif()
 
 install(TARGETS ${PROJECT_NAME})
 
-
 # Tests
-
-include(CTest)
-include(GoogleTest)
-
-add_subdirectory(tests)
-
 enable_testing()
+add_subdirectory(tests)

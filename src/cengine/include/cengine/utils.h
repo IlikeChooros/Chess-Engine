@@ -8,11 +8,28 @@
 /**
  * @brief Converts a square index to a string representation
  */
-inline std::string square_to_str(int square){
+inline std::string square_to_str(int square, bool inverse = true){
+    if(square < 0 || square > 63)
+        return "??";
     std::string str(2, ' ');
     str[0] = 'a' + (square % 8);
-    str[1] = '1' + (7 - square / 8);
+    square = inverse ? 7 - square / 8 : square / 8;
+    str[1] = '1' + square;
     return str;
+}
+
+/**
+ * @brief Converts square as string to index format
+ * @return -1 if the string is not a valid square
+ */
+inline int str_to_square(std::string str, bool inverse = true){
+    if (str.size() < 2)
+        return -1;
+    if ((str[0] < 'a' || str[0] > 'h') || (str[1] < '1' || str[1] > '8'))
+        return -1;
+    int row = str[1] - '1';
+    row = inverse ? 7 - row : row;
+    return row * 8 + str[0] - 'a';
 }
 
 #if DEBUG_DETAILS
