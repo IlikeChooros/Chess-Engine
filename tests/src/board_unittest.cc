@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <cengine/board.h>
+#include "includes.h"
 
 namespace{
 

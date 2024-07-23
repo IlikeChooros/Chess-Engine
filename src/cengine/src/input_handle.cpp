@@ -56,7 +56,23 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
             from = -1;
             state->state = InputState::Move;
         }
-    } else {
+    } else if(event.type == sf::Event::KeyPressed){
+        if(event.key.code == sf::Keyboard::Escape){
+            window->close();
+            return;
+        }
+        
+        // Undo move
+        if(event.key.code == sf::Keyboard::Z){
+            manager->unmake();
+        }
+
+        // Print fen
+        if(event.key.code == sf::Keyboard::P){
+            dlogf("Fen: %s\n", manager->board->getFen().c_str());
+        }
+    }
+     else {
         state->state = prev_state; // Do nothing
     }
 }

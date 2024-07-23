@@ -23,15 +23,30 @@ namespace chess
 
     Manager::Manager(Board* board)
     {
-        this->board = board;
         this->captured_piece = Piece::Empty;
         this->prev_captured_piece = Piece::Empty;
         this->n_moves = 0;
         this->move_list = std::vector<int>(256, 0);
         this->prev_move_list = std::vector<int>(256, 0);
-        this->side = Piece::White;
-        if (board != nullptr)
-            generateMoves();
+
+        // load data from the board
+        this->board = board;
+
+        if (board == nullptr)
+            return;
+        
+        this->side = board->getSide();
+        this->halfmove_clock = board->halfmoveClock();
+        this->fullmove_counter = board->fullmoveCounter();
+
+        // load target enpassant square
+        if(board->enpassantTarget() != -1){
+            int direction = this->side == Piece::White ? 8 : -8;
+            int from = board->enpassantTarget() - direction;
+            int to = board->enpassantTarget() + direction;
+            curr_move = Move(from, to, Move::FLAG_DOUBLE_PAWN);
+        }
+        generateMoves();
     }
 
     Manager& Manager::operator=(Manager&& other)
@@ -45,6 +60,8 @@ namespace chess
         this->curr_move = other.curr_move;
         this->prev_move = other.prev_move;
         this->side = other.side;
+        this->halfmove_clock = other.halfmove_clock;
+        this->fullmove_counter = other.fullmove_counter;
         return *this;
     }
 
@@ -76,6 +93,9 @@ namespace chess
         return false;
     }
 
+    /**
+     * @brief Get all possible moves for a piece at a given square
+     */
     std::list<Manager::PieceMoveInfo> Manager::getPieceMoves(uint32_t from){
         std::list<PieceMoveInfo> moves;
         for(int i = 0; i < n_moves; i++){
@@ -89,6 +109,145 @@ namespace chess
             }
         }
         return moves;
+    }
+
+        /**
+     * @brief Makes a move, updating the board, the side to move and generating new moves
+     */
+    void Manager::make(Move& move, bool validate){
+        if(this->side == Piece::Black){
+            this->fullmove_counter++;
+        }
+        prev_move = curr_move;
+        curr_move = move;
+
+        // Update halfmove clock, if the move is a pawn move or a capture, reset the clock
+        // (`handleCapture()` will update the clock if the move is a capture)
+        if (Piece::getType((*board)[curr_move.getFrom()]) == Piece::Pawn){
+            this->halfmove_clock = 0;
+        } else {
+            this->halfmove_clock++;
+        }
+
+        handleCapture(move);
+        handleMove(move);
+        this->side ^= Piece::colorMask;
+        generateMoves(validate);
+    }
+
+    /**
+     * @brief Unmakes current move, restoring the board to the previous state, 
+     * may be called only once after `make()`
+     */
+    void Manager::unmake(){
+        if(!curr_move && curr_move != prev_move)
+            return;
+
+        int* iboard = board->board.get();
+        int from = curr_move.getFrom(), to = curr_move.getTo(), captured_pos = to;
+
+        if (curr_move.isCapture()){
+            int offset = 0;
+            if(curr_move.isEnPassant()){
+                offset = Piece::getColor(iboard[from]) == Piece::White ? -8 : 8;
+            }
+            captured_pos += offset;
+        } else if (curr_move.isQueenCastle()){
+            // Get rook starting position
+            int rook_from = Piece::getColor(iboard[to]) == Piece::White ? 56 : 0;
+            iboard[rook_from] = iboard[to + 1]; // move the rook back
+            iboard[to + 1] = Piece::Empty; // empty the rook's previous position
+            iboard[from] = Piece::addSpecial(iboard[from], Piece::Castling); // restore the king's special move
+            iboard[rook_from] = Piece::addSpecial(iboard[rook_from], Piece::Castling); // restore the rook's special move
+        } else if (curr_move.isKingCastle()){
+            int rook_from = Piece::getColor(iboard[to]) == Piece::White ? 63 : 7; 
+            iboard[rook_from] = iboard[to - 1];
+            iboard[to - 1] = Piece::Empty;
+            iboard[from] = Piece::addSpecial(iboard[from], Piece::Castling);
+            iboard[rook_from] = Piece::addSpecial(iboard[rook_from], Piece::Castling);
+        }
+
+        iboard[from] = iboard[to];
+        iboard[to] = Piece::Empty;
+        iboard[captured_pos] = captured_piece;
+
+        // restore other variables
+        this->side ^= Piece::colorMask;
+        this->captured_piece = prev_captured_piece;
+        this->curr_move = prev_move;
+        this->n_moves = this->prev_move_list.size();
+        this->move_list = std::move(this->prev_move_list);
+    }
+
+    /**
+     * @brief Moves the piece to given position, it handles castling
+     */
+    void Manager::handleMove(Move& move){
+        int* iboard = board->board.get();
+        board->enpassant_target = -1;
+        int from = move.getFrom(), to = move.getTo();
+
+        // If that's a castle, move the corresponding rooks
+        if (move.isCastle()){
+            handleCastlingMove(move.isKingCastle(), from, to);
+        }
+
+        // If that's a double pawn move, set the enpassant target
+        if (move.isDoubleMove()){
+            int direction = Piece::getColor(iboard[from]) == Piece::White ? 8 : -8;
+            board->enpassant_target = to + direction;
+        }
+
+        iboard[to] = iboard[from];
+        iboard[from] = Piece::Empty;
+    }
+
+    /**
+     * @brief Moves the rook to the correct position after a castling move
+     * @param is_king_castle True if it's a king castle, false otherwise
+     * @param from The starting position of the king
+     * @param to The target position of the king
+     */
+    void Manager::handleCastlingMove(bool is_king_castle, int from, int to){
+        int* iboard = board->board.get();
+        int rook_from, rook_to;
+
+        if(is_king_castle){
+            // get rook starting position
+            rook_from = Piece::getColor(iboard[from]) == Piece::White ? 63 : 7;
+            rook_to = to - 1; // rook target position
+        } else {
+            rook_from = Piece::getColor(iboard[from]) == Piece::White ? 56 : 0;
+            rook_to = to + 1;
+        }
+        iboard[rook_to] = iboard[rook_from];
+        iboard[rook_from] = Piece::Empty;
+    }
+
+    /**
+     * @brief If the move is a capture, it correctly updates the board
+     * @attention Should be called before `handleMove()` as it won't update correctly `captured_piece`
+     */
+    void Manager::handleCapture(Move& move){
+        if (!move.isCapture()){
+            captured_piece = Piece::Empty;
+            return;
+        }            
+
+        halfmove_clock = 0;
+        int* iboard = this->board->board.get();
+        int to = move.getTo();
+        int from = move.getFrom();
+        int offset = 0;
+
+        if(move.isEnPassant()){
+            offset = Piece::getColor(iboard[from]) == Piece::White ? 8 : -8;
+            dlogf("En passant capture\n");
+        }
+
+        prev_captured_piece = captured_piece;
+        captured_piece = iboard[to + offset];
+        iboard[to + offset] = Piece::Empty;
     }
 
     /**
@@ -322,124 +481,6 @@ namespace chess
         // valid castle
         dlogf("Added possible castle at %s\n", square_to_str(target_king_pos).c_str());
         addMove(king, target_king_pos, castling_flags[j], const_cast<int*>(move_list.data()), n_moves);
-    }
-
-    /**
-     * @brief Makes a move, updating the board, the side to move and generating new moves
-     */
-    void Manager::make(Move& move, bool validate){
-        prev_move = curr_move;
-        curr_move = move;
-        handleCapture(move);
-        handleMove(move);
-        this->side ^= Piece::colorMask;
-        generateMoves(validate);
-    }
-
-    /**
-     * @brief Unmakes current move, restoring the board to the previous state, 
-     * may be called only once after `make()`
-     */
-    void Manager::unmake(){
-        if(!curr_move && curr_move != prev_move)
-            return;
-
-        int* iboard = board->board.get();
-        int from = curr_move.getFrom(), to = curr_move.getTo(), captured_pos = to;
-
-        if (curr_move.isCapture()){
-            int offset = 0;
-            if(curr_move.isEnPassant()){
-                offset = Piece::getColor(iboard[from]) == Piece::White ? 8 : -8;
-            }
-            captured_pos += offset;
-        } else if (curr_move.isQueenCastle()){
-            // Get rook starting position
-            int rook_from = Piece::getColor(iboard[to]) == Piece::White ? 56 : 0;
-            iboard[rook_from] = iboard[to + 1]; // move the rook back
-            iboard[to + 1] = Piece::Empty; // empty the rook's previous position
-            iboard[from] = Piece::addSpecial(iboard[from], Piece::Castling); // restore the king's special move
-            iboard[rook_from] = Piece::addSpecial(iboard[rook_from], Piece::Castling); // restore the rook's special move
-        } else if (curr_move.isKingCastle()){
-            int rook_from = Piece::getColor(iboard[to]) == Piece::White ? 63 : 7; 
-            iboard[rook_from] = iboard[to - 1];
-            iboard[to - 1] = Piece::Empty;
-            iboard[from] = Piece::addSpecial(iboard[from], Piece::Castling);
-            iboard[rook_from] = Piece::addSpecial(iboard[rook_from], Piece::Castling);
-        }
-
-        iboard[from] = iboard[to];
-        iboard[to] = Piece::Empty;
-        iboard[captured_pos] = captured_piece;
-
-        // restore other variables
-        this->side ^= Piece::colorMask;
-        this->captured_piece = prev_captured_piece;
-        this->curr_move = prev_move;
-        this->n_moves = this->prev_move_list.size();
-        this->move_list = std::move(this->prev_move_list);
-    }
-
-    /**
-     * @brief Moves the piece to given position, it handles castling
-     */
-    void Manager::handleMove(Move& move){
-        int* iboard = board->board.get();
-        int from = move.getFrom(), to = move.getTo();
-
-        // If that's a castle, move the corresponding rooks
-        if (move.isCastle()){
-            handleCastlingMove(move.isKingCastle(), from, to);
-        }
-
-        iboard[to] = iboard[from];
-        iboard[from] = Piece::Empty;
-    }
-
-    /**
-     * @brief Moves the rook to the correct position after a castling move
-     * @param is_king_castle True if it's a king castle, false otherwise
-     * @param from The starting position of the king
-     * @param to The target position of the king
-     */
-    void Manager::handleCastlingMove(bool is_king_castle, int from, int to){
-        int* iboard = board->board.get();
-        int rook_from, rook_to;
-
-        if(is_king_castle){
-            // get rook starting position
-            rook_from = Piece::getColor(iboard[from]) == Piece::White ? 63 : 7;
-            rook_to = to - 1; // rook target position
-        } else {
-            rook_from = Piece::getColor(iboard[from]) == Piece::White ? 56 : 0;
-            rook_to = to + 1;
-        }
-        iboard[rook_to] = iboard[rook_from];
-        iboard[rook_from] = Piece::Empty;
-    }
-
-    /**
-     * @brief If the move is a capture, it correctly updates the board
-     * @attention Should be called before `handleMove()` as it won't update correctly `captured_piece`
-     */
-    void Manager::handleCapture(Move& move){
-        if (!move.isCapture()){
-            captured_piece = Piece::Empty;
-            return;
-        }            
-        int* iboard = this->board->board.get();
-        int to = move.getTo();
-        int from = move.getFrom();
-        int offset = 0;
-
-        if(move.isEnPassant()){
-            offset = Piece::getColor(iboard[from]) == Piece::White ? 8 : -8;
-            dlogf("En passant capture\n");
-        }
-
-        prev_captured_piece = captured_piece;
-        captured_piece = iboard[to + offset];
-        iboard[to + offset] = Piece::Empty;
     }
 
     /**
