@@ -34,7 +34,6 @@ namespace chess
 
         bool movePiece(uint32_t from, uint32_t to);
         std::list<PieceMoveInfo> getPieceMoves(uint32_t from);
-        int getSide();
         int generateMoves(bool validate = true);
         bool validateMove(Move& move, int king_pos, bool is_white);
 
@@ -49,7 +48,6 @@ namespace chess
         void checkKingCastling(bool is_white, int j, int king_index);
         void handleCastlingMove(bool is_king_castle, int from, int to);
 
-        int side;
         std::vector<int> move_list;
         std::vector<int> prev_move_list;
         int n_moves;
@@ -60,7 +58,5 @@ namespace chess
         int prev_captured_piece;
         int black_king_pos;
         int white_king_pos;
-        int halfmove_clock;
-        int fullmove_counter;
     };
 }

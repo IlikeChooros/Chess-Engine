@@ -35,13 +35,10 @@ namespace chess
         if (board == nullptr)
             return;
         
-        this->side = board->getSide();
-        this->halfmove_clock = board->halfmoveClock();
-        this->fullmove_counter = board->fullmoveCounter();
 
         // load target enpassant square
         if(board->enpassantTarget() != -1){
-            int direction = this->side == Piece::White ? 8 : -8;
+            int direction = this->board->side == Piece::White ? 8 : -8;
             int from = board->enpassantTarget() - direction;
             int to = board->enpassantTarget() + direction;
             curr_move = Move(from, to, Move::FLAG_DOUBLE_PAWN);
@@ -59,9 +56,6 @@ namespace chess
         this->prev_captured_piece = other.prev_captured_piece;
         this->curr_move = other.curr_move;
         this->prev_move = other.prev_move;
-        this->side = other.side;
-        this->halfmove_clock = other.halfmove_clock;
-        this->fullmove_counter = other.fullmove_counter;
         return *this;
     }
 
@@ -75,7 +69,7 @@ namespace chess
     bool Manager::movePiece(uint32_t from, uint32_t to)
     {
         int* iboard = this->board->board.get();
-        if(iboard[from] == Piece::Empty || from == to || Piece::getColor(iboard[from]) != this->side)
+        if(iboard[from] == Piece::Empty || from == to || Piece::getColor(iboard[from]) != this->board->side)
             return false;
 
         for(int i = 0; i < n_moves; i++){
@@ -115,8 +109,8 @@ namespace chess
      * @brief Makes a move, updating the board, the side to move and generating new moves
      */
     void Manager::make(Move& move, bool validate){
-        if(this->side == Piece::Black){
-            this->fullmove_counter++;
+        if(this->board->side == Piece::Black){
+            this->board->fullmove_counter++;
         }
         prev_move = curr_move;
         curr_move = move;
@@ -124,14 +118,14 @@ namespace chess
         // Update halfmove clock, if the move is a pawn move or a capture, reset the clock
         // (`handleCapture()` will update the clock if the move is a capture)
         if (Piece::getType((*board)[curr_move.getFrom()]) == Piece::Pawn){
-            this->halfmove_clock = 0;
+            this->board->halfmove_clock = 0;
         } else {
-            this->halfmove_clock++;
+            this->board->halfmove_clock++;
         }
 
         handleCapture(move);
         handleMove(move);
-        this->side ^= Piece::colorMask;
+        this->board->side ^= Piece::colorMask;
         generateMoves(validate);
     }
 
@@ -172,7 +166,7 @@ namespace chess
         iboard[captured_pos] = captured_piece;
 
         // restore other variables
-        this->side ^= Piece::colorMask;
+        this->board->side ^= Piece::colorMask;
         this->captured_piece = prev_captured_piece;
         this->curr_move = prev_move;
         this->n_moves = this->prev_move_list.size();
@@ -198,7 +192,7 @@ namespace chess
             board->enpassant_target = to + direction;
         }
 
-        iboard[to] = iboard[from];
+        iboard[to] = Piece::deleteSpecial(iboard[from], Piece::Castling); // for the king & rooks, doesn't affect pieces without special moves
         iboard[from] = Piece::Empty;
     }
 
@@ -220,7 +214,7 @@ namespace chess
             rook_from = Piece::getColor(iboard[from]) == Piece::White ? 56 : 0;
             rook_to = to + 1;
         }
-        iboard[rook_to] = iboard[rook_from];
+        iboard[rook_to] = Piece::deleteSpecial(iboard[rook_from], Piece::Castling); // for the rook
         iboard[rook_from] = Piece::Empty;
     }
 
@@ -234,7 +228,7 @@ namespace chess
             return;
         }            
 
-        halfmove_clock = 0;
+        board->halfmove_clock = 0;
         int* iboard = this->board->board.get();
         int to = move.getTo();
         int from = move.getFrom();
@@ -502,13 +496,5 @@ namespace chess
         // by the piece in square x. The `is_white` variable is used to differentiate between white and black pieces
         attacks_to[is_white][to] |= 1UL << from; 
         attacks_from[is_white][from] |= 1UL << to;
-    }
-
-    /**
-     * @brief Get current side color
-     * @return Piece::Color, either Piece::White or Piece::Black
-     */
-    int Manager::getSide(){
-        return this->side;
     }
 }

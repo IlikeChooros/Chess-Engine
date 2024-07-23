@@ -225,6 +225,12 @@ namespace chess
             {'q', false},
         };
         int pos = 0;
+        
+        auto w_find = findAll(Piece::getCastleKing(Piece::White));
+        auto b_find = findAll(Piece::getCastleKing(Piece::Black));
+
+        bool w_castle = !w_find.empty() ? w_find[0] == 60 : false;
+        bool b_castle = !b_find.empty() ? b_find[0] == 4 : false;
 
         // Write piece placement
         for(int i = 0; i < 64; i++){
@@ -250,20 +256,23 @@ namespace chess
             c = Piece::getColor(p) == Piece::Black ? c : toupper(c);
             fen += c;
 
-            if(!Piece::hasSpecial(p, Piece::Castling))
-                continue;
-
-            if (Piece::getType(p) == Piece::King)
+            if(!Piece::hasSpecial(p, Piece::Castling) || Piece::getType(p) == Piece::King)
                 continue;
             
             // Save castling rights
             if(Piece::getColor(p) == Piece::White){
+                if(!w_castle){
+                    continue;
+                }
                 if (i == 63){
                     castling_rights[0].second = true;
                 } else {
                     castling_rights[1].second = true;
                 }
-            } else {
+            } else{
+                if(!b_castle){
+                    continue;
+                }
                 if (i == 7){
                     castling_rights[2].second = true;
                 } else {
@@ -314,16 +323,14 @@ namespace chess
     /**
      * @brief Find all the indices of a piece on the board
      * 
-     * @param piece The piece to find
-     * @param color The color of the piece
+     * @param piece The piece to find (with color and special moves)
      * @return vector<int> The indices of the piece
      */
-    std::vector<int> Board::findAll(int piece, int color){
+    std::vector<int> Board::findAll(int piece){
         std::vector<int> indices;
         indices.reserve(16);
-        int p = piece | color;
         for (auto i=0; i < 64; i++){
-            if (board[i] == p){
+            if (board[i] == piece){
                 indices.push_back(i);
             }
         }

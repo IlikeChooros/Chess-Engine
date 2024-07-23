@@ -55,7 +55,7 @@ namespace chess{
          */
         inline int& operator[](int index) {return this->board[index]; };
 
-        std::vector<int> findAll(int piece, int color);
+        std::vector<int> findAll(int piece);
         
 
         std::unique_ptr<int[]> board;

@@ -40,7 +40,7 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
             return;
 
         if (from == -1){
-            if (Piece::getColor(manager->board->board[y*8 + x]) != manager->getSide()){
+            if (Piece::getColor(manager->board->board[y*8 + x]) != manager->board->side){
                 return;
             }
             from = x + y*8;
@@ -61,7 +61,7 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
             window->close();
             return;
         }
-        
+
         // Undo move
         if(event.key.code == sf::Keyboard::Z){
             manager->unmake();

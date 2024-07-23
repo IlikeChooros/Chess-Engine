@@ -34,7 +34,7 @@ TEST(Manager, movePiece){
     board.init();
     Manager manager(&board);
     manager.movePiece(str_to_square("e2"), str_to_square("e4"));
-    
+
     EXPECT_EQ(board[str_to_square("e4")], Piece::createPiece(Piece::Pawn, Piece::White));
     EXPECT_EQ(board[str_to_square("e2")], 0);
 }
@@ -58,5 +58,13 @@ TEST(Manager, loadFenEnpassant){
     containsMove(manager.getPieceMoves(str_to_square("e5")), "f6");
 }
 
+TEST(Manager, loadCheckmatePos){
+    Board board;
+    board.loadFen("6k1/ppp3Q1/2np4/2b1p2N/4P3/3P1P2/PPP1KP1P/8 b - - 1 27");
+    Manager manager(&board);
+
+    // int n_moves = manager.generateMoves();
+    // EXPECT_EQ(n_moves, 0);
+}
 
 } // namespace
