@@ -9,6 +9,7 @@
 #include "pieces.h"
 #include "move.h"
 #include "utils.h"
+#include "castling_rights.h"
 
 
 namespace chess{
@@ -33,22 +34,32 @@ namespace chess{
         /**
          * @brief Get the side to move
          */
-        inline int getSide() {return this->side; };
+        inline int& getSide() {return this->m_side; };
 
         /**
          * @brief Get the enpassant target square
          */
-        inline int enpassantTarget() {return this->enpassant_target; };
+        inline int& enpassantTarget() {return this->m_enpassant_target; };
         
         /**
          * @brief Get the halfmove clock
          */
-        inline int halfmoveClock() {return this->halfmove_clock; };
+        inline int& halfmoveClock() {return this->m_halfmove_clock; };
 
         /**
          * @brief Get the fullmove counter
          */
-        inline int fullmoveCounter() {return this->fullmove_counter; };
+        inline int& fullmoveCounter() {return this->m_fullmove_counter; };
+
+        /**
+         * @brief Get the castling rights
+         */
+        inline CastlingRights& castlingRights() {return this->m_castling_rights; };
+
+        /**
+         * @brief Get raw board data
+         */
+        inline int* getBoard() {return this->board.get(); };
 
         /**
          * @brief Get the piece at a given index
@@ -59,9 +70,10 @@ namespace chess{
         
 
         std::unique_ptr<int[]> board;
-        int side;
-        int enpassant_target;
-        int halfmove_clock;
-        int fullmove_counter;
+        int m_side;
+        int m_enpassant_target;
+        int m_halfmove_clock;
+        int m_fullmove_counter;
+        CastlingRights m_castling_rights;
     };
 }

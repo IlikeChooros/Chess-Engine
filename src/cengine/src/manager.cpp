@@ -7,7 +7,7 @@ namespace chess
     uint64_t Manager::attacks_to[2][64] = {};
     uint64_t Manager::attacks_from[2][64] = {};
 
-    const int Manager::castling_rights[2][4] = {
+    const int Manager::castling_data[2][4] = {
         {BLACK_KING_START,  0,  7, Piece::Black}, // Black (index 0 -> is_white = false)
         {WHITE_KING_START, 56, 63, Piece::White} // White
     };
@@ -27,22 +27,13 @@ namespace chess
         this->prev_captured_piece = Piece::Empty;
         this->n_moves = 0;
         this->move_list = std::vector<int>(256, 0);
-        this->prev_move_list = std::vector<int>(256, 0);
 
         // load data from the board
         this->board = board;
 
         if (board == nullptr)
             return;
-        
 
-        // load target enpassant square
-        if(board->enpassantTarget() != -1){
-            int direction = this->board->side == Piece::White ? 8 : -8;
-            int from = board->enpassantTarget() - direction;
-            int to = board->enpassantTarget() + direction;
-            curr_move = Move(from, to, Move::FLAG_DOUBLE_PAWN);
-        }
         generateMoves();
     }
 
@@ -51,7 +42,6 @@ namespace chess
         this->board = other.board;
         this->n_moves = other.n_moves;
         this->move_list = std::move(other.move_list);
-        this->prev_move_list = std::move(other.prev_move_list);
         this->captured_piece = other.captured_piece;
         this->prev_captured_piece = other.prev_captured_piece;
         this->curr_move = other.curr_move;
@@ -69,7 +59,7 @@ namespace chess
     bool Manager::movePiece(uint32_t from, uint32_t to)
     {
         int* iboard = this->board->board.get();
-        if(iboard[from] == Piece::Empty || from == to || Piece::getColor(iboard[from]) != this->board->side)
+        if(iboard[from] == Piece::Empty || from == to || Piece::getColor(iboard[from]) != this->board->m_side)
             return false;
 
         for(int i = 0; i < n_moves; i++){
@@ -109,8 +99,8 @@ namespace chess
      * @brief Makes a move, updating the board, the side to move and generating new moves
      */
     void Manager::make(Move& move, bool validate){
-        if(this->board->side == Piece::Black){
-            this->board->fullmove_counter++;
+        if(this->board->m_side == Piece::Black){
+            this->board->fullmoveCounter()++;
         }
         prev_move = curr_move;
         curr_move = move;
@@ -118,14 +108,14 @@ namespace chess
         // Update halfmove clock, if the move is a pawn move or a capture, reset the clock
         // (`handleCapture()` will update the clock if the move is a capture)
         if (Piece::getType((*board)[curr_move.getFrom()]) == Piece::Pawn){
-            this->board->halfmove_clock = 0;
+            this->board->halfmoveClock() = 0;
         } else {
-            this->board->halfmove_clock++;
+            this->board->halfmoveClock()++;
         }
 
         handleCapture(move);
         handleMove(move);
-        this->board->side ^= Piece::colorMask;
+        this->board->m_side ^= Piece::colorMask;
         generateMoves(validate);
     }
 
@@ -139,26 +129,30 @@ namespace chess
 
         int* iboard = board->board.get();
         int from = curr_move.getFrom(), to = curr_move.getTo(), captured_pos = to;
+        bool is_white = Piece::getColor(iboard[to]) == Piece::White;
+
+        const int castling_rights[2][2] = {
+            {CastlingRights::BLACK_QUEEN, CastlingRights::WHITE_QUEEN}, // queen castle
+            {CastlingRights::BLACK_KING, CastlingRights::WHITE_KING} // king castle
+        };
 
         if (curr_move.isCapture()){
             int offset = 0;
             if(curr_move.isEnPassant()){
-                offset = Piece::getColor(iboard[from]) == Piece::White ? -8 : 8;
+                offset = is_white ? -8 : 8;
             }
             captured_pos += offset;
         } else if (curr_move.isQueenCastle()){
             // Get rook starting position
-            int rook_from = Piece::getColor(iboard[to]) == Piece::White ? 56 : 0;
+            int rook_from = is_white ? 56 : 0;
             iboard[rook_from] = iboard[to + 1]; // move the rook back
             iboard[to + 1] = Piece::Empty; // empty the rook's previous position
-            iboard[from] = Piece::addSpecial(iboard[from], Piece::Castling); // restore the king's special move
-            iboard[rook_from] = Piece::addSpecial(iboard[rook_from], Piece::Castling); // restore the rook's special move
+            board->m_castling_rights.add(castling_rights[1][is_white]);
         } else if (curr_move.isKingCastle()){
-            int rook_from = Piece::getColor(iboard[to]) == Piece::White ? 63 : 7; 
+            int rook_from = is_white ? 63 : 7; 
             iboard[rook_from] = iboard[to - 1];
             iboard[to - 1] = Piece::Empty;
-            iboard[from] = Piece::addSpecial(iboard[from], Piece::Castling);
-            iboard[rook_from] = Piece::addSpecial(iboard[rook_from], Piece::Castling);
+            board->m_castling_rights.add(castling_rights[0][is_white]);
         }
 
         iboard[from] = iboard[to];
@@ -166,20 +160,21 @@ namespace chess
         iboard[captured_pos] = captured_piece;
 
         // restore other variables
-        this->board->side ^= Piece::colorMask;
+        this->board->m_side ^= Piece::colorMask;
         this->captured_piece = prev_captured_piece;
         this->curr_move = prev_move;
-        this->n_moves = this->prev_move_list.size();
-        this->move_list = std::move(this->prev_move_list);
     }
 
     /**
      * @brief Moves the piece to given position, it handles castling
      */
     void Manager::handleMove(Move& move){
-        int* iboard = board->board.get();
-        board->enpassant_target = -1;
+        
+        // Reset enpassant target every move
+        board->m_enpassant_target = -1;
+        int* iboard = board->board.get();        
         int from = move.getFrom(), to = move.getTo();
+        bool is_white = Piece::getColor(iboard[from]) == Piece::White;
 
         // If that's a castle, move the corresponding rooks
         if (move.isCastle()){
@@ -188,11 +183,23 @@ namespace chess
 
         // If that's a double pawn move, set the enpassant target
         if (move.isDoubleMove()){
-            int direction = Piece::getColor(iboard[from]) == Piece::White ? 8 : -8;
-            board->enpassant_target = to + direction;
+            int direction = is_white ? 8 : -8;
+            board->m_enpassant_target = to + direction;
         }
 
-        iboard[to] = Piece::deleteSpecial(iboard[from], Piece::Castling); // for the king & rooks, doesn't affect pieces without special moves
+        // Update castling rights
+        if (Piece::getType(iboard[from]) == Piece::King){
+            board->m_castling_rights.remove(Piece::getColor(iboard[from]) == Piece::White ? CastlingRights::WHITE : CastlingRights::BLACK);
+        } else if (Piece::getType(iboard[from]) == Piece::Rook){
+            // If the rook is moved from the starting position, remove the castling rights for that side
+            if (from == 0 || from == 56){ // queen side rook
+                board->m_castling_rights.remove(is_white ? CastlingRights::WHITE_QUEEN : CastlingRights::BLACK_QUEEN);
+            } else if (from == 7 || from == 63){ // king side rook
+                board->m_castling_rights.remove(is_white ? CastlingRights::WHITE_KING : CastlingRights::BLACK_KING);
+            }
+        }
+
+        iboard[to] = iboard[from];
         iboard[from] = Piece::Empty;
     }
 
@@ -205,16 +212,27 @@ namespace chess
     void Manager::handleCastlingMove(bool is_king_castle, int from, int to){
         int* iboard = board->board.get();
         int rook_from, rook_to;
+        bool is_white = Piece::getColor(iboard[from]) == Piece::White;
+
+        const int castling_pos[2][2] = {
+            {0, 56}, // queen castle
+            {7, 63} // king castle
+        };
 
         if(is_king_castle){
             // get rook starting position
-            rook_from = Piece::getColor(iboard[from]) == Piece::White ? 63 : 7;
+            rook_from = castling_pos[1][is_white];
             rook_to = to - 1; // rook target position
         } else {
-            rook_from = Piece::getColor(iboard[from]) == Piece::White ? 56 : 0;
+            rook_from = castling_pos[0][is_white];
             rook_to = to + 1;
         }
-        iboard[rook_to] = Piece::deleteSpecial(iboard[rook_from], Piece::Castling); // for the rook
+
+        // Update castling rights
+        board->m_castling_rights.remove(is_white ? CastlingRights::WHITE : CastlingRights::BLACK);
+
+        // Move the rook (king will be handled in `handleMove()`)
+        iboard[rook_to] = iboard[rook_from]; 
         iboard[rook_from] = Piece::Empty;
     }
 
@@ -228,7 +246,7 @@ namespace chess
             return;
         }            
 
-        board->halfmove_clock = 0;
+        board->m_halfmove_clock = 0;
         int* iboard = this->board->board.get();
         int to = move.getTo();
         int from = move.getFrom();
@@ -250,8 +268,6 @@ namespace chess
      */
     int Manager::generateMoves(bool validate)
     {
-        // Copy current moves to the previous move list
-        this->prev_move_list = this->move_list;
         this->n_moves = 0;
         int* iboard = this->board->board.get();
 
@@ -385,9 +401,8 @@ namespace chess
                         addMove(i, n, Move::FLAG_CAPTURE, pseudo_moves, n_pseudo_moves);
                         dlogf("Pawn capture to %s\n", square_to_str(n).c_str());
                     } else {
-                        // Check if enpassant is possible, if the last move was a double pawn move and there is a pawn
-                        // in the correct position (next to the attacking pawn, n + previous_pawn_offset[0])
-                        if (curr_move.isDoubleMove() && int(curr_move.getTo()) == Board::mailbox[Board::mailbox64[n] + Board::pawn_move_offsets[!is_white][0]]){
+                        // Check if enpassant is possible, if the enpassant target is the same as the square
+                        if (board->enpassantTarget() == n){
                             addMove(i, n, Move::FLAG_ENPASSANT_CAPTURE, pseudo_moves, n_pseudo_moves);
                             dlogf("En passant to %s\n", square_to_str(n).c_str());
                         }
@@ -415,12 +430,17 @@ namespace chess
         }
 
         dlogln("Checking castle rights");
+
         // Check for castling
-        
+        if (!board->m_castling_rights){
+            dlogln("No castling rights");
+            return;
+        }
+
         for(int i = 0; i < 2; i++){
             // Get starting position for the king
-            int king = castling_rights[i][0]; // 0 black, 1 white
-            if (iboard[king] != Piece::getCastleKing(castling_rights[i][3])) // King has moved
+            int king = castling_data[i][0]; // 0 black, 1 white
+            if (iboard[king] != Piece::getKing(castling_data[i][3])) // King has moved
                 continue;
 
             dlogf("Found valid king at %s\n", square_to_str(king).c_str());
@@ -438,24 +458,34 @@ namespace chess
     /**
      * @brief Check if the king can castle to the given side.
      * @param is_white True if the king is white, false otherwise
-     * @param j The index of the castling_rights array at position 1 or 2
+     * @param j The index of the castling_data array at position 1 or 2
      * @param king The index of the king
      */
     void Manager::checkKingCastling(bool is_white, int j, int king){
         int *iboard = board->board.get();
 
-        int rook = iboard[castling_rights[is_white][j + 1]];
-        if (rook != Piece::getCastleRook(castling_rights[is_white][3])) // not the correct piece / doesn't have castling rights
+        CastlingRights cr(board->m_castling_rights);
+        int rook = iboard[castling_data[is_white][j + 1]];
+        if (rook != Piece::getRook(castling_data[is_white][3])) // not the correct piece (rook)
+            return;
+
+        const int castling_rights[2][2] = {
+            {CastlingRights::BLACK_QUEEN, CastlingRights::BLACK_KING},
+            {CastlingRights::WHITE_QUEEN, CastlingRights::WHITE_KING}
+        };
+
+        // Check if we have correct castling rights
+        if(!cr.has(castling_rights[is_white][j]))
             return;
         
-        dlogf("Valid rook at %s\n", square_to_str(castling_rights[is_white][j + 1]).c_str());
+        dlogf("Valid rook at %s\n", square_to_str(castling_data[is_white][j + 1]).c_str());
         if (attacks_to[!is_white][king] != 0) // king in check
             return;
 
         // Check if the squares between the king and the rook are empty and 
         // not attacked by the enemy color
         int pos = king;
-        int rook_pos = castling_rights[is_white][j + 1];
+        int rook_pos = castling_data[is_white][j + 1];
         int target_king_pos = king + castling_offsets[0][j];
 
         while(pos != target_king_pos){

@@ -46,7 +46,7 @@ namespace chess
         // Special moves
         enum SpecialMove
         {
-            Castling = 32, // 0b0100000
+            // Castling = 32, // 0b0100000
         };
 
         /**
@@ -95,7 +95,7 @@ namespace chess
         /**
          * @brief Check if the piece has a special move
          */
-        static inline bool hasSpecial(const int& piece, int special = SpecialMove::Castling){
+        static inline bool hasSpecial(const int& piece, int special = 0){
             return (piece & specialMoveMask) == special;
         }
 
@@ -109,15 +109,15 @@ namespace chess
         /**
          * @brief Get the piece representing the king of a given color
          */
-        static inline int getCastleKing(int color){
-            return King | color | Castling;
+        static inline int getKing(int color){
+            return King | color;
         }
 
         /**
          * @brief Get the piece representing the rook of a given color
          */
-        static inline int getCastleRook(int color){
-            return Rook | color | Castling;
+        static inline int getRook(int color){
+            return Rook | color;
         }
 
         static std::string toStr(int piece){

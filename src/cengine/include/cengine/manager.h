@@ -9,9 +9,19 @@
 #include "board.h"
 #include "move.h"
 #include "utils.h"
+#include "castling_rights.h"
 
 namespace chess
 {
+
+    struct _History
+    {
+        Move move;
+        int captured_piece;
+        int enpassant_target;
+        int halfmove_clock;
+        int castling_rights;
+    };
 
     class Manager
     {
@@ -25,7 +35,7 @@ namespace chess
 
         static uint64_t attacks_to[2][64];
         static uint64_t attacks_from[2][64];
-        static const int castling_rights[2][4];
+        static const int castling_data[2][4];
         static const int castling_offsets[2][2];
         static const int castling_flags[2];
 
@@ -48,8 +58,8 @@ namespace chess
         void checkKingCastling(bool is_white, int j, int king_index);
         void handleCastlingMove(bool is_king_castle, int from, int to);
 
+        std::list<_History> history;
         std::vector<int> move_list;
-        std::vector<int> prev_move_list;
         int n_moves;
         Board* board;
         Move curr_move;

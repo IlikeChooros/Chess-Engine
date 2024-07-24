@@ -71,10 +71,11 @@ namespace chess
      */
     Board& Board::init(){     
 
-        side = Piece::White;
-        halfmove_clock = 0;
-        fullmove_counter = 1;  
-        enpassant_target = -1;
+        m_side = Piece::White;
+        m_halfmove_clock = 0;
+        m_fullmove_counter = 1;  
+        m_enpassant_target = -1;
+        m_castling_rights = CastlingRights::ALL;
 
         board = std::unique_ptr<int[]>(new int[64]());
 
@@ -82,11 +83,11 @@ namespace chess
             board[i + 8] = Piece::createPiece(Piece::Pawn, Piece::Black);
             board[i + 48] = Piece::createPiece(Piece::Pawn, Piece::White); 
         }
-        board[0] = Piece::getCastleRook(Piece::Black);
-        board[7] = Piece::getCastleRook(Piece::Black);
+        board[0] = Piece::getRook(Piece::Black);
+        board[7] = Piece::getRook(Piece::Black);
 
-        board[56] = Piece::getCastleRook(Piece::White);
-        board[63] = Piece::getCastleRook(Piece::White);
+        board[56] = Piece::getRook(Piece::White);
+        board[63] = Piece::getRook(Piece::White);
 
         board[1] = Piece::Knight | Piece::Black;
         board[6] = Piece::Knight | Piece::Black;
@@ -101,10 +102,10 @@ namespace chess
         board[61] = Piece::Bishop | Piece::White;
 
         board[3] = Piece::Queen | Piece::Black;
-        board[4] = Piece::getCastleKing(Piece::Black);
+        board[4] = Piece::getKing(Piece::Black);
 
         board[59] = Piece::Queen | Piece::White;
-        board[60] = Piece::getCastleKing(Piece::White);
+        board[60] = Piece::getKing(Piece::White);
         return *this;
     }
 
@@ -154,55 +155,50 @@ namespace chess
             }
         }
 
-        // Read side
+        // Read m_side
         std::string s_side;
         ss >> s_side;
-        side = s_side == "w" ? Piece::White : Piece::Black;
+        m_side = s_side == "w" ? Piece::White : Piece::Black;
 
-        std::unordered_map<int, int> castle_pos = {
-            {'k', 7},
-            {'q', 0},
-            {'K', 63},
-            {'Q', 56},
+        std::unordered_map<int, int> castling = {
+            {'k', CastlingRights::BLACK_KING},
+            {'q', CastlingRights::BLACK_QUEEN},
+            {'K', CastlingRights::WHITE_KING},
+            {'Q', CastlingRights::WHITE_QUEEN},
         };
 
         // Read castling rights
         i = 0;
         std::string castling_rights;
         ss >> castling_rights;
+
         while(c != ' ' && i < castling_rights.size()){
             c = castling_rights[i++];
             if (c == '-'){ // no castling for both sides
                 i++;
+                m_castling_rights = CastlingRights::NONE;
                 break;
             }
-            if(castle_pos.find(c) == castle_pos.end()){
+            if(castling.find(c) == castling.end()){
                 return;
             }
-            int pos = castle_pos[c];
-            board[pos] = Piece::addSpecial(board[pos], Piece::Castling);
-            if(Piece::getColor(board[pos]) == Piece::Black){
-                // Add castling right for the king
-                board[4] = Piece::getCastleKing(Piece::Black);
-            } else {
-                board[60] = Piece::getCastleKing(Piece::White);
-            }
+            m_castling_rights.add(castling[c]);
         }
 
         // Read enpassant target square
         std::string s_target;
         ss >> s_target;
-        enpassant_target = str_to_square(s_target);
+        m_enpassant_target = str_to_square(s_target);
         
         // Read halfmove clock
         std::string hf;
         ss >> hf;
-        halfmove_clock = std::stoi(hf);
+        m_halfmove_clock = std::stoi(hf);
 
         // Read fullmove counter
         std::string full_move;
         ss >> full_move;
-        fullmove_counter = std::stoi(full_move);
+        m_fullmove_counter = std::stoi(full_move);
     }
 
     std::string Board::getFen(){
@@ -218,19 +214,7 @@ namespace chess
             {Piece::King, 'k'},            
         });
 
-        std::pair<char, bool> castling_rights[4] = {
-            {'K', false},
-            {'Q', false},
-            {'k', false},
-            {'q', false},
-        };
         int pos = 0;
-        
-        auto w_find = findAll(Piece::getCastleKing(Piece::White));
-        auto b_find = findAll(Piece::getCastleKing(Piece::Black));
-
-        bool w_castle = !w_find.empty() ? w_find[0] == 60 : false;
-        bool b_castle = !b_find.empty() ? b_find[0] == 4 : false;
 
         // Write piece placement
         for(int i = 0; i < 64; i++){
@@ -255,67 +239,50 @@ namespace chess
             char c = mapping[Piece::getType(p)];
             c = Piece::getColor(p) == Piece::Black ? c : toupper(c);
             fen += c;
-
-            if(!Piece::hasSpecial(p, Piece::Castling) || Piece::getType(p) == Piece::King)
-                continue;
-            
-            // Save castling rights
-            if(Piece::getColor(p) == Piece::White){
-                if(!w_castle){
-                    continue;
-                }
-                if (i == 63){
-                    castling_rights[0].second = true;
-                } else {
-                    castling_rights[1].second = true;
-                }
-            } else{
-                if(!b_castle){
-                    continue;
-                }
-                if (i == 7){
-                    castling_rights[2].second = true;
-                } else {
-                    castling_rights[3].second = true;
-                }
-            }
         }
         if(pos != 0){
             fen += '0' + pos;
         }
 
-        // write the side
+        // write the m_side
         fen += ' ';
-        fen += side == Piece::Black ? 'b' : 'w';
+        fen += m_side == Piece::Black ? 'b' : 'w';
+
+
+        std::pair<char, int> castling_rights[4] = {
+            {'K', CastlingRights::WHITE_KING},
+            {'Q', CastlingRights::WHITE_QUEEN},
+            {'k', CastlingRights::BLACK_KING},
+            {'q', CastlingRights::BLACK_QUEEN},
+        };
 
         // write castling rights
         fen += ' ';
-        bool none = true;
-        for (int i = 0; i < 4; i++){
-            if(castling_rights[i].second){
-                fen += castling_rights[i].first;
-                none = false;
-            }
-        }
-        if (none){
+        if (m_castling_rights.none()){
             fen += '-';
+        } else {
+            for (int i = 0; i < 4; i++){
+                if(m_castling_rights.has(castling_rights[i].second)){
+                    fen += castling_rights[i].first;
+                }
+            }
         }
 
         // write enpassant target square
         fen += ' ';
-        if (enpassant_target == -1){
+        if (m_enpassant_target == -1){
             fen += '-';
         } else {
-            fen += square_to_str(enpassant_target);
+            fen += square_to_str(m_enpassant_target);
         }
 
         // write halfmove clock
         fen += ' ';
-        fen += std::to_string(halfmove_clock);
+        fen += std::to_string(m_halfmove_clock);
 
         // write fullmove counter
         fen += ' ';
-        fen += std::to_string(fullmove_counter);
+        fen += std::to_string(m_fullmove_counter);
 
         return fen;
     }

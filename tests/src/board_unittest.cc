@@ -29,14 +29,14 @@ TEST(Board, loadFen){
 
     const char* fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     int expected_board[64] = {0};
-    expected_board[0] = Piece::getCastleRook(Piece::Black);
+    expected_board[0] = Piece::getRook(Piece::Black);
     expected_board[1] = Piece::Knight | Piece::Black;
     expected_board[2] = Piece::Bishop | Piece::Black;
     expected_board[3] = Piece::Queen | Piece::Black;
-    expected_board[4] = Piece::getCastleKing(Piece::Black);
+    expected_board[4] = Piece::getKing(Piece::Black);
     expected_board[5] = Piece::Bishop | Piece::Black;
     expected_board[6] = Piece::Knight | Piece::Black;
-    expected_board[7] = Piece::getCastleRook(Piece::Black);
+    expected_board[7] = Piece::getRook(Piece::Black);
 
     for(int i = 0; i < 8; i++){
         expected_board[i + 8] = Piece::createPiece(Piece::Pawn, Piece::Black);
@@ -44,14 +44,14 @@ TEST(Board, loadFen){
         expected_board[i + 16] = expected_board[i + 24] = expected_board[i + 32] = expected_board[i + 40] = 0;
     }
 
-    expected_board[56] = Piece::getCastleRook(Piece::White);
+    expected_board[56] = Piece::getRook(Piece::White);
     expected_board[57] = Piece::Knight | Piece::White;
     expected_board[58] = Piece::Bishop | Piece::White;
     expected_board[59] = Piece::Queen | Piece::White;
-    expected_board[60] = Piece::getCastleKing(Piece::White);
+    expected_board[60] = Piece::getKing(Piece::White);
     expected_board[61] = Piece::Bishop | Piece::White;
     expected_board[62] = Piece::Knight | Piece::White;
-    expected_board[63] = Piece::getCastleRook(Piece::White);
+    expected_board[63] = Piece::getRook(Piece::White);
 
     testFen(fen, expected_board, Piece::White, -1, 0, 1);
 }

@@ -40,7 +40,7 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
             return;
 
         if (from == -1){
-            if (Piece::getColor(manager->board->board[y*8 + x]) != manager->board->side){
+            if (Piece::getColor(manager->board->board[y*8 + x]) != manager->board->getSide()){
                 return;
             }
             from = x + y*8;
