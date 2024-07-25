@@ -70,6 +70,13 @@ namespace chess
         static inline int getSpecial(const int& piece){
             return piece & specialMoveMask;
         }
+        
+        /**
+         * @brief Check if the piece is white
+         */
+        static inline bool isWhite(const int& piece){
+            return getColor(piece) == White;
+        }
 
         /**
          * @brief Add a special move to a piece

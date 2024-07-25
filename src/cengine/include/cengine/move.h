@@ -7,7 +7,6 @@
 class Move
 {
     public:
-    typedef unsigned int uint32_t;
 
     // Mask for the from and to fields (6 bits)
     static const uint32_t MASK_MOVE = 0b111111;

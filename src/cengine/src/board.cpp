@@ -106,7 +106,29 @@ namespace chess
 
         board[59] = Piece::Queen | Piece::White;
         board[60] = Piece::getKing(Piece::White);
+
+        updateBitboards();
         return *this;
+    }
+
+    /**
+     * @brief Update the bitboards, this is called after initializing the board
+     */
+    void Board::updateBitboards(){
+        for (int i = 0; i < 2; i++){
+            for (int j = 0; j < 6; j++){
+                m_bitboards[i][j] = 0;
+            }
+        }
+        for (int i = 0; i < 64; i++){
+            int piece = board[i];
+            if (piece == Piece::Empty){
+                continue;
+            }
+            bool color = Piece::getColor(piece) == Piece::White;
+            int type = Piece::getType(piece);
+            m_bitboards[color][type - 1] |= 1ULL << i;
+        }
     }
 
     /**
@@ -199,8 +221,14 @@ namespace chess
         std::string full_move;
         ss >> full_move;
         m_fullmove_counter = std::stoi(full_move);
+
+        // Update bitboards
+        updateBitboards();
     }
 
+    /**
+     * @brief Get the fen string of the current board
+     */
     std::string Board::getFen(){
         std::string fen;
         fen.reserve(128);

@@ -5,6 +5,7 @@
 #include <list>
 #include <stdio.h>
 #include <vector>
+#include <cmath>
 
 #include "board.h"
 #include "move.h"
@@ -26,8 +27,6 @@ namespace chess
     class Manager
     {
     public:
-        typedef unsigned long uint64_t;
-        typedef unsigned int uint32_t;
         typedef struct {
             uint32_t x, y;
             uint32_t flags;

@@ -30,6 +30,7 @@ namespace chess{
         Board& init();
         void loadFen(const char* fen);
         std::string getFen();
+        void updateBitboards();
 
         /**
          * @brief Get the side to move
@@ -62,6 +63,18 @@ namespace chess{
         inline int* getBoard() {return this->board.get(); };
 
         /**
+         * @brief Get the bitboards for a given color
+         */
+        inline uint64_t* bitboards(bool is_white) {return this->m_bitboards[is_white]; };
+
+        /**
+         * @brief Moves given piece from one square to another on the bitboard
+         */
+        inline void updateBitboard(int is_white, int type, int from, int to){
+            this->m_bitboards[is_white][type] ^= (1ULL << from) | (1ULL << to);
+        }
+
+        /**
          * @brief Get the piece at a given index
          */
         inline int& operator[](int index) {return this->board[index]; };
@@ -74,6 +87,7 @@ namespace chess{
         int m_enpassant_target;
         int m_halfmove_clock;
         int m_fullmove_counter;
+        uint64_t m_bitboards[2][6]; // 0: white, 1: black, contains bitboards for each piece type
         CastlingRights m_castling_rights;
     };
 }

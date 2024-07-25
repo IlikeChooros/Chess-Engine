@@ -129,7 +129,7 @@ namespace chess
 
         int* iboard = board->board.get();
         int from = curr_move.getFrom(), to = curr_move.getTo(), captured_pos = to;
-        bool is_white = Piece::getColor(iboard[to]) == Piece::White;
+        bool is_white = Piece::isWhite(iboard[to]);
 
         const int castling_rights[2][2] = {
             {CastlingRights::BLACK_QUEEN, CastlingRights::WHITE_QUEEN}, // queen castle
@@ -174,7 +174,7 @@ namespace chess
         board->m_enpassant_target = -1;
         int* iboard = board->board.get();        
         int from = move.getFrom(), to = move.getTo();
-        bool is_white = Piece::getColor(iboard[from]) == Piece::White;
+        bool is_white = Piece::isWhite(iboard[from]);
 
         // If that's a castle, move the corresponding rooks
         if (move.isCastle()){
@@ -189,7 +189,7 @@ namespace chess
 
         // Update castling rights
         if (Piece::getType(iboard[from]) == Piece::King){
-            board->m_castling_rights.remove(Piece::getColor(iboard[from]) == Piece::White ? CastlingRights::WHITE : CastlingRights::BLACK);
+            board->m_castling_rights.remove(Piece::isWhite(iboard[from]) ? CastlingRights::WHITE : CastlingRights::BLACK);
         } else if (Piece::getType(iboard[from]) == Piece::Rook){
             // If the rook is moved from the starting position, remove the castling rights for that side
             if (from == 0 || from == 56){ // queen side rook
@@ -199,8 +199,12 @@ namespace chess
             }
         }
 
+        // Move the piece
         iboard[to] = iboard[from];
         iboard[from] = Piece::Empty;
+
+        // Update the bitboard for the piece
+        board->updateBitboard(is_white, Piece::getType(iboard[to]) - 1, from, to);
     }
 
     /**
@@ -212,7 +216,7 @@ namespace chess
     void Manager::handleCastlingMove(bool is_king_castle, int from, int to){
         int* iboard = board->board.get();
         int rook_from, rook_to;
-        bool is_white = Piece::getColor(iboard[from]) == Piece::White;
+        bool is_white = Piece::isWhite(iboard[from]);
 
         const int castling_pos[2][2] = {
             {0, 56}, // queen castle
@@ -229,11 +233,14 @@ namespace chess
         }
 
         // Update castling rights
-        board->m_castling_rights.remove(is_white ? CastlingRights::WHITE : CastlingRights::BLACK);
+        board->castlingRights().remove(is_white ? CastlingRights::WHITE : CastlingRights::BLACK);
 
         // Move the rook (king will be handled in `handleMove()`)
         iboard[rook_to] = iboard[rook_from]; 
         iboard[rook_from] = Piece::Empty;
+
+        // Update the bitboard for the rook
+        board->updateBitboard(is_white, Piece::getType(iboard[rook_to]) - 1, rook_from, rook_to);
     }
 
     /**
@@ -253,13 +260,16 @@ namespace chess
         int offset = 0;
 
         if(move.isEnPassant()){
-            offset = Piece::getColor(iboard[from]) == Piece::White ? 8 : -8;
+            offset = Piece::isWhite(iboard[from]) ? 8 : -8;
             dlogf("En passant capture\n");
         }
 
         prev_captured_piece = captured_piece;
         captured_piece = iboard[to + offset];
         iboard[to + offset] = Piece::Empty;
+
+        // Update the bitboard for the captured piece
+        board->bitboards(Piece::isWhite(captured_piece))[Piece::getType(captured_piece) - 1] ^= 1ULL << (to + offset);
     }
 
     /**
@@ -269,21 +279,24 @@ namespace chess
     int Manager::generateMoves(bool validate)
     {
         this->n_moves = 0;
-        int* iboard = this->board->board.get();
+        int* iboard = this->board->getBoard();
 
         int n_pseudo_moves = 0;
         std::unique_ptr<int[]> pseudo_moves(new int[256]);
         generatePseudoLegalMoves(n_pseudo_moves, pseudo_moves.get());
 
     #if DEBUG_DETAILS
-        // for(int i = 0; i < 64; i++){
-        //     if (iboard[i] == Piece::Empty)
-        //         continue;
-        //     dlogf("Piece at %s: %s\n", square_to_str(i).c_str(), Piece::toStr(iboard[i]).c_str());
-        //     dlogf("Attacks to square %s\n", square_to_str(i).c_str());
-        //     dbitboard(attacks_to[0][i] | attacks_to[1][i]);
-        //     dlogf("Attacks from square %s\n", square_to_str(i).c_str());
-        //     dbitboard(attacks_from[0][i] | attacks_from[1][i]);
+        // print bitboards
+        // for(int i = 0; i < 2; i++){
+        //     uint64_t *bb = board->bitboards(i);
+        //     uint64_t bb_combined = 0;
+
+        //     for(int i = 0; i < 6; i++){
+        //         bb_combined |= bb[i];
+        //     }
+
+        //     dlogf("Bitboard for %s\n", i == 0 ? "black" : "white");
+        //     dbitboard(bb_combined);
         // }
     #endif
 
@@ -296,7 +309,13 @@ namespace chess
             // validate pseudo moves
             for(int i = 0; i < n_pseudo_moves; i++){
                 Move move(pseudo_moves[i]);
-                bool is_white = Piece::getColor(iboard[move.getFrom()]) == Piece::White;
+                int color = Piece::getColor(iboard[move.getFrom()]);
+
+                // If the piece is not the same color as the side to move, skip the move
+                if (color != board->getSide())
+                    continue;
+                
+                bool is_white = color == Piece::White;
                 int king = is_white ? white_king_pos : black_king_pos;
                 if (validateMove(move, king, is_white)){
                     addMove(move.getFrom(), move.getTo(), move.getFlags(), const_cast<int*>(move_list.data()), n_moves);
@@ -428,6 +447,7 @@ namespace chess
                 }
             }
         }
+        
 
         dlogln("Checking castle rights");
 
@@ -452,6 +472,54 @@ namespace chess
     }
 
     bool Manager::validateMove(Move& move, int king, bool is_white){
+        int to = move.getTo();
+        int from = move.getFrom();
+        int king_attack = attacks_to[!is_white][king];
+
+        if (from != king){
+            // Check if the king is not in check
+            if (king_attack == 0){
+                // Check if the piece is not pinned
+
+                // TODO: Implement pinned pieces
+
+                return true;
+            }
+            
+            // If there is more than one piece attacking the king, the move is invalid
+            if (king_attack & (king_attack - 1)){
+                // More than one piece is attacking the king
+                return false;
+            }
+
+            // Get the position of the attacking piece (attacks_to = 1 << pos)
+        #if defined(__GNUC__) || defined(__GNUG__)
+            int attacking_pos = __builtin_ctzll(king_attack);
+        #else
+            int attacking_pos = (int)log2f(king_attack);
+        #endif
+
+            // Check if the the given move can block the check or capture the attacking piece
+            if (move.isCapture()){
+                // Check if the move is not a capture of the attacking piece
+                if (attacking_pos != to){
+                    return false;
+                }
+            } else {
+                // Check if the move can block the check, we will need to the bitboards, since the attacks
+                // are also bitboards
+                // int bitmove = 1 << to;
+
+                // TODO: Implement blocking check
+            }
+
+        } else {
+            // Check if the king can't move to the given square
+            if (attacks_to[!is_white][to] != 0){
+                return false;
+            }
+        }
+
         return true;
     }
 
