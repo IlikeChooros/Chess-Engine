@@ -37,14 +37,16 @@ namespace chess
         static const int castling_data[2][4];
         static const int castling_offsets[2][2];
         static const int castling_flags[2];
+        static uint64_t in_between[64][64];
 
         Manager(Board* board = nullptr);
+        Manager(const Manager& other) = delete;
         Manager& operator=(Manager&& other);
 
         bool movePiece(uint32_t from, uint32_t to);
         std::list<PieceMoveInfo> getPieceMoves(uint32_t from);
         int generateMoves(bool validate = true);
-        bool validateMove(Move& move, int king_pos, bool is_white);
+        bool validateMove(Move& move, int king_pos, bool is_white, uint64_t pinnedbb);
 
     
         void make(Move& move, bool validate = true);
@@ -56,6 +58,10 @@ namespace chess
         void handleMove(Move& move);
         void checkKingCastling(bool is_white, int j, int king_index);
         void handleCastlingMove(bool is_king_castle, int from, int to);
+        uint64_t rookAttacks(uint64_t occupied, int square);
+        uint64_t bishopAttacks(uint64_t occupied, int square);
+        uint64_t xRayRookAttacks(uint64_t occupied, uint64_t blockers, int square);
+        uint64_t xRayBishopAttacks(uint64_t occupied, uint64_t blockers, int square);
 
         std::list<_History> history;
         std::vector<int> move_list;

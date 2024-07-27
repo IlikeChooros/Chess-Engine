@@ -24,6 +24,10 @@ namespace chess{
         static const int n_piece_rays[6];
         static const bool is_piece_sliding[6];
 
+        static const int ROOK_TYPE = Piece::Rook - 1;
+        static const int BISHOP_TYPE = Piece::Bishop - 1;
+        static const int QUEEN_TYPE = Piece::Queen - 1;
+
         Board() = default;
         Board(const Board& other) = delete;
         
@@ -67,6 +71,42 @@ namespace chess{
          */
         inline uint64_t* bitboards(bool is_white) {return this->m_bitboards[is_white]; };
 
+        /**
+         * @brief Get the occupied squares for a given color
+         */
+        inline uint64_t occupied(bool is_white) {
+            uint64_t color = 0;
+            for (int i = 0; i < 6; i++){
+                color |= this->m_bitboards[is_white][i];
+            }
+            return color;
+        }
+
+        /**
+         * @brief Get the occupied squares on the board
+         */
+        inline uint64_t occupied() {
+            uint64_t occ = 0;
+            for (int i = 0; i < 6; i++){
+                occ |= this->m_bitboards[0][i] | this->m_bitboards[1][i];
+            }
+            return occ;
+        }
+
+        /**
+         * @brief Get the opposite rooks / queen bitboard
+         */
+        inline uint64_t oppRooksQueens(bool is_white) {
+            return this->m_bitboards[!is_white][ROOK_TYPE] | this->m_bitboards[!is_white][QUEEN_TYPE];
+        }
+
+        /**
+         * @brief Get the opposite bishops / queen bitboard
+         */
+        inline uint64_t oppBishopsQueens(bool is_white) {
+            return this->m_bitboards[!is_white][BISHOP_TYPE] | this->m_bitboards[!is_white][QUEEN_TYPE];
+        }
+        
         /**
          * @brief Moves given piece from one square to another on the bitboard
          */

@@ -32,6 +32,38 @@ inline int str_to_square(std::string str, bool inverse = true){
     return row * 8 + str[0] - 'a';
 }
 
+/**
+ * @brief Get the LSB1 index (the least significant bit that is 1)
+ */
+inline int bitScanForward(uint64_t bb){
+    #if defined(__GNUC__) || defined(__clang__)
+        return __builtin_ctzll(bb);
+    #elif defined(_MSC_VER)
+        unsigned long index;
+        _BitScanForward64(&index, bb);
+        return index;
+    #else
+        // BitScanForward implementation for other compilers
+        // Using de Bruijn multiplication
+        // https://www.chessprogramming.org/De_Bruijn_Sequence_Generator
+        const uint64_t magic = 0x022fdd63cc95386d; // the 4061955.
+
+        const unsigned int magictable[64] =
+        {
+            0,  1,  2, 53,  3,  7, 54, 27,
+            4, 38, 41,  8, 34, 55, 48, 28,
+            62,  5, 39, 46, 44, 42, 22,  9,
+            24, 35, 59, 56, 49, 18, 29, 11,
+            63, 52,  6, 26, 37, 40, 33, 47,
+            61, 45, 43, 21, 23, 58, 17, 10,
+            51, 25, 36, 32, 60, 20, 57, 16,
+            50, 31, 19, 15, 30, 14, 13, 12,
+        };
+
+        return magictable[((b&-b)*magic) >> 58];
+    #endif
+}
+
 #if DEBUG_DETAILS
 
 /**
