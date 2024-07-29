@@ -3,6 +3,7 @@
 #include <iostream>
 #include <bitset>
 #include <string>
+#include <chrono>
 #include "settings.h"
 
 /**
@@ -63,6 +64,32 @@ inline int bitScanForward(uint64_t bb){
         return magictable[((b&-b)*magic) >> 58];
     #endif
 }
+
+typedef std::chrono::time_point<std::chrono::high_resolution_clock> dtimer_t;
+
+#if DEBUG_PERFORMANCE
+
+/**
+ * @brief Starts a timer
+ */
+inline void start_timer(dtimer_t& start){
+    start = std::chrono::high_resolution_clock::now();
+}
+
+/**
+ * @brief Ends a timer and prints the duration
+ */
+inline void end_timer(dtimer_t& start, const char* msg = "Total time"){
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    printf("%s: %ldus\n", msg, duration.count());
+}
+
+#else
+inline void start_timer(dtimer_t& start){return;}
+inline void end_timer(dtimer_t& start, const char* msg = "Total time"){return;}
+#endif
+
 
 #if DEBUG_DETAILS
 

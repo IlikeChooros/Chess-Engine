@@ -2,6 +2,9 @@
 
 namespace chess
 {
+
+    // Constants
+
     constexpr int WHITE_KING_START = 60, BLACK_KING_START = 4;
 
     uint64_t Manager::attacks_to[2][64] = {};
@@ -22,6 +25,45 @@ namespace chess
     };
 
     uint64_t Manager::in_between[64][64] = {};
+    uint64_t Manager::pawnAttacks[2][64] = {};
+
+    // Helper functions
+
+    /**
+     * @brief Generates the attacks for a piece
+     * @param type The type of the piece (Piece::Rook, Piece::Bishop, Piece::Queen)
+     * @param occupied The bitboard of the occupied squares
+     * @param square The square of the piece
+     */
+    uint64_t mailboxAttacks(int type, uint64_t occupied, int square, bool is_sliding = true){
+        uint64_t attacks = 0;
+        for(int j = 0; j < Board::n_piece_rays[type]; j++){
+            for(int n = square;;){
+                // mailbox64 has indexes for the 64 valid squares in mailbox.
+                // If, by moving the piece, we go outside of the valid squares (n == -1),
+                // we break the loop. Else, the n has the index of the next square.
+                n = Board::mailbox[Board::mailbox64[n] + Board::piece_move_offsets[type][j]];
+                if (n == -1){// outside of the board
+                    break;
+                }
+                
+                // Attack = possible move 
+                attacks |= 1ULL << n;
+
+                // If the square is not empty
+                if (occupied & (1ULL << n)){
+                    break;
+                }
+
+                if (!is_sliding){
+                    break;
+                }
+            }
+        }
+        return attacks;
+    }
+
+    // C'tor
 
     Manager::Manager(Board* board)
     {
@@ -35,8 +77,29 @@ namespace chess
 
         if (board == nullptr)
             return;
-
+        init();
         generateMoves();
+    }
+
+    Manager& Manager::operator=(Manager&& other)
+    {
+        this->board = other.board;
+        this->n_moves = other.n_moves;
+        this->move_list = std::move(other.move_list);
+        this->captured_piece = other.captured_piece;
+        this->prev_captured_piece = other.prev_captured_piece;
+        this->curr_move = other.curr_move;
+        this->prev_move = other.prev_move;
+        this->black_king_pos = other.black_king_pos;
+        this->white_king_pos = other.white_king_pos;
+        this->history = other.history;
+        return *this;
+    }
+
+    void Manager::init(){
+
+        white_king_pos = bitScanForward(board->bitboards(true)[Piece::King - 1]);
+        black_king_pos = bitScanForward(board->bitboards(false)[Piece::King - 1]);
 
         // Initialize the in_between array
         // Taken from: https://www.chessprogramming.org/Square_Attacked_By
@@ -71,19 +134,19 @@ namespace chess
                 in_between[i][j] = line & btwn;   /* return the bits on that line in-between */
             }
         }
-    
-    }
 
-    Manager& Manager::operator=(Manager&& other)
-    {
-        this->board = other.board;
-        this->n_moves = other.n_moves;
-        this->move_list = std::move(other.move_list);
-        this->captured_piece = other.captured_piece;
-        this->prev_captured_piece = other.prev_captured_piece;
-        this->curr_move = other.curr_move;
-        this->prev_move = other.prev_move;
-        return *this;
+        // Init piece attacks
+        for(int i = 0; i < 64; i++){
+            // Pawn attacks
+            for(int j = 0; j < 2; j++){
+                for(int k = 0; k < 2; k++){
+                    int n = Board::mailbox[Board::mailbox64[i] + Board::pawn_attack_offsets[j][k]];
+                    if(n != -1){
+                        pawnAttacks[j][i] |= 1ULL << n;
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -96,7 +159,7 @@ namespace chess
     bool Manager::movePiece(uint32_t from, uint32_t to)
     {
         int* iboard = this->board->board.get();
-        if(iboard[from] == Piece::Empty || from == to || Piece::getColor(iboard[from]) != this->board->m_side)
+        if(iboard[from] == Piece::Empty || from == to || Piece::getColor(iboard[from]) != this->board->getSide())
             return false;
 
         for(int i = 0; i < n_moves; i++){
@@ -132,10 +195,10 @@ namespace chess
         return moves;
     }
 
-        /**
+    /**
      * @brief Makes a move, updating the board, the side to move and generating new moves
      */
-    void Manager::make(Move& move, bool validate){
+    void Manager::make(Move& move){
         if(this->board->m_side == Piece::Black){
             this->board->fullmoveCounter()++;
         }
@@ -153,7 +216,7 @@ namespace chess
         handleCapture(move);
         handleMove(move);
         this->board->m_side ^= Piece::colorMask;
-        generateMoves(validate);
+        generateMoves();
     }
 
     /**
@@ -224,8 +287,10 @@ namespace chess
             board->m_enpassant_target = to + direction;
         }
 
-        // Update castling rights
+        // Update castling rights & king position
         if (Piece::getType(iboard[from]) == Piece::King){
+            int *king_pos = is_white ? &white_king_pos : &black_king_pos;
+            *king_pos = to;
             board->m_castling_rights.remove(Piece::isWhite(iboard[from]) ? CastlingRights::WHITE : CastlingRights::BLACK);
         } else if (Piece::getType(iboard[from]) == Piece::Rook){
             // If the rook is moved from the starting position, remove the castling rights for that side
@@ -313,154 +378,16 @@ namespace chess
      * @brief Generates all possible moves for the current board state
      * @return The number of moves generated
      */
-    int Manager::generateMoves(bool validate)
+    int Manager::generateMoves()
     {
+        dtimer_t timer;
+        start_timer(timer);
+
         this->n_moves = 0;
         int* iboard = this->board->getBoard();
 
         int n_pseudo_moves = 0;
         std::unique_ptr<int[]> pseudo_moves(new int[256]);
-        generatePseudoLegalMoves(n_pseudo_moves, pseudo_moves.get());
-
-    #if DEBUG_DETAILS
-        // print bitboards
-        // for(int i = 0; i < 2; i++){
-        //     uint64_t *bb = board->bitboards(i);
-        //     uint64_t bb_combined = 0;
-
-        //     for(int i = 0; i < 6; i++){
-        //         bb_combined |= bb[i];
-        //     }
-
-        //     dlogf("Bitboard for %s\n", i == 0 ? "black" : "white");
-        //     dbitboard(bb_combined);
-        // }
-    #endif
-
-        // TODO: Implement pinned pieces
-        // Source: https://www.chessprogramming.org/Checks_and_Pinned_Pieces_(Bitboards)
-        bool is_white = board->getSide() == Piece::White;
-        int king = is_white ? white_king_pos : black_king_pos;
-
-        uint64_t pinned = 0;
-        uint64_t occupied = board->occupied();
-        uint64_t blockers = board->occupied(is_white);
-        uint64_t pinner = xRayRookAttacks(occupied, blockers, king) & board->oppRooksQueens(is_white);
-
-        dlogf("Pinned pieces for %s\n", square_to_str(king).c_str());
-        dbitboard(occupied);
-        dbitboard(blockers);
-        dbitboard(pinner);
-        dbitboard(board->oppRooksQueens(is_white));
-        dbitboard(board->oppBishopsQueens(is_white));
-        dlogf("X-ray attacks for %s\n", square_to_str(king).c_str());
-        dbitboard(xRayRookAttacks(occupied, blockers, king));
-        dbitboard(xRayBishopAttacks(occupied, blockers, king));
-
-        while(pinner){
-            int sq = bitScanForward(pinner);
-            pinned |= in_between[sq][king] & blockers;
-            pinner &= pinner - 1;
-        }
-        pinner = xRayBishopAttacks(occupied, blockers, king) & board->oppBishopsQueens(is_white);
-        while(pinner){
-            int sq = bitScanForward(pinner);
-            pinned |= in_between[sq][king] & blockers;
-            pinner &= pinner - 1;
-        }
-
-        dlogf("Pinned pieces for %s\n", square_to_str(king).c_str());
-        dbitboard(pinned);
-
-
-        // validate pseudo moves
-        for(int i = 0; i < n_pseudo_moves; i++){
-            Move move(pseudo_moves[i]);
-            int color = Piece::getColor(iboard[move.getFrom()]);
-
-            // If the piece is not the same color as the side to move, skip the move
-            if (color != board->getSide())
-                continue;
-            
-            bool is_white = color == Piece::White;
-            int king = is_white ? white_king_pos : black_king_pos;
-            if (validateMove(move, king, is_white, pinned)){
-                addMove(move.getFrom(), move.getTo(), move.getFlags(), const_cast<int*>(move_list.data()), n_moves);
-            }
-        }
-        
-
-        return n_moves;
-    }
-
-    /**
-     * @brief Generates the attacks for a slider piece
-     * @param type The type of the piece (Piece::Rook, Piece::Bishop, Piece::Queen)
-     * @param occupied The bitboard of the occupied squares
-     * @param square The square of the piece
-     */
-    uint64_t sliderTypeAttacks(int type, uint64_t occupied, int square){
-        uint64_t attacks = 0;
-        for(int j = 0; j < Board::n_piece_rays[type]; j++){
-            for(int n = square;;){
-                // mailbox64 has indexes for the 64 valid squares in mailbox.
-                // If, by moving the piece, we go outside of the valid squares (n == -1),
-                // we break the loop. Else, the n has the index of the next square.
-                n = Board::mailbox[Board::mailbox64[n] + Board::piece_move_offsets[type][j]];
-                if (n == -1){// outside of the board
-                    break;
-                }
-                
-                // Attack = possible move 
-                attacks |= 1ULL << n;
-
-                // If the square is not empty
-                if (occupied & (1ULL << n)){
-                    break;
-                }
-            }
-        }
-        return attacks;
-    }
-
-    /**
-     * @brief Get the rook attacks for a given square, attacks are both squares attacked and pieces
-     */
-    uint64_t Manager::rookAttacks(uint64_t occupied, int rook){
-        return sliderTypeAttacks(Piece::Rook - 1, occupied, rook);
-    }
-
-    /**
-     * @brief Get the bishop attacks for a given square
-     */
-    uint64_t Manager::bishopAttacks(uint64_t occupied, int bishop){
-        return sliderTypeAttacks(Piece::Bishop - 1, occupied, bishop);
-    }
-
-    /**
-     * @brief Get the x-ray attacks for a rook
-     * @author https://www.chessprogramming.org/X-ray_Attacks_(Bitboards)#ModifyingOccupancy
-     */
-    uint64_t Manager::xRayRookAttacks(uint64_t occupied, uint64_t blockers, int rooksq){
-        uint64_t attacks = rookAttacks(occupied, rooksq); // get the valid rook attacks (all pieces involved)
-        blockers &= attacks; // take only the blockers that are in the attacks (attacked blockers)
-        return attacks ^ rookAttacks(occupied ^ blockers, rooksq); // get the x-ray attacks (attacks through the blockers)
-    }
-    
-    /**
-     * @brief Get the x-ray attacks for a bishop
-     * @author https://www.chessprogramming.org/X-ray_Attacks_(Bitboards)#ModifyingOccupancy
-     */
-    uint64_t Manager::xRayBishopAttacks(uint64_t occupied, uint64_t blockers, int bishopsq){
-        uint64_t attacks = bishopAttacks(occupied, bishopsq);
-        blockers &= attacks;
-        return attacks ^ bishopAttacks(occupied ^ blockers, bishopsq);
-    }
-
-    void Manager::generatePseudoLegalMoves(int& n_pseudo_moves, int* pseudo_moves){
-        int* iboard = this->board->board.get();
-
-        n_pseudo_moves = 0;
         
         for(int i = 0; i < 64; i++){
             // reset the attacks_from array & attacks_to bitboards
@@ -470,6 +397,7 @@ namespace chess
             attacks_to[1][i] = 0;
         }
 
+        // Generate pseudo-legal moves
         for(int i = 0; i < 64; i++){
             if(iboard[i] == Piece::Empty)
                 continue;
@@ -483,14 +411,6 @@ namespace chess
                     Piece::toStr(iboard[i]).c_str(), 
                     square_to_str(i).c_str()
                 );
-
-                if (type == Piece::King){
-                    if (is_white){
-                        white_king_pos = i;
-                    } else {
-                        black_king_pos = i;
-                    }
-                }
                  
                 type--;
                 // Use the piece move offsets
@@ -518,12 +438,12 @@ namespace chess
                                     square_to_str(i).c_str(),
                                     square_to_str(n).c_str()
                                 );
-                                addMove(i, n, Move::FLAG_CAPTURE, pseudo_moves, n_pseudo_moves);
+                                addMove(i, n, Move::FLAG_CAPTURE, pseudo_moves.get(), n_pseudo_moves);
                             }
                             break;
                         }
                         // move
-                        addMove(i, n, Move::FLAG_NONE, pseudo_moves, n_pseudo_moves);
+                        addMove(i, n, Move::FLAG_NONE, pseudo_moves.get(), n_pseudo_moves);
                         // If the piece is not sliding, break the loop
                         if (!Board::is_piece_sliding[type]){
                             break;
@@ -537,24 +457,29 @@ namespace chess
                 // Pawn moves
                 int start_rank = is_white ? 6 : 1;
                 
-                // Check for pawn attacks
-                for(int j = 0; j < 2; j++){
+                uint64_t attacks = pawnAttacks[is_white][i];
 
-                    int n = Board::mailbox[Board::mailbox64[i] + Board::pawn_attack_offsets[is_white][j]];
-                    if(n == -1) // Out of the board
-                        continue;
+                // Check for enpassant
+                if ((board->enpassantTarget() != -1) && (1UL << board->enpassantTarget()) & attacks){
+                    addMove(i, board->enpassantTarget(), Move::FLAG_ENPASSANT_CAPTURE, pseudo_moves.get(), n_pseudo_moves);
+                }
 
-                    addAttack(i, n, is_white); // Update attacks_to and attacks_from bitboards
+                uint64_t captures = attacks & board->occupied();
+                uint64_t enemy_pieces = board->occupied(!is_white);
 
-                    // Normal capture
-                    if (iboard[n] != Piece::Empty && Piece::getColor(iboard[n]) != piece_color){
-                        addMove(i, n, Move::FLAG_CAPTURE, pseudo_moves, n_pseudo_moves);
-                        dlogf("Pawn capture to %s\n", square_to_str(n).c_str());
-                    } else {
-                        // Check if enpassant is possible, if the enpassant target is the same as the square
-                        if (board->enpassantTarget() == n){
-                            addMove(i, n, Move::FLAG_ENPASSANT_CAPTURE, pseudo_moves, n_pseudo_moves);
-                            dlogf("En passant to %s\n", square_to_str(n).c_str());
+                if (captures){
+                    int n = bitScanForward(captures);
+                    addAttack(i, n, is_white);
+                    if (captures & enemy_pieces){
+                        addMove(i, n, Move::FLAG_CAPTURE, pseudo_moves.get(), n_pseudo_moves);
+                    }
+                    captures &= (captures - 1);
+
+                    if (captures){
+                        n = bitScanForward(captures);
+                        addAttack(i, n, is_white);
+                        if (captures & enemy_pieces){
+                            addMove(i, n, Move::FLAG_CAPTURE, pseudo_moves.get(), n_pseudo_moves);
                         }
                     }
                 }
@@ -564,7 +489,7 @@ namespace chess
                 if (n == -1 || iboard[n] != Piece::Empty) 
                     continue; // Out of the board or piece in the way
 
-                addMove(i, n, Move::FLAG_NONE, pseudo_moves, n_pseudo_moves);
+                addMove(i, n, Move::FLAG_NONE, pseudo_moves.get(), n_pseudo_moves);
                 dlogf("Pawn move to %s\n", square_to_str(n).c_str());
 
                 if (i / 8 == start_rank){
@@ -573,45 +498,157 @@ namespace chess
                     if (iboard[n] != Piece::Empty) // Piece in the way
                         continue;
 
-                    addMove(i, n, Move::FLAG_DOUBLE_PAWN, pseudo_moves, n_pseudo_moves);
+                    addMove(i, n, Move::FLAG_DOUBLE_PAWN, pseudo_moves.get(), n_pseudo_moves);
                     dlogf("Pawn double move to %s\n", square_to_str(n).c_str());
                 }
             }
-        }
-        
+        }        
 
         dlogln("Checking castle rights");
 
         // Check for castling
-        if (!board->m_castling_rights){
-            dlogln("No castling rights");
-            return;
-        }
+        if (board->castlingRights()){
+            for(int i = 0; i < 2; i++){
+                // Get starting position for the king
+                int king = castling_data[i][0]; // 0 black, 1 white
+                if (iboard[king] != Piece::getKing(castling_data[i][3])) // King has moved
+                    continue;
 
-        for(int i = 0; i < 2; i++){
-            // Get starting position for the king
-            int king = castling_data[i][0]; // 0 black, 1 white
-            if (iboard[king] != Piece::getKing(castling_data[i][3])) // King has moved
-                continue;
-
-            dlogf("Found valid king at %s\n", square_to_str(king).c_str());
-            // Check if rooks have moved / still have castling rights
-            for(int j = 0; j < 2; j++){
-                checkKingCastling(i, j, king);
+                dlogf("Found valid king at %s\n", square_to_str(king).c_str());
+                // Check if rooks have moved / still have castling rights
+                for(int j = 0; j < 2; j++){
+                    checkKingCastling(i, j, king);
+                }
             }
         }
+
+        
+    #if DEBUG_DETAILS
+        // print bitboards
+        // for(int i = 0; i < 2; i++){
+        //     uint64_t *bb = board->bitboards(i);
+        //     uint64_t bb_combined = 0;
+
+        //     for(int i = 0; i < 6; i++){
+        //         bb_combined |= bb[i];
+        //     }
+
+        //     dlogf("Bitboard for %s\n", i == 0 ? "black" : "white");
+        //     dbitboard(bb_combined);
+        // }
+    #endif
+
+        // TODO: Implement pinned pieces
+        // Source: https://www.chessprogramming.org/Checks_and_Pinned_Pieces_(Bitboards)
+        bool is_white = board->getSide() == Piece::White;
+        int king = is_white ? white_king_pos : black_king_pos;
+
+        uint64_t pinned = 0;
+        uint64_t occupied = board->occupied();
+        uint64_t blockers = board->occupied(is_white);
+        uint64_t pinner = xRayRookAttacks(occupied, blockers, king) & board->oppRooksQueens(is_white);
+
+        // dlogf("Pinned pieces for %s\n", square_to_str(king).c_str());
+        // dbitboard(occupied);
+        // dbitboard(blockers);
+        // dbitboard(pinner);
+        // dbitboard(board->oppRooksQueens(is_white));
+        // dbitboard(board->oppBishopsQueens(is_white));
+        // dlogf("X-ray attacks for %s\n", square_to_str(king).c_str());
+        // dbitboard(xRayRookAttacks(occupied, blockers, king));
+        // dbitboard(xRayBishopAttacks(occupied, blockers, king));
+
+        while(pinner){
+            int sq = bitScanForward(pinner);
+            pinned |= in_between[sq][king] & blockers;
+            pinner &= pinner - 1;
+        }
+        pinner = xRayBishopAttacks(occupied, blockers, king) & board->oppBishopsQueens(is_white);
+        while(pinner){
+            int sq = bitScanForward(pinner);
+            pinned |= in_between[sq][king] & blockers;
+            pinner &= pinner - 1;
+        }
+
+        dlogf("Pinned pieces for %s\n", square_to_str(king).c_str());
+        dbitboard(pinned);
+
+
+        // validate pseudo moves
+        for(int i = 0; i < n_pseudo_moves; i++){
+            Move move(pseudo_moves[i]);
+            // If the piece is not the same color as the side to move, skip the move
+            if (Piece::getColor(iboard[move.getFrom()]) != board->getSide())
+                continue;
+            
+            if (validateMove(move, king, is_white, pinned)){
+                addMove(move.getFrom(), move.getTo(), move.getFlags(), const_cast<int*>(move_list.data()), n_moves);
+            }
+        }
+        
+        end_timer(timer, "Move generation");
+        return n_moves;
+    }
+
+    /**
+     * @brief Get the rook attacks for a given square, attacks are both squares attacked and pieces
+     */
+    uint64_t Manager::rookAttacks(uint64_t occupied, int rook){
+        return mailboxAttacks(Piece::Rook - 1, occupied, rook);
+    }
+
+    /**
+     * @brief Get the bishop attacks for a given square
+     */
+    uint64_t Manager::bishopAttacks(uint64_t occupied, int bishop){
+        return mailboxAttacks(Piece::Bishop - 1, occupied, bishop);
+    }
+
+    /**
+     * @brief Get the x-ray attacks for a rook
+     * @author https://www.chessprogramming.org/X-ray_Attacks_(Bitboards)#ModifyingOccupancy
+     */
+    uint64_t Manager::xRayRookAttacks(uint64_t occupied, uint64_t blockers, int rooksq){
+        uint64_t attacks = rookAttacks(occupied, rooksq); // get the valid rook attacks (all pieces involved)
+        blockers &= attacks; // take only the blockers that are in the attacks (attacked blockers)
+        return attacks ^ rookAttacks(occupied ^ blockers, rooksq); // get the x-ray attacks (attacks through the blockers)
+    }
+    
+    /**
+     * @brief Get the x-ray attacks for a bishop
+     * @author https://www.chessprogramming.org/X-ray_Attacks_(Bitboards)#ModifyingOccupancy
+     */
+    uint64_t Manager::xRayBishopAttacks(uint64_t occupied, uint64_t blockers, int bishopsq){
+        uint64_t attacks = bishopAttacks(occupied, bishopsq);
+        blockers &= attacks;
+        return attacks ^ bishopAttacks(occupied ^ blockers, bishopsq);
     }
 
     bool Manager::validateMove(Move& move, int king, bool is_white, uint64_t pinned){
         int to = move.getTo();
         int from = move.getFrom();
-        int king_attack = attacks_to[!is_white][king];
+        uint64_t king_attack = attacks_to[!is_white][king];
 
         if (from != king){
             // Check if the king is not in check
             if (king_attack == 0){
                 // Check if the piece is not pinned
                 uint64_t bitmove = 1ULL << from;
+
+                // Check if the move is enpassant (special pawn case)
+                if (move.isEnPassant()){
+                    // Check with x-ray attacks, without the pawn target
+                    int direction = is_white ? 8 : -8;
+                    uint64_t occupied = board->occupied() ^ (1ULL << (to + direction));
+                    uint64_t blockers = board->occupied(is_white);
+                    uint64_t pinner = xRayRookAttacks(occupied, blockers, king) & board->oppRooksQueens(is_white);
+                    while(pinner){
+                        int sq = bitScanForward(pinner);
+                        pinned |= in_between[sq][king] & blockers;
+                        pinner &= pinner - 1;
+                    }
+                }
+
                 return (pinned & bitmove) == 0;
             }
             

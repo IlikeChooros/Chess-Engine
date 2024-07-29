@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <vector>
 #include <cmath>
+#include <chrono>
 
 #include "board.h"
 #include "move.h"
@@ -38,20 +39,21 @@ namespace chess
         static const int castling_offsets[2][2];
         static const int castling_flags[2];
         static uint64_t in_between[64][64];
+        static uint64_t pawnAttacks[2][64];
 
         Manager(Board* board = nullptr);
         Manager(const Manager& other) = delete;
         Manager& operator=(Manager&& other);
+        void init();
 
         bool movePiece(uint32_t from, uint32_t to);
         std::list<PieceMoveInfo> getPieceMoves(uint32_t from);
-        int generateMoves(bool validate = true);
+        int generateMoves();
         bool validateMove(Move& move, int king_pos, bool is_white, uint64_t pinnedbb);
 
     
-        void make(Move& move, bool validate = true);
+        void make(Move& move);
         void unmake();
-        void generatePseudoLegalMoves(int& n_moves, int* move_list);
         void addMove(int from, int to, int flags, int* move_list, int& n_moves);
         void addAttack(int from, int to, bool piece_is_white);
         void handleCapture(Move& move);

@@ -17,9 +17,8 @@ namespace chess
     class Piece
     {
         public:
-        static const int pieceMask = 0b0000111;  // 0b00111
-        static const int colorMask = 0b0011000; // 0b11000
-        static const int specialMoveMask = 0b1100000;
+        static const int pieceMask = 0b00111;  // 0b00111
+        static const int colorMask = 0b11000; // 0b11000
 
         // Piece types
         enum Type
@@ -43,12 +42,6 @@ namespace chess
             Black = 16, // 0b0010000
         };
 
-        // Special moves
-        enum SpecialMove
-        {
-            // Castling = 32, // 0b0100000
-        };
-
         /**
          * @brief Get the color of a piece
          * @return piece & colorMask, either 0b01000 or 0b10000
@@ -63,13 +56,6 @@ namespace chess
         static inline int getType(const int& piece){
             return piece & pieceMask;
         }
-
-        /**
-         * @brief Get the special move of a piece
-         */
-        static inline int getSpecial(const int& piece){
-            return piece & specialMoveMask;
-        }
         
         /**
          * @brief Check if the piece is white
@@ -77,14 +63,6 @@ namespace chess
         static inline bool isWhite(const int& piece){
             return getColor(piece) == White;
         }
-
-        /**
-         * @brief Add a special move to a piece
-         */
-        static inline int addSpecial(int piece, int special){
-            return piece | special;
-        }
-
         /**
          * @brief Create a piece with a given type and color
          */
@@ -97,20 +75,6 @@ namespace chess
          */
         static inline bool isSliding(const int& piece){
             return getType(piece) & 0b100;
-        }
-
-        /**
-         * @brief Check if the piece has a special move
-         */
-        static inline bool hasSpecial(const int& piece, int special = 0){
-            return (piece & specialMoveMask) == special;
-        }
-
-        /**
-         * @brief Delete the special move of a piece, by default deletes all special moves
-         */
-        static inline int deleteSpecial(int piece, int special = specialMoveMask){
-            return piece & (~specialMoveMask);
         }
 
         /**

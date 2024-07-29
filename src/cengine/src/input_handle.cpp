@@ -69,7 +69,7 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
 
         // Print fen
         if(event.key.code == sf::Keyboard::P){
-            dlogf("Fen: %s\n", manager->board->getFen().c_str());
+            printf("Fen: %s\n", manager->board->getFen().c_str());
         }
     }
      else {

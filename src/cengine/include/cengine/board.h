@@ -27,6 +27,8 @@ namespace chess{
         static const int ROOK_TYPE = Piece::Rook - 1;
         static const int BISHOP_TYPE = Piece::Bishop - 1;
         static const int QUEEN_TYPE = Piece::Queen - 1;
+        static const int KING_TYPE = Piece::King - 1;
+        static const int KNIGHT_TYPE = Piece::Knight - 1;
 
         Board() = default;
         Board(const Board& other) = delete;

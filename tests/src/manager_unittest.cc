@@ -118,33 +118,13 @@ TEST_F(ManagerTest, checkCastlingRightsAfterMove){
     containsMove("e8", "c8", false);
 }
 
-// Test castling with manually set board
-TEST_F(ManagerTest, checkCastlingRightsAfterMoveManual){
-    move("e2", "e4"); // 1. e4
-    move("e7", "e5"); // 1. e4 e5
-    move("g1", "f3"); // 2. Nf3
-    move("b8", "c6"); // 2. Nf3 Nc6
-    move("f1", "c4"); // 3. Bc4
-    move("g8", "f6"); // 3. Bc4 Nf6
-
-    // possible castle for white
-    expectMoves("e1", {"e2", "f1", "g1"});
-
-    move("d2", "d3"); // 4. d3
-    move("f8", "c5"); // 4. d3 Bc5
-    move("b1", "c3"); // 5. Nc3
-    move("d7", "d6"); // 5. Nc3 d6
-    move("c1", "g5"); // 6. Bg5
-    move("c8", "e6"); // 6. Bg5 Be6
-    move("d1", "d2") ;// 7. Qd2
-    move("d8", "d7"); // 7. Qd2 Qd7
-
-    // every castle move should be possible
-    expectMoves("e1", {"c1", "d1", "e2", "f1", "g1"});
-    expectMoves("e8", {"c8", "d8", "e7", "f8", "g8"});
-
-    move("e1", "g1"); // 8. O-O
-    move("e8", "c8"); // 8. O-O O-O-O 
+// Test move generation
+TEST_F(ManagerTest, testEnpassantPin){
+    loadFen("8/8/8/r2Pp2K/8/8/k7/8 w - e6 0 1");
+    // Can't enpassant because of pin
+    containsMove("e5", "e6", false);
 }
+
+
 
 } // namespace
