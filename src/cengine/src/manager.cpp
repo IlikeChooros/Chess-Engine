@@ -78,6 +78,7 @@ namespace chess
             return;
         init();
         generateMoves();
+        pushHistory();
     }
 
     Manager& Manager::operator=(Manager&& other)
@@ -164,7 +165,6 @@ namespace chess
             auto move = Move(move_list[i]);
             if (move.getFrom() == from && move.getTo() == to){
                 make(move);
-                board->m_side ^= Piece::colorMask;
                 generateMoves();
                 return true;
             }
@@ -215,6 +215,7 @@ namespace chess
 
         handleCapture(move);
         handleMove(move);
+        this->board->m_side ^= Piece::colorMask;
         pushHistory();
     }
 
@@ -223,12 +224,13 @@ namespace chess
      * may be called only once after `make()`
      */
     void Manager::unmake(){
-        if(this->history.empty())
+        if(this->history.size() == 1)
             return;
 
         // Get the last move
-        auto history = this->history.back();
         this->history.pop_back();
+        auto history = this->history.back();
+        
 
         int* iboard = board->getBoard();
         int from = curr_move.getFrom(), to = curr_move.getTo(), captured_pos = to;
@@ -237,9 +239,11 @@ namespace chess
         if (curr_move.isCapture()){
             int offset = 0;
             if(curr_move.isEnPassant()){
-                offset = is_white ? -8 : 8;
+                offset = is_white ? 8 : -8;
             }
             captured_pos += offset;
+            // Restore the captured piece in bitboards
+            board->bitboards(is_white)[Piece::getType(captured_piece) - 1] |= 1ULL << captured_pos;
         } else if (curr_move.isCastle()){
             const int rooks_to[2][2] = {
                 {0, 56}, // queen castle
@@ -255,7 +259,7 @@ namespace chess
             int rook_to = rooks_to[is_king_castle][is_white];
             iboard[rook_to] = iboard[rook_from]; // move the rook back
             iboard[rook_from] = Piece::Empty; // empty the rook's previous position
-            board->updateBitboard(is_white, Piece::Rook - 1, rook_from, rook_to);
+            board->updateBitboard(is_white, Piece::Rook - 1, rook_from, rook_to); // update the bitboard
         }
 
         // Restore the king position
@@ -268,12 +272,8 @@ namespace chess
         iboard[from] = iboard[to];
         iboard[to] = Piece::Empty;
         board->updateBitboard(is_white, Piece::getType(iboard[from]) - 1, to, from);
-
         // Restore the captured piece
-        if (captured_piece != Piece::Empty){
-            iboard[captured_pos] = captured_piece;
-            board->bitboards(is_white)[Piece::getType(captured_piece) - 1] |= 1ULL << captured_pos;
-        }
+        iboard[captured_pos] = captured_piece;
 
         // restore other variables
         this->board->getSide() = history.side_to_move;
