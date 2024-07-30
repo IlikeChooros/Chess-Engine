@@ -119,10 +119,18 @@ TEST_F(ManagerTest, checkCastlingRightsAfterMove){
 }
 
 // Test move generation
-TEST_F(ManagerTest, testEnpassantPin){
+
+// Test special pawn cases, when enpassant is possible and the rook is pinning the pawn
+TEST_F(ManagerTest, testMoveGenEnpassantPin){
     loadFen("8/8/8/r2Pp2K/8/8/k7/8 w - e6 0 1");
     // Can't enpassant because of pin
-    containsMove("e5", "e6", false);
+    containsMove("d5", "e6", false);
+}
+
+TEST_F(ManagerTest, testMoveGenEnpassantPinNotPinned){
+    loadFen("8/8/8/r2Pp1PK/8/8/k7/8 w - e6 0 1");
+    // Enpassant should be possible, there is a pawn near the king
+    containsMove("d5", "e6");
 }
 
 

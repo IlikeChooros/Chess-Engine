@@ -16,13 +16,17 @@
 namespace chess
 {
 
-    struct _History
+    struct CHistory
     {
-        Move move;
-        int captured_piece;
-        int enpassant_target;
-        int halfmove_clock;
-        int castling_rights;
+        uint32_t move:Move::bits; // 16 bits
+        uint32_t side_to_move:Piece::bits; // 5 bit for side to move (Piece::Color)
+        uint32_t captured_piece:Piece::bits; // 5 bits for piece
+        uint32_t enpassant_target:6; // 7 bits for square (0 - 63)
+        uint32_t halfmove_clock:6; // 6 bits for halfmove clock (0 - 63 (max is 50))
+        uint32_t fullmove_counter:10; // 11 bits for fullmove counter (0 - 1023)
+        uint32_t castling_rights:CastlingRights::bits; // 4 bits for castling rights
+        uint32_t reserved:12;
+        // That gives total of 64 bits, instead of 6*32 = 192 bits
     };
 
     class Manager
@@ -44,35 +48,38 @@ namespace chess
         Manager(Board* board = nullptr);
         Manager(const Manager& other) = delete;
         Manager& operator=(Manager&& other);
+        
+        // Public API
         void init();
-
         bool movePiece(uint32_t from, uint32_t to);
         std::list<PieceMoveInfo> getPieceMoves(uint32_t from);
         int generateMoves();
-        bool validateMove(Move& move, int king_pos, bool is_white, uint64_t pinnedbb);
 
-    
+        // Private API
         void make(Move& move);
         void unmake();
+        int generatePseudoMoves(bool is_white, uint64_t occupied, uint64_t enemy_pieces, int* move_list);
+        bool validateMove(Move& move, int king_pos, bool is_white, uint64_t pinnedbb);
         void addMove(int from, int to, int flags, int* move_list, int& n_moves);
         void addAttack(int from, int to, bool piece_is_white);
         void handleCapture(Move& move);
         void handleMove(Move& move);
         void checkKingCastling(bool is_white, int j, int king_index);
         void handleCastlingMove(bool is_king_castle, int from, int to);
+        void pushHistory();
         uint64_t rookAttacks(uint64_t occupied, int square);
         uint64_t bishopAttacks(uint64_t occupied, int square);
         uint64_t xRayRookAttacks(uint64_t occupied, uint64_t blockers, int square);
         uint64_t xRayBishopAttacks(uint64_t occupied, uint64_t blockers, int square);
+        
 
-        std::list<_History> history;
+        std::list<CHistory> history;
         std::vector<int> move_list;
         int n_moves;
         Board* board;
         Move curr_move;
         Move prev_move;
         int captured_piece;
-        int prev_captured_piece;
         int black_king_pos;
         int white_king_pos;
     };

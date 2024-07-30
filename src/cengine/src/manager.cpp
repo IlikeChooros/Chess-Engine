@@ -68,7 +68,6 @@ namespace chess
     Manager::Manager(Board* board)
     {
         this->captured_piece = Piece::Empty;
-        this->prev_captured_piece = Piece::Empty;
         this->n_moves = 0;
         this->move_list = std::vector<int>(256, 0);
 
@@ -87,7 +86,6 @@ namespace chess
         this->n_moves = other.n_moves;
         this->move_list = std::move(other.move_list);
         this->captured_piece = other.captured_piece;
-        this->prev_captured_piece = other.prev_captured_piece;
         this->curr_move = other.curr_move;
         this->prev_move = other.prev_move;
         this->black_king_pos = other.black_king_pos;
@@ -166,6 +164,8 @@ namespace chess
             auto move = Move(move_list[i]);
             if (move.getFrom() == from && move.getTo() == to){
                 make(move);
+                board->m_side ^= Piece::colorMask;
+                generateMoves();
                 return true;
             }
         }
@@ -215,8 +215,7 @@ namespace chess
 
         handleCapture(move);
         handleMove(move);
-        this->board->m_side ^= Piece::colorMask;
-        generateMoves();
+        pushHistory();
     }
 
     /**
@@ -224,17 +223,16 @@ namespace chess
      * may be called only once after `make()`
      */
     void Manager::unmake(){
-        if(!curr_move && curr_move != prev_move)
+        if(this->history.empty())
             return;
 
-        int* iboard = board->board.get();
+        // Get the last move
+        auto history = this->history.back();
+        this->history.pop_back();
+
+        int* iboard = board->getBoard();
         int from = curr_move.getFrom(), to = curr_move.getTo(), captured_pos = to;
         bool is_white = Piece::isWhite(iboard[to]);
-
-        const int castling_rights[2][2] = {
-            {CastlingRights::BLACK_QUEEN, CastlingRights::WHITE_QUEEN}, // queen castle
-            {CastlingRights::BLACK_KING, CastlingRights::WHITE_KING} // king castle
-        };
 
         if (curr_move.isCapture()){
             int offset = 0;
@@ -242,27 +240,49 @@ namespace chess
                 offset = is_white ? -8 : 8;
             }
             captured_pos += offset;
-        } else if (curr_move.isQueenCastle()){
+        } else if (curr_move.isCastle()){
+            const int rooks_to[2][2] = {
+                {0, 56}, // queen castle
+                {7, 63} // king castle
+            };
+            const int rooks_from[2][2] = {
+                {3, 59}, // queen castle
+                {5, 61} // king castle
+            };
             // Get rook starting position
-            int rook_from = is_white ? 56 : 0;
-            iboard[rook_from] = iboard[to + 1]; // move the rook back
-            iboard[to + 1] = Piece::Empty; // empty the rook's previous position
-            board->castlingRights().add(castling_rights[1][is_white]);
-        } else if (curr_move.isKingCastle()){
-            int rook_from = is_white ? 63 : 7; 
-            iboard[rook_from] = iboard[to - 1];
-            iboard[to - 1] = Piece::Empty;
-            board->castlingRights().add(castling_rights[0][is_white]);
+            bool is_king_castle = curr_move.isKingCastle();
+            int rook_from = rooks_from[is_king_castle][is_white];
+            int rook_to = rooks_to[is_king_castle][is_white];
+            iboard[rook_to] = iboard[rook_from]; // move the rook back
+            iboard[rook_from] = Piece::Empty; // empty the rook's previous position
+            board->updateBitboard(is_white, Piece::Rook - 1, rook_from, rook_to);
         }
 
+        // Restore the king position
+        if (Piece::getType(iboard[to]) == Piece::King){
+            int *king_pos = is_white ? &white_king_pos : &black_king_pos;
+            *king_pos = from;
+        }
+
+        // Restore the moved piece
         iboard[from] = iboard[to];
         iboard[to] = Piece::Empty;
-        iboard[captured_pos] = captured_piece;
+        board->updateBitboard(is_white, Piece::getType(iboard[from]) - 1, to, from);
+
+        // Restore the captured piece
+        if (captured_piece != Piece::Empty){
+            iboard[captured_pos] = captured_piece;
+            board->bitboards(is_white)[Piece::getType(captured_piece) - 1] |= 1ULL << captured_pos;
+        }
 
         // restore other variables
-        this->board->m_side ^= Piece::colorMask;
-        this->captured_piece = prev_captured_piece;
-        this->curr_move = prev_move;
+        this->board->getSide() = history.side_to_move;
+        this->board->halfmoveClock() = history.halfmove_clock;
+        this->board->enpassantTarget() = history.enpassant_target;
+        this->board->castlingRights() = history.castling_rights;
+        this->board->fullmoveCounter() = history.fullmove_counter;
+        this->captured_piece = history.captured_piece;
+        this->curr_move = history.move;
     }
 
     /**
@@ -317,22 +337,19 @@ namespace chess
      */
     void Manager::handleCastlingMove(bool is_king_castle, int from, int to){
         int* iboard = board->board.get();
-        int rook_from, rook_to;
         bool is_white = Piece::isWhite(iboard[from]);
 
         const int castling_pos[2][2] = {
             {0, 56}, // queen castle
             {7, 63} // king castle
         };
+        const int rooks_to[2][2] = {
+            {3, 59}, // queen castle
+            {5, 61} // king castle
+        };
 
-        if(is_king_castle){
-            // get rook starting position
-            rook_from = castling_pos[1][is_white];
-            rook_to = to - 1; // rook target position
-        } else {
-            rook_from = castling_pos[0][is_white];
-            rook_to = to + 1;
-        }
+        int rook_from = castling_pos[is_king_castle][is_white],
+            rook_to = rooks_to[is_king_castle][is_white];
 
         // Update castling rights
         board->castlingRights().remove(is_white ? CastlingRights::WHITE : CastlingRights::BLACK);
@@ -342,7 +359,7 @@ namespace chess
         iboard[rook_from] = Piece::Empty;
 
         // Update the bitboard for the rook
-        board->updateBitboard(is_white, Piece::getType(iboard[rook_to]) - 1, rook_from, rook_to);
+        board->updateBitboard(is_white, Piece::Rook - 1, rook_from, rook_to);
     }
 
     /**
@@ -353,7 +370,7 @@ namespace chess
         if (!move.isCapture()){
             captured_piece = Piece::Empty;
             return;
-        }            
+        }
 
         board->m_halfmove_clock = 0;
         int* iboard = this->board->board.get();
@@ -366,7 +383,6 @@ namespace chess
             dlogf("En passant capture\n");
         }
 
-        prev_captured_piece = captured_piece;
         captured_piece = iboard[to + offset];
         iboard[to + offset] = Piece::Empty;
 
@@ -384,9 +400,11 @@ namespace chess
         start_timer(timer);
 
         this->n_moves = 0;
-        int* iboard = this->board->getBoard();
-
         int n_pseudo_moves = 0;
+        int* iboard = this->board->getBoard();
+        bool is_white = board->getSide() == Piece::White;
+        const int kings[2] = {black_king_pos, white_king_pos};
+
         std::unique_ptr<int[]> pseudo_moves(new int[256]);
         
         for(int i = 0; i < 64; i++){
@@ -398,111 +416,13 @@ namespace chess
         }
 
         // Generate pseudo-legal moves
-        for(int i = 0; i < 64; i++){
-            if(iboard[i] == Piece::Empty)
-                continue;
-            
-            int type = Piece::getType(iboard[i]);
-            int piece_color = Piece::getColor(iboard[i]);
-            bool is_white = piece_color == Piece::White;
+        uint64_t occupied = board->occupied();
+        uint64_t blockers = board->occupied(is_white);
+        int king = kings[is_white];
 
-            if (type != Piece::Pawn){
-                dlogf("Generating moves for %s at %s\n", 
-                    Piece::toStr(iboard[i]).c_str(), 
-                    square_to_str(i).c_str()
-                );
-                 
-                type--;
-                // Use the piece move offsets
-                for(int j = 0; j < Board::n_piece_rays[type]; j++){
-                    for(int n = i;;){
-                        // mailbox64 has indexes for the 64 valid squares in mailbox.
-                        // If, by moving the piece, we go outside of the valid squares (n == -1),
-                        // we break the loop. Else, the n has the index of the next square.
-                        n = Board::mailbox[Board::mailbox64[n] + Board::piece_move_offsets[type][j]];
-                        if (n == -1){// outside of the board
-                            break;
-                        }
-                        
-                        // Attack = possible move (these are pieces)
-                        addAttack(i, n, is_white);
-                        dlogf("Attacks to: %s (%d)\n", square_to_str(n).c_str(), n);
-
-                        // If the square is not empty
-                        if (iboard[n] != Piece::Empty){
-                            if (Piece::getColor(iboard[n]) != piece_color){
-                                dlogf(
-                                    "Added pseudo-legal capture "
-                                    "by %s from %s to %s\n",
-                                    Piece::toStr(iboard[i]).c_str(), 
-                                    square_to_str(i).c_str(),
-                                    square_to_str(n).c_str()
-                                );
-                                addMove(i, n, Move::FLAG_CAPTURE, pseudo_moves.get(), n_pseudo_moves);
-                            }
-                            break;
-                        }
-                        // move
-                        addMove(i, n, Move::FLAG_NONE, pseudo_moves.get(), n_pseudo_moves);
-                        // If the piece is not sliding, break the loop
-                        if (!Board::is_piece_sliding[type]){
-                            break;
-                        }
-                    }
-                }
-
-                dlogf("Attacks from: %s \n", square_to_str(i).c_str());
-                dbitboard(attacks_from[is_white][i]);
-            } else {
-                // Pawn moves
-                int start_rank = is_white ? 6 : 1;
-                
-                uint64_t attacks = pawnAttacks[is_white][i];
-
-                // Check for enpassant
-                if ((board->enpassantTarget() != -1) && (1UL << board->enpassantTarget()) & attacks){
-                    addMove(i, board->enpassantTarget(), Move::FLAG_ENPASSANT_CAPTURE, pseudo_moves.get(), n_pseudo_moves);
-                }
-
-                uint64_t captures = attacks & board->occupied();
-                uint64_t enemy_pieces = board->occupied(!is_white);
-
-                if (captures){
-                    int n = bitScanForward(captures);
-                    addAttack(i, n, is_white);
-                    if (captures & enemy_pieces){
-                        addMove(i, n, Move::FLAG_CAPTURE, pseudo_moves.get(), n_pseudo_moves);
-                    }
-                    captures &= (captures - 1);
-
-                    if (captures){
-                        n = bitScanForward(captures);
-                        addAttack(i, n, is_white);
-                        if (captures & enemy_pieces){
-                            addMove(i, n, Move::FLAG_CAPTURE, pseudo_moves.get(), n_pseudo_moves);
-                        }
-                    }
-                }
-
-                // Check for pawn moves
-                int n = Board::mailbox[Board::mailbox64[i] + Board::pawn_move_offsets[is_white][0]];
-                if (n == -1 || iboard[n] != Piece::Empty) 
-                    continue; // Out of the board or piece in the way
-
-                addMove(i, n, Move::FLAG_NONE, pseudo_moves.get(), n_pseudo_moves);
-                dlogf("Pawn move to %s\n", square_to_str(n).c_str());
-
-                if (i / 8 == start_rank){
-                    // Check for double pawn moves
-                    n = Board::mailbox[Board::mailbox64[i] + Board::pawn_move_offsets[is_white][1]];
-                    if (iboard[n] != Piece::Empty) // Piece in the way
-                        continue;
-
-                    addMove(i, n, Move::FLAG_DOUBLE_PAWN, pseudo_moves.get(), n_pseudo_moves);
-                    dlogf("Pawn double move to %s\n", square_to_str(n).c_str());
-                }
-            }
-        }        
+        // First generate for the opposite side
+        generatePseudoMoves(!is_white, occupied ^ (1ULL << king), blockers ^ (1ULL << king), nullptr);
+        n_pseudo_moves = generatePseudoMoves(is_white, occupied, board->occupied(!is_white), pseudo_moves.get());   
 
         dlogln("Checking castle rights");
 
@@ -522,41 +442,10 @@ namespace chess
             }
         }
 
-        
-    #if DEBUG_DETAILS
-        // print bitboards
-        // for(int i = 0; i < 2; i++){
-        //     uint64_t *bb = board->bitboards(i);
-        //     uint64_t bb_combined = 0;
-
-        //     for(int i = 0; i < 6; i++){
-        //         bb_combined |= bb[i];
-        //     }
-
-        //     dlogf("Bitboard for %s\n", i == 0 ? "black" : "white");
-        //     dbitboard(bb_combined);
-        // }
-    #endif
-
         // TODO: Implement pinned pieces
         // Source: https://www.chessprogramming.org/Checks_and_Pinned_Pieces_(Bitboards)
-        bool is_white = board->getSide() == Piece::White;
-        int king = is_white ? white_king_pos : black_king_pos;
-
         uint64_t pinned = 0;
-        uint64_t occupied = board->occupied();
-        uint64_t blockers = board->occupied(is_white);
         uint64_t pinner = xRayRookAttacks(occupied, blockers, king) & board->oppRooksQueens(is_white);
-
-        // dlogf("Pinned pieces for %s\n", square_to_str(king).c_str());
-        // dbitboard(occupied);
-        // dbitboard(blockers);
-        // dbitboard(pinner);
-        // dbitboard(board->oppRooksQueens(is_white));
-        // dbitboard(board->oppBishopsQueens(is_white));
-        // dlogf("X-ray attacks for %s\n", square_to_str(king).c_str());
-        // dbitboard(xRayRookAttacks(occupied, blockers, king));
-        // dbitboard(xRayBishopAttacks(occupied, blockers, king));
 
         while(pinner){
             int sq = bitScanForward(pinner);
@@ -569,10 +458,6 @@ namespace chess
             pinned |= in_between[sq][king] & blockers;
             pinner &= pinner - 1;
         }
-
-        dlogf("Pinned pieces for %s\n", square_to_str(king).c_str());
-        dbitboard(pinned);
-
 
         // validate pseudo moves
         for(int i = 0; i < n_pseudo_moves; i++){
@@ -588,6 +473,143 @@ namespace chess
         
         end_timer(timer, "Move generation");
         return n_moves;
+    }
+
+    /**
+     * @brief Generates pseudo-legal moves for a given side
+     * @param is_white True if the side is white, false otherwise
+     * @param occupied The bitboard of the occupied squares
+     * @param enemy_pieces The bitboard of the enemy pieces
+     * @param move_list The list of moves to append to
+     * @return The number of pseudo-legal moves generated, if the current side is not the same as the side to generate moves for
+     * it will only save moves to the attacks table (`attacks_to`, `attacks_from`)
+     */
+    int Manager::generatePseudoMoves(bool is_white, uint64_t occupied, uint64_t enemy_pieces, int* move_list){
+        // Pawn moves
+        uint64_t pawns = board->bitboards(is_white)[Piece::Pawn - 1];
+        bool current_side = (board->getSide() == Piece::White) == is_white;
+        int n_pseudo_moves = 0;
+
+        // Special ranks for double pawn moves & promotions
+        const int special_ranks[2] = {
+            1, 6, 
+        };
+
+        // Handle pawn moves
+        while(pawns){
+            int from = bitScanForward(pawns);
+            int rank = from / 8;
+            uint64_t attacks = pawnAttacks[is_white][from];
+
+            // Check for captures
+            while(attacks){
+                int n = bitScanForward(attacks);
+                addAttack(from, n, is_white);
+                if (current_side && (((1ULL << n) & enemy_pieces) != 0)){
+                    if (rank == special_ranks[!is_white]){
+                        // Check for promotions
+                        addMove(from, n, Move::FLAG_ROOK_PROMOTION_CAPTURE, move_list, n_pseudo_moves);
+                        addMove(from, n, Move::FLAG_QUEEN_PROMOTION_CAPTURE, move_list, n_pseudo_moves);
+                        addMove(from, n, Move::FLAG_BISHOP_PROMOTION_CAPTURE, move_list, n_pseudo_moves);
+                        addMove(from, n, Move::FLAG_KNIGHT_PROMOTION_CAPTURE, move_list, n_pseudo_moves);
+                    } else {
+                        // Just a normal capture
+                        addMove(from, n, Move::FLAG_CAPTURE, move_list, n_pseudo_moves);
+                    }
+                }                
+                attacks &= (attacks - 1);
+            }
+
+            if (!current_side){
+                pawns &= (pawns - 1);
+                continue;
+            }
+
+            // Check for enpassant
+            if((board->enpassantTarget() != 0) && (1UL << board->enpassantTarget()) & attacks){
+                addMove(from, board->enpassantTarget(), Move::FLAG_ENPASSANT_CAPTURE, move_list, n_pseudo_moves);
+            }
+
+            // Check for pawn moves
+            int n = Board::mailbox[Board::mailbox64[from] + Board::pawn_move_offsets[is_white][0]];
+            if (n != -1 && (occupied & (1ULL << n)) == 0){
+                
+                // Check if that's a promotion move
+                if (rank == special_ranks[!is_white]){
+                    addMove(from, n, Move::FLAG_ROOK_PROMOTION, move_list, n_pseudo_moves);
+                    addMove(from, n, Move::FLAG_QUEEN_PROMOTION, move_list, n_pseudo_moves);
+                    addMove(from, n, Move::FLAG_BISHOP_PROMOTION, move_list, n_pseudo_moves);
+                    addMove(from, n, Move::FLAG_KNIGHT_PROMOTION, move_list, n_pseudo_moves);
+                } else {
+                    addMove(from, n, Move::FLAG_NONE, move_list, n_pseudo_moves);
+                }                
+
+                if (rank == special_ranks[is_white]){
+                    // Check for double pawn moves
+                    n = Board::mailbox[Board::mailbox64[from] + Board::pawn_move_offsets[is_white][1]];
+                    if ((occupied & (1ULL << n)) == 0){
+                        addMove(from, n, Move::FLAG_DOUBLE_PAWN, move_list, n_pseudo_moves);
+                    }
+                }
+            }
+
+            pawns &= (pawns - 1);
+        }
+
+        for(int type = 1; type < 6; type++){
+            uint64_t pieces = board->bitboards(is_white)[type];
+            // Current side generation (adding to the move list)
+            if(current_side){
+                while(pieces){
+                    int from = bitScanForward(pieces);
+                    for(int rays = 0; rays < Board::n_piece_rays[type]; rays++){
+                        for(int n = from;;){
+                            n = Board::mailbox[Board::mailbox64[n] + Board::piece_move_offsets[type][rays]];
+                            if (n == -1){
+                                break;
+                            }
+                            uint64_t bitmove = 1ULL << n;
+                            addAttack(from, n, is_white);
+                            if (occupied & bitmove){
+                                if (enemy_pieces & bitmove){
+                                    addMove(from, n, Move::FLAG_CAPTURE, move_list, n_pseudo_moves);
+                                }
+                                break;
+                            }
+
+                            addMove(from, n, Move::FLAG_NONE, move_list, n_pseudo_moves);
+                            if (!Board::is_piece_sliding[type]){
+                                break;
+                            }
+                        }
+                    }
+                    pieces &= (pieces - 1);
+                }
+            } else {
+                // Enemy pieces generation (only adding to the attacks table)
+                while(pieces){
+                    int from = bitScanForward(pieces);
+                    for(int rays = 0; rays < Board::n_piece_rays[type]; rays++){
+                        for(int n = from;;){
+                            n = Board::mailbox[Board::mailbox64[n] + Board::piece_move_offsets[type][rays]];
+                            if (n == -1){
+                                break;
+                            }
+                            addAttack(from, n, is_white);
+                            if (occupied & (1ULL << n)){
+                                break;
+                            }
+                            if (!Board::is_piece_sliding[type]){
+                                break;
+                            }
+                        }
+                    }
+                    pieces &= (pieces - 1);
+                }                
+            }
+        }
+
+        return n_pseudo_moves;
     }
 
     /**
@@ -738,6 +760,22 @@ namespace chess
         // valid castle
         dlogf("Added possible castle at %s\n", square_to_str(target_king_pos).c_str());
         addMove(king, target_king_pos, castling_flags[j], const_cast<int*>(move_list.data()), n_moves);
+    }
+
+    /**
+     * @brief Pushes the current move to the history stack
+     */
+    void Manager::pushHistory(){
+        CHistory new_history;
+        new_history.move = curr_move.move();
+        new_history.side_to_move = board->getSide();
+        new_history.captured_piece = captured_piece;
+        new_history.enpassant_target = board->enpassantTarget();
+        new_history.halfmove_clock = board->halfmoveClock();
+        new_history.fullmove_counter = board->fullmoveCounter();
+        new_history.castling_rights = board->castlingRights().rights();
+
+        history.push_back(new_history);
     }
 
     /**

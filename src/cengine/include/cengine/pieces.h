@@ -19,27 +19,28 @@ namespace chess
         public:
         static const int pieceMask = 0b00111;  // 0b00111
         static const int colorMask = 0b11000; // 0b11000
+        static const int bits = 5;
 
         // Piece types
         enum Type
         {
-            // non sliding pieces (0b00000xx)
+            // non sliding pieces (0b000xx)
             Empty = 0,
             Pawn = 1,
             Knight = 2,
             King = 3,
 
-            // sliding pieces (0b00001xx)
-            Bishop = 4, 
-            Rook = 5,
-            Queen = 6,
+            // sliding pieces (0b001xx)
+            Bishop = 4, // 0b00100
+            Rook = 5,  // 0b00101
+            Queen = 6, // 0b00110
         };
 
         // Piece colors
         enum Color
         {
-            White = 8,  // 0b0001000
-            Black = 16, // 0b0010000
+            White = 8,  // 0b01000
+            Black = 16, // 0b10000
         };
 
         /**

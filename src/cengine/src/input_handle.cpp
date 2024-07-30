@@ -65,6 +65,7 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
         // Undo move
         if(event.key.code == sf::Keyboard::Z){
             manager->unmake();
+            (void)manager->generateMoves();
         }
 
         // Print fen

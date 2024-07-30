@@ -121,6 +121,11 @@ namespace chess{
          */
         inline int& operator[](int index) {return this->board[index]; };
 
+        /**
+         * @brief Get the piece at a given index
+         */
+        inline int& at(int from) {return this->board[from]; };
+
         std::vector<int> findAll(int piece);
         
 

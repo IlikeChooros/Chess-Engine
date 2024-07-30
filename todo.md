@@ -5,7 +5,8 @@
     - [ ] Promotion moves
   - [ ] Overall:
     - [x] When king is in check -> the first check works fine, but every subsequent check the pieces doesn't care about the king's situation
-    - [ ] king check detection -> valid move generation for king when in check by sliding pieces
+    - [x] king check detection -> valid move generation for king when in check by sliding pieces
+    - [ ] Preft test
     - [ ] Game over detection
     - [ ] 50 move rule detection
     - [ ] Threefold repetition detection

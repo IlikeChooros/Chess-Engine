@@ -10,6 +10,7 @@ class Move
 
     // Mask for the from and to fields (6 bits)
     static const uint32_t MASK_MOVE = 0b111111;
+    static const int bits = 16; // 6 + 6 + 4
 
     // Flag structure (4 bits)
     // first bit -> special bit 1 (0b000x)
@@ -49,6 +50,7 @@ class Move
     uint32_t getFrom() const {return (m_move >> 6) & MASK_MOVE;};
     uint32_t getTo() const {return m_move & MASK_MOVE;};
     uint32_t getFlags() const {return m_move >> 12;};
+    uint32_t move() const {return m_move;};
 
     bool isCapture() const {return getFlags() & FLAG_CAPTURE;};
     bool isPromotion() const {return getFlags() & FLAG_PROMOTION;};

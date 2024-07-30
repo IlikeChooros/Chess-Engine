@@ -211,6 +211,7 @@ namespace chess
         std::string s_target;
         ss >> s_target;
         m_enpassant_target = str_to_square(s_target);
+        m_enpassant_target = m_enpassant_target == -1 ? 0 : m_enpassant_target;
         
         // Read halfmove clock
         std::string hf;
@@ -298,7 +299,7 @@ namespace chess
 
         // write enpassant target square
         fen += ' ';
-        if (m_enpassant_target == -1){
+        if (m_enpassant_target == 0){
             fen += '-';
         } else {
             fen += square_to_str(m_enpassant_target);
