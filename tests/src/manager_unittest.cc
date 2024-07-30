@@ -37,7 +37,7 @@ class ManagerTest : public ::testing::Test{
             }
         }
         if(does_contain){
-            FAIL() << "Move from " << from << " to " << to << " should be present";
+            FAIL() << "*** Move from " << from << " to " << to << " should be present";
         }
     }
 

@@ -74,7 +74,7 @@ namespace chess
         m_side = Piece::White;
         m_halfmove_clock = 0;
         m_fullmove_counter = 1;  
-        m_enpassant_target = -1;
+        m_enpassant_target = 0;
         m_castling_rights = CastlingRights::ALL;
 
         board = std::unique_ptr<int[]>(new int[64]());

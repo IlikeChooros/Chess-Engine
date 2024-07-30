@@ -291,7 +291,7 @@ namespace chess
     void Manager::handleMove(Move& move){
         
         // Reset enpassant target every move
-        board->m_enpassant_target = -1;
+        board->enpassantTarget() = 0;
         int* iboard = board->board.get();        
         int from = move.getFrom(), to = move.getTo();
         bool is_white = Piece::isWhite(iboard[from]);
@@ -304,7 +304,7 @@ namespace chess
         // If that's a double pawn move, set the enpassant target
         if (move.isDoubleMove()){
             int direction = is_white ? 8 : -8;
-            board->m_enpassant_target = to + direction;
+            board->enpassantTarget() = to + direction;
         }
 
         // Update castling rights & king position
@@ -526,7 +526,7 @@ namespace chess
             }
 
             // Check for enpassant
-            if((board->enpassantTarget() != 0) && (1UL << board->enpassantTarget()) & attacks){
+            if((board->enpassantTarget() != 0) && (1ULL << board->enpassantTarget()) & pawnAttacks[is_white][from]){
                 addMove(from, board->enpassantTarget(), Move::FLAG_ENPASSANT_CAPTURE, move_list, n_pseudo_moves);
             }
 

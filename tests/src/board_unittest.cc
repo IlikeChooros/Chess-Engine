@@ -53,7 +53,7 @@ TEST(Board, loadFen){
     expected_board[62] = Piece::Knight | Piece::White;
     expected_board[63] = Piece::getRook(Piece::White);
 
-    testFen(fen, expected_board, Piece::White, -1, 0, 1);
+    testFen(fen, expected_board, Piece::White, 0, 0, 1);
 }
 
 TEST(Board, loadFenKingPawnPos){
@@ -65,7 +65,7 @@ TEST(Board, loadFenKingPawnPos){
     expected_board[str_to_square("e4")] = Piece::Pawn | Piece::White;
     expected_board[str_to_square("g5")] = Piece::King | Piece::White;
 
-    testFen(fen, expected_board, Piece::Black, -1, 0, 1);
+    testFen(fen, expected_board, Piece::Black, 0, 0, 1);
 }
 
 TEST(Board, loadFenDrawPosition){
@@ -88,7 +88,7 @@ TEST(Board, loadFenDrawPosition){
     expected_board[str_to_square("f3")] = Piece::Pawn | Piece::White;
     expected_board[str_to_square("h4")] = Piece::Pawn | Piece::White;
 
-    testFen(fen, expected_board, Piece::Black, -1, 99, 50);
+    testFen(fen, expected_board, Piece::Black, 0, 99, 50);
 }
 
 TEST(Board, getFen){
