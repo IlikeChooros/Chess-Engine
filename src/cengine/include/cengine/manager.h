@@ -1,34 +1,9 @@
 #pragma once
 
-#include <string.h>
-#include <memory>
-#include <list>
-#include <stdio.h>
-#include <vector>
-#include <cmath>
-#include <chrono>
-
-#include "board.h"
-#include "move.h"
-#include "utils.h"
-#include "castling_rights.h"
+#include "manager_impl.h"
 
 namespace chess
 {
-
-    struct CHistory
-    {
-        uint32_t move:Move::bits; // 16 bits
-        uint32_t side_to_move:Piece::bits; // 5 bit for side to move (Piece::Color)
-        uint32_t captured_piece:Piece::bits; // 5 bits for piece
-        uint32_t enpassant_target:6; // 7 bits for square (0 - 63)
-        uint32_t halfmove_clock:6; // 6 bits for halfmove clock (0 - 63 (max is 50))
-        uint32_t fullmove_counter:10; // 11 bits for fullmove counter (0 - 1023)
-        uint32_t castling_rights:CastlingRights::bits; // 4 bits for castling rights
-        uint32_t reserved:12;
-        // That gives total of 64 bits, instead of 6*32 = 192 bits
-    };
-
     class Manager
     {
     public:
@@ -37,50 +12,46 @@ namespace chess
             uint32_t flags;
         } PieceMoveInfo;
 
-        static uint64_t attacks_to[2][64];
-        static uint64_t attacks_from[2][64];
-        static const int castling_data[2][4];
-        static const int castling_offsets[2][2];
-        static const int castling_flags[2];
-        static uint64_t in_between[64][64];
-        static uint64_t pawnAttacks[2][64];
-
         Manager(Board* board = nullptr);
         Manager(const Manager& other) = delete;
         Manager& operator=(Manager&& other);
         
-        // Public API
-        void init();
-        bool movePiece(uint32_t from, uint32_t to);
+        bool movePiece(uint32_t from, uint32_t to, int flags = -1);
         std::list<PieceMoveInfo> getPieceMoves(uint32_t from);
-        int generateMoves();
+        std::vector<uint32_t> getFlags(uint32_t from, uint32_t to);
+        bool isPromotion(uint32_t from, uint32_t to);
 
-        // Private API
-        void make(Move& move);
-        void unmake();
-        int generatePseudoMoves(bool is_white, uint64_t occupied, uint64_t enemy_pieces, int* move_list);
-        bool validateMove(Move& move, int king_pos, bool is_white, uint64_t pinnedbb);
-        void addMove(int from, int to, int flags, int* move_list, int& n_moves);
-        void addAttack(int from, int to, bool piece_is_white);
-        void handleCapture(Move& move);
-        void handleMove(Move& move);
-        void checkKingCastling(bool is_white, int j, int king_index);
-        void handleCastlingMove(bool is_king_castle, int from, int to);
-        void pushHistory();
-        uint64_t rookAttacks(uint64_t occupied, int square);
-        uint64_t bishopAttacks(uint64_t occupied, int square);
-        uint64_t xRayRookAttacks(uint64_t occupied, uint64_t blockers, int square);
-        uint64_t xRayBishopAttacks(uint64_t occupied, uint64_t blockers, int square);
-        
+        /**
+         * @brief Reload the manager, should be called after changing the board (for example after loading a FEN string)
+         */
+        inline void reload() { m_impl->reload(); }
 
-        std::list<CHistory> history;
-        std::vector<int> move_list;
-        int n_moves;
-        Board* board;
-        Move curr_move;
-        Move prev_move;
-        int captured_piece;
-        int black_king_pos;
-        int white_king_pos;
+        /**
+         * @brief Unmake current move
+         */
+        inline void unmake() { m_impl->unmake(); }
+
+        /**
+         * @brief Generate moves for the current board state
+         */
+        inline int generateMoves() { return m_impl->generateMoves(); }
+
+        /**
+         * @brief Get the current game state
+         */
+        inline ManagerImpl::GameState getState() { return m_impl->state; }
+
+        /**
+         * @brief Get the board
+         */
+        inline Board* board() { return m_impl->board; }
+
+        /**
+         * @brief Get the implementation
+         */
+        inline ManagerImpl* impl() { return m_impl.get(); }
+
+    private:
+        std::unique_ptr<ManagerImpl> m_impl;
     };
 }

@@ -27,6 +27,7 @@ class Move
     static const uint32_t FLAG_ENPASSANT_CAPTURE = 0b0101;
 
     // Promotion flags
+    static const uint32_t MASK_PROMOTION_PIECE = 0b0011;
     static const uint32_t FLAG_PROMOTION = 0b1000;
     static const uint32_t FLAG_KNIGHT_PROMOTION = 0b1000;
     static const uint32_t FLAG_BISHOP_PROMOTION = 0b1001;
@@ -54,11 +55,18 @@ class Move
 
     bool isCapture() const {return getFlags() & FLAG_CAPTURE;};
     bool isPromotion() const {return getFlags() & FLAG_PROMOTION;};
+    bool isPromotionCapture() const {return (getFlags() & (FLAG_CAPTURE | FLAG_PROMOTION)) == (FLAG_CAPTURE | FLAG_PROMOTION);};
     bool isDoubleMove() const {return getFlags() == FLAG_DOUBLE_PAWN;};
     bool isEnPassant() const {return getFlags() == FLAG_ENPASSANT_CAPTURE;};
     bool isQueenCastle() const {return getFlags() == FLAG_QUEEN_CASTLE;};
     bool isKingCastle() const {return getFlags() == FLAG_KING_CASTLE;};
     bool isCastle() const {return isQueenCastle() || isKingCastle();};
+
+    /**
+     * @brief Get the promotion piece, if the move is a promotion
+     * @return 0 - Knight, 1 - Bishop, 2 - Rook, 3 - Queen
+     */
+    int getPromotionPiece() const {return getFlags() & MASK_PROMOTION_PIECE;};
 
     operator int() const {return m_move;};
     operator bool() const {return m_move != 0;};

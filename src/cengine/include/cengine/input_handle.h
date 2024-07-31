@@ -10,12 +10,15 @@ enum class InputState
 {
     None,
     Select,
-    Move
+    Move,
+    Promote
 };
 
 struct BoardWindowState{
     InputState state;
     int from;
+    int to;
+    int move_flags = -1;
 };
 
 void handleInput(chess::Manager* manager, sf::Event& event, sf::RenderWindow* window, BoardWindowState* state);

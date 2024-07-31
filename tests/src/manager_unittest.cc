@@ -21,7 +21,7 @@ class ManagerTest : public ::testing::Test{
     // Load a fen string into the board and generate moves
     void loadFen(const char* fen){
         board.loadFen(fen);
-        manager.generateMoves();
+        manager.reload();
     }
 
     // Check if a list of moves contains a move
@@ -85,8 +85,8 @@ TEST_F(ManagerTest, loadFenEnpassant){
 TEST_F(ManagerTest, loadCheckmatePos){
     loadFen("6k1/ppp3Q1/2np4/2b1p2N/4P3/3P1P2/PPP1KP1P/8 b - - 1 27");
 
-    // int n_moves = manager.generateMoves();
-    // EXPECT_EQ(n_moves, 0);
+    // Check if the checkmate position is detected
+    ASSERT_EQ(manager.impl()->n_moves, 0);
 }
 
 // Position tests
@@ -133,6 +133,43 @@ TEST_F(ManagerTest, testMoveGenEnpassantPinNotPinned){
     containsMove("d5", "e6");
 }
 
+TEST_F(ManagerTest, testMoveGenCheckmate){
+    loadFen("rnbqkbnr/ppppp2p/5p2/6pQ/3PP3/8/PPP2PPP/RNB1KBNR b KQkq - 1 3");
+    // Checkmate position, so there should be no moves
+    ASSERT_EQ(manager.impl()->n_moves, 0);
+}
 
+TEST_F(ManagerTest, testMoveGenCapturePromotion){
+    loadFen("rnbqkbnr/pP3ppp/8/8/4p3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 5");
+
+    // Check if the promotion capture move is present
+    containsMove("b7", "a8", true);
+    containsMove("b7", "c8", true);
+
+    // Check if the correct flags are set
+    auto vflags = manager.getFlags(str_to_square("b7"), str_to_square("a8"));
+    ASSERT_EQ(vflags.size(), 4);
+    for(int i = 0; i < 4; i++){
+        vflags[i] <<= 12;
+        ASSERT_TRUE(Move(vflags[i]).isPromotionCapture());
+    }
+}
+
+TEST_F(ManagerTest, testMoveGenPromotion){
+    loadFen("r1bqkbnr/pP3ppp/2n5/8/4pP2/8/PPPP2PP/RNBQKBNR w KQkq - 1 6");
+
+    // Check if the promotion move is present
+    containsMove("b7", "b8", true);
+
+    // Check if the correct flags are set
+    auto vflags = manager.getFlags(str_to_square("b7"), str_to_square("b8"));
+    ASSERT_EQ(vflags.size(), 4);
+    for(int i = 0; i < 4; i++){
+        vflags[i] <<= 12;
+        Move m(vflags[i]);
+        ASSERT_TRUE(m.isPromotion());
+        ASSERT_FALSE(m.isPromotionCapture());
+    }
+}
 
 } // namespace

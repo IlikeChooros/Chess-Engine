@@ -1,12 +1,12 @@
 ## Move generation
 - [ ] Generate all possible moves for a given board state:
-  - [ ] Pawn moves:
+  - [x] Pawn moves:
     - [x] Valid pinned pawn moves -> when a pawn is pinned to the king, and tries to enpassant capture
-    - [ ] Promotion moves
+    - [x] Promotion moves (-.-)
   - [ ] Overall:
     - [x] When king is in check -> the first check works fine, but every subsequent check the pieces doesn't care about the king's situation
     - [x] king check detection -> valid move generation for king when in check by sliding pieces
-    - [ ] Preft test
+    - [ ] Perft test 
     - [ ] Game over detection
     - [ ] 50 move rule detection
     - [ ] Threefold repetition detection

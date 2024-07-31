@@ -5,6 +5,8 @@ target_sources(cengine
         src/board.cpp
         src/input_handle.cpp
         src/manager.cpp
+        src/manager_impl.cpp
+        src/test.cpp
         src/ui.cpp
 )
 

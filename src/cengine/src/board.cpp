@@ -182,17 +182,18 @@ namespace chess
         ss >> s_side;
         m_side = s_side == "w" ? Piece::White : Piece::Black;
 
+        
+        // Read castling rights
+        i = 0;
+        std::string castling_rights;
+        ss >> castling_rights;
+
         std::unordered_map<int, int> castling = {
             {'k', CastlingRights::BLACK_KING},
             {'q', CastlingRights::BLACK_QUEEN},
             {'K', CastlingRights::WHITE_KING},
             {'Q', CastlingRights::WHITE_QUEEN},
         };
-
-        // Read castling rights
-        i = 0;
-        std::string castling_rights;
-        ss >> castling_rights;
 
         while(c != ' ' && i < castling_rights.size()){
             c = castling_rights[i++];

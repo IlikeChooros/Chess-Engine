@@ -6,10 +6,92 @@ static sf::Font font;
 static sf::Sprite pieces_sprite;
 static chess::Manager manager;
 static BoardWindowState state = {InputState::None, -1};
+static ui::PromotionWindow promotion = ui::PromotionWindow();
 
 namespace ui
 {
     using namespace chess;
+
+    PromotionWindow::PromotionWindow(
+        sf::Font& font, sf::Texture& texture,
+        Manager* manager, int x, int y
+    )
+    {
+        this->m_font = font;
+        this->m_texture = texture;
+        this->m_manager = manager;
+        this->m_rect = sf::RectangleShape({4 * (120 + 10) + 2*10, 120 + 50});
+        this->m_x = x - m_rect.getSize().x / 2;
+        this->m_y = y;
+        this->m_rect.setFillColor(sf::Color(0, 0, 0, 192));
+        this->m_rect.setPosition(m_x, m_y);
+    }
+
+    PromotionWindow& PromotionWindow::operator=(PromotionWindow&& other)
+    {
+        this->m_font = other.m_font;
+        this->m_texture = other.m_texture;
+        this->m_manager = other.m_manager;
+        this->m_x = other.m_x;
+        this->m_y = other.m_y;
+        this->m_rect = other.m_rect;
+        return *this;
+    }
+
+    /**
+     * @brief Draw the promotion window
+     * @param target The target to draw the window to
+     * @param states The render states
+     */
+    void PromotionWindow::draw(sf::RenderTarget& target, sf::RenderStates states) const
+    {
+        target.draw(m_rect, states);
+
+        sf::Text text("Promote to:", m_font, 24);
+        text.setPosition(m_x + 10, m_y + 10);
+        text.setFillColor(sf::Color::White);
+        target.draw(text, states);
+
+        sf::Sprite sprite;
+        sprite.setTexture(m_texture);
+        sprite.setScale(2, 2);
+
+        int x = m_x + 10;
+        const int texture_x[] = {180, 240, 120, 0}; // knight, bishop, rook, queen
+
+        for(int i = 0; i < 4; i++){
+            sprite.setTextureRect(sf::IntRect(texture_x[i], 60, 60, 60));
+            sprite.setPosition(x, m_y + 40);
+            target.draw(sprite, states);
+            x += 120 + 10;
+        }
+    }
+
+    /**
+     * @brief Handle input for the promotion window
+     * @param event The event to handle
+     * @param window The window to get the input from
+     * @param state The state to update
+     */
+    void PromotionWindow::handleInput(sf::Event& event, sf::RenderWindow* window, BoardWindowState* state)
+    {
+        if(event.type == sf::Event::MouseButtonPressed){
+            auto mouse = sf::Mouse::getPosition(*window);
+            if (m_rect.getGlobalBounds().contains(mouse.x, mouse.y)){
+                // Get base flag and set the chosen piece
+                auto vflags = m_manager->getFlags(state->from, state->to);
+                state->move_flags = vflags[0] & (Move::FLAG_CAPTURE | Move::FLAG_PROMOTION);
+                state->move_flags |= (mouse.x - m_x) / 120;
+                m_manager->movePiece(state->from, state->to, state->move_flags);
+
+                // Reset the state
+                state->state = InputState::None;
+                state->from = -1;
+                state->move_flags = -1;
+            }
+        }
+    }
+
 
     void drawBoard(Board& board);
 
@@ -34,20 +116,21 @@ namespace ui
         font.loadFromFile(binary_path / "font/Ubuntu-L.ttf");
         pieces_sprite.setTexture(pieces_texture, true);
         pieces_sprite.setScale(2, 2);
+        promotion = PromotionWindow(font, pieces_texture, &manager, 750, 400);
         
         Clock timer;
 
         while(window.isOpen()){
             Event event; 
             if(window.pollEvent(event)){
-                switch (event.type)
-                {
-                case Event::Closed:
+                if (event.type == Event::Closed){
                     window.close();
                     break;
-                default:
+                }
+                if(state.state == InputState::Promote){
+                    promotion.handleInput(event, &window, &state);
+                } else {
                     handleInput(&manager, event, &window, &state);
-                    break;
                 }
             }
             
@@ -137,6 +220,40 @@ namespace ui
     }
 
     /**
+     * @brief Draw the selected piece moves
+     * @param from The square to draw the moves from
+     * @param size The size of the square (in pixels)
+     * @param offset The x offset of the board (in pixels)
+     * @param manager The manager to get the moves from
+     */
+    void drawSelectedPieceMoves(int from, int size, const int offset, Manager* manager){
+        // Draw the selected square
+        int x = from % 8,
+            y = from / 8;
+        sf::RectangleShape square({float(size), float(size)});
+        square.setFillColor(sf::Color(255, 255, 0, 32));
+        square.setOutlineColor(sf::Color::Yellow);
+        square.setOutlineThickness(5);
+        square.setPosition(float(x*size + offset), float(y*size));
+        window.draw(square);
+
+        // Draw possible moves
+        square.setFillColor(sf::Color::Transparent);
+        square.setOutlineThickness(5);
+
+        auto moves = manager->getPieceMoves(from);
+        for(auto& move : moves){
+            sf::Color color(0, 255, 0, 128);
+            if (move.flags & Move::FLAG_CAPTURE){
+                color = sf::Color(255, 0, 0, 128);
+            } 
+            square.setOutlineColor(color);
+            square.setPosition(float(move.x*size + offset), float(move.y)*size);
+            window.draw(square);
+        }
+    }
+
+    /**
      * @brief Draw the chess board
      * @param board The board to draw
      */
@@ -151,30 +268,10 @@ namespace ui
 
         // If there is a selected piece by the user, draw it
         if (state.state == InputState::Select){
-            // Draw the selected square
-            int x = state.from % 8,
-                y = state.from / 8;
-            sf::RectangleShape square({float(size), float(size)});
-            square.setFillColor(sf::Color(255, 255, 0, 32));
-            square.setOutlineColor(sf::Color::Yellow);
-            square.setOutlineThickness(5);
-            square.setPosition(float(x*size + offset_x), float(y*size));
-            window.draw(square);
-
-            // Draw possible moves
-            square.setFillColor(sf::Color::Transparent);
-            square.setOutlineThickness(5);
-
-            auto moves = manager.getPieceMoves(state.from);
-            for(auto& move : moves){
-                sf::Color color(0, 255, 0, 128);
-                if (move.flags & Move::FLAG_CAPTURE){
-                    color = sf::Color(255, 0, 0, 128);
-                } 
-                square.setOutlineColor(color);
-                square.setPosition(float(move.x*size + offset_x), float(move.y)*size);
-                window.draw(square);
-            }
+            drawSelectedPieceMoves(state.from, size, offset_x, &manager);
+        }
+        else if (state.state == InputState::Promote){
+            window.draw(promotion);
         }
     }
 }

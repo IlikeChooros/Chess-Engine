@@ -35,26 +35,35 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
 
         int x = (mouse.x - offset_x) / size;
         int y = mouse.y / size;
+        int to = x + y*8;
 
         if (x < 0 || x > 7 || y < 0 || y > 7)
             return;
 
         if (from == -1){
-            if (Piece::getColor(manager->board->board[y*8 + x]) != manager->board->getSide()){
+            if (Piece::getColor(manager->board()->board[y*8 + x]) != manager->board()->getSide()){
                 return;
             }
-            from = x + y*8;
+            from = to;
             state->state = InputState::Select;
             state->from = from;
         } else {
+            // Check if that's a promotion move and the state is not already set
+            if(manager->isPromotion(from, to) && state->state != InputState::Promote){
+                state->state = InputState::Promote;
+                state->from = from;
+                state->to = to;
+                return;
+            }
+
             dlogf("From: %s to: %s\n", 
                 square_to_str(from).c_str(), 
-                square_to_str(x + y*8).c_str()
+                square_to_str(to).c_str()
             );
-
-            manager->movePiece(from, x + y*8);
+            manager->movePiece(from, to, state->move_flags);
             from = -1;
             state->state = InputState::Move;
+            state->move_flags = -1;
         }
     } else if(event.type == sf::Event::KeyPressed){
         if(event.key.code == sf::Keyboard::Escape){
@@ -70,7 +79,7 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
 
         // Print fen
         if(event.key.code == sf::Keyboard::P){
-            printf("Fen: %s\n", manager->board->getFen().c_str());
+            printf("Fen: %s\n", manager->board()->getFen().c_str());
         }
     }
      else {
