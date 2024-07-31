@@ -210,6 +210,7 @@ namespace chess{
         int* iboard = board->getBoard();
         int from = curr_move.getFrom(), to = curr_move.getTo(), captured_pos = to;
         bool is_white = history.side_to_move == Piece::White;
+        const int colors[2] = { Piece::Black, Piece::White };
 
         if (curr_move.isCapture()){
             int offset = 0;
@@ -235,6 +236,13 @@ namespace chess{
             iboard[rook_to] = iboard[rook_from]; // move the rook back
             iboard[rook_from] = Piece::Empty; // empty the rook's previous position
             board->updateBitboard(is_white, Piece::Rook - 1, rook_from, rook_to); // update the bitboard
+        }
+
+        // Restore the promotion piece
+        if (curr_move.isPromotion()){
+            board->bitboards(is_white)[Piece::getType(iboard[to]) - 1] ^= 1ULL << to; // remove the promoted piece
+            iboard[to] = Piece::Pawn | colors[is_white]; // restore the pawn
+            board->bitboards(is_white)[Piece::Pawn - 1] |= 1ULL << to; // add the pawn to the bitboard (not moved yet)
         }
 
         // Restore the king position
@@ -418,16 +426,13 @@ namespace chess{
 
         // Check for castling
         if (board->castlingRights()){
-            for(int i = 0; i < 2; i++){
-                // Get starting position for the king
-                int king = castling_data[i][0]; // 0 black, 1 white
-                if (iboard[king] != Piece::getKing(castling_data[i][3])) // King has moved
-                    continue;
-
+            // Get starting position for the king
+            int king = castling_data[is_white][0]; // 0 black, 1 white
+            if (iboard[king] == Piece::getKing(castling_data[is_white][3])){
                 dlogf("Found valid king at %s\n", square_to_str(king).c_str());
                 // Check if rooks have moved / still have castling rights
                 for(int j = 0; j < 2; j++){
-                    checkKingCastling(i, j, king);
+                    checkKingCastling(is_white, j, king);
                 }
             }
         }
@@ -435,17 +440,24 @@ namespace chess{
         // TODO: Implement pinned pieces
         // Source: https://www.chessprogramming.org/Checks_and_Pinned_Pieces_(Bitboards)
         uint64_t pinned = 0;
+        uint64_t pinners = 0;
+        uint64_t in_between_bb = 0;
         uint64_t pinner = xRayRookAttacks(occupied, blockers, king) & board->oppRooksQueens(is_white);
+        pinners |= pinner;
 
         while(pinner){
             int sq = bitScanForward(pinner);
             pinned |= in_between[sq][king] & blockers;
+            in_between_bb |= in_between[sq][king];
             pinner &= pinner - 1;
         }
         pinner = xRayBishopAttacks(occupied, blockers, king) & board->oppBishopsQueens(is_white);
+        pinners |= pinner;
+
         while(pinner){
             int sq = bitScanForward(pinner);
             pinned |= in_between[sq][king] & blockers;
+            in_between_bb |= in_between[sq][king];
             pinner &= pinner - 1;
         }
 
@@ -456,7 +468,7 @@ namespace chess{
             if (Piece::getColor(iboard[move.getFrom()]) != board->getSide())
                 continue;
             
-            if (validateMove(move, king, is_white, pinned)){
+            if (validateMove(move, king, is_white, pinned, pinners, in_between_bb)){
                 addMove(move.getFrom(), move.getTo(), move.getFlags(), const_cast<int*>(move_list.data()), n_moves);
             }
         }
@@ -644,11 +656,12 @@ namespace chess{
         return attacks ^ bishopAttacks(occupied ^ blockers, bishopsq);
     }
 
-    bool ManagerImpl::validateMove(Move& move, int king, bool is_white, uint64_t pinned)
+    bool ManagerImpl::validateMove(Move& move, int king, bool is_white, uint64_t pinned, uint64_t pinners, uint64_t in_between_bb)
     {
         int to = move.getTo();
         int from = move.getFrom();
         uint64_t king_attack = attacks_to[!is_white][king];
+        const int enpassant_dir[2] = {-8, 8};
 
         if (from != king){
             // Check if the king is not in check
@@ -659,8 +672,7 @@ namespace chess{
                 // Check if the move is enpassant (special pawn case)
                 if (move.isEnPassant()){
                     // Check with x-ray attacks, without the pawn target
-                    int direction = is_white ? 8 : -8;
-                    uint64_t occupied = board->occupied() ^ (1ULL << (to + direction));
+                    uint64_t occupied = board->occupied() ^ (1ULL << (to + enpassant_dir[is_white]));
                     uint64_t blockers = board->occupied(is_white);
                     uint64_t pinner = xRayRookAttacks(occupied, blockers, king) & board->oppRooksQueens(is_white);
                     while(pinner){
@@ -670,7 +682,12 @@ namespace chess{
                     }
                 }
 
-                return (pinned & bitmove) == 0;
+                if (pinned & bitmove){
+                    // The piece is pinned, so it can only move along the pin line or capture the pinning piece
+                    return ((in_between_bb | pinners) & (1ULL << to)) != 0;
+                }               
+
+                return true;
             }
             
             // If there is more than one piece attacking the king, the move is invalid
@@ -684,6 +701,10 @@ namespace chess{
 
             // Check if the the given move can block the check or capture the attacking piece
             if (move.isCapture()){
+                // Check if we can capture the attacking pawn
+                if (move.isEnPassant() && king_attack & (1ULL << (to + enpassant_dir[is_white]))){
+                    return true;
+                }
                 // Check if the move is not a capture of the attacking piece
                 if (attacking_pos != to){
                     return false;

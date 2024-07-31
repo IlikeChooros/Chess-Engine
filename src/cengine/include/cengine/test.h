@@ -6,17 +6,32 @@ namespace test
 {
     using namespace chess;
 
-    class Preft
+    class Perft
     {
-    public:
-        Preft(Board* board = nullptr);
-        Preft(const Preft& other) = delete;
-        Preft& operator=(Preft&& other);
+        uint64_t perft(int depth);
+        void printResults(int depth, uint64_t nodes, const uint64_t* nodes_path, ManagerImpl &manager);
 
-        int run(int depth = 5);
-    private:
-        int preft(int depth);
-
+        bool m_print;
+        bool m_init_pos;
+        uint64_t m_time_ms;
         Board *m_board;
+    public:
+        static constexpr uint64_t nodes_perft[6] = {20, 400, 8902, 197281, 4865609, 119060324};
+        static constexpr int perft_max_depth = 6;
+
+        Perft(Board* board = nullptr);
+        Perft &operator=(Perft &&other);
+
+        uint64_t run(int depth = 5);
+        
+        /**
+         * @brief Get the time in milliseconds it took to run the perft test
+         */
+        uint64_t getTime() const { return m_time_ms; }    
+
+        /**
+         * @brief Set if the perft test should print the results
+         */
+        void setPrint(bool print) { m_print = print; }    
     };
 }

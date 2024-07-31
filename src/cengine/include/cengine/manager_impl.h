@@ -60,7 +60,7 @@ namespace chess
         void unmake();
         GameState evalState();
         int generatePseudoMoves(bool is_white, uint64_t occupied, uint64_t enemy_pieces, int* move_list);
-        bool validateMove(Move& move, int king_pos, bool is_white, uint64_t pinnedbb);
+        bool validateMove(Move& move, int king_pos, bool is_white, uint64_t pinnedbb, uint64_t pinners, uint64_t in_between_bb);
         void addMove(int from, int to, int flags, int* move_list, int& n_moves);
         void addAttack(int from, int to, bool piece_is_white);
         void handleCapture(Move& move);

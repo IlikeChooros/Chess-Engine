@@ -96,8 +96,6 @@ TEST_F(ManagerTest, checkBasicCastlingRights){
     // Check if the castling moves are present
     containsMove("e1", "g1");
     containsMove("e1", "c1");
-    containsMove("e8", "g8");
-    containsMove("e8", "c8");
 }
 
 TEST_F(ManagerTest, checkCastlingRightsAfterMove){
@@ -114,6 +112,9 @@ TEST_F(ManagerTest, checkCastlingRightsAfterMove){
     // Check if the castling moves aren't present (there shouldn't be any)
     containsMove("e1", "g1", false);
     containsMove("e1", "c1", false);
+
+    manager.movePiece(str_to_square("e1"), str_to_square("e2"));
+
     containsMove("e8", "g8", false);
     containsMove("e8", "c8", false);
 }
@@ -169,6 +170,20 @@ TEST_F(ManagerTest, testMoveGenPromotion){
         Move m(vflags[i]);
         ASSERT_TRUE(m.isPromotion());
         ASSERT_FALSE(m.isPromotionCapture());
+    }
+}
+
+
+TEST_F(ManagerTest, testPreft){
+    test::Perft preft(&board);
+
+    uint64_t expected[] = {
+        20, 400, 8902, 197281, 4865609, 119060324
+    };
+
+    for(unsigned int i = 1; i < sizeof(expected)/sizeof(expected[0]); i++){
+        uint64_t nodes = preft.run(i);
+        ASSERT_EQ(nodes, expected[i - 1]);
     }
 }
 

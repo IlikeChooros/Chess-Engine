@@ -33,6 +33,7 @@ inline int str_to_square(std::string str, bool inverse = true){
     return row * 8 + str[0] - 'a';
 }
 
+
 /**
  * @brief Get the LSB1 index (the least significant bit that is 1)
  */

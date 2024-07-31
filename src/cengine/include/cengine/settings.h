@@ -9,13 +9,13 @@
 #define DEBUG_LEVEL_ALL 10
 
 // Set to true to enable performance debug messages, turns off other debug messages
-#define DEBUG_PERFORMANCE true
+#define DEBUG_PERFORMANCE false
 
 #ifndef DEBUG_LEVEL
 #   if DEBUG_PERFORMANCE
 #       define DEBUG_LEVEL DEBUG_LEVEL_ERR
 #   else
-#       define DEBUG_LEVEL DEBUG_LEVEL_DETAILS 
+#       define DEBUG_LEVEL DEBUG_LEVEL_NONE 
 #   endif
 #endif
 

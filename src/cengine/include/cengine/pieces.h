@@ -2,6 +2,7 @@
 
 #include <string>
 #include "types.h"
+#include "utils.h"
 
 
 namespace chess
@@ -91,6 +92,35 @@ namespace chess
         static inline int getRook(int color){
             return Rook | color;
         }
+
+        static std::string notation(int piece, int square){
+            std::string str = "";
+            if (piece == Empty)
+                return " ";
+
+            switch (piece & pieceMask)
+            {
+                case Knight:
+                    str += "N";
+                    break;
+                case King:
+                    str += "K";
+                    break;
+                case Bishop:
+                    str += "B";
+                    break;
+                case Rook:
+                    str += "R";
+                    break;
+                case Queen:
+                    str += "Q";
+                    break;
+                default:
+                    break;
+            }
+            return str + square_to_str(square);
+        }
+
 
         static std::string toStr(int piece){
             std::string str = "";
