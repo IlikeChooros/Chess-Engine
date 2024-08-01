@@ -13,7 +13,7 @@ namespace test
 
         bool m_print;
         bool m_init_pos;
-        uint64_t m_time_ms;
+        uint64_t m_time_us;
         Board *m_board;
     public:
         static constexpr uint64_t nodes_perft[6] = {20, 400, 8902, 197281, 4865609, 119060324};
@@ -27,7 +27,7 @@ namespace test
         /**
          * @brief Get the time in milliseconds it took to run the perft test
          */
-        uint64_t getTime() const { return m_time_ms; }    
+        uint64_t getTime() const { return m_time_us / 1000; }    
 
         /**
          * @brief Set if the perft test should print the results

@@ -73,7 +73,7 @@ namespace
     
     TEST_F(PerftTest, PerftTest)
     {
-        for (size_t i = 0; i < 10; i++)
+        for (size_t i = 0; i < sizeof(PerftTestData::data)/sizeof(PerftTestData::data[0]); i++)
         {
             printf("Running test %zu...", i + 1);
             runTest(PerftTestData::data[i]);

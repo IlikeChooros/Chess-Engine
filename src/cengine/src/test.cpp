@@ -7,7 +7,7 @@ namespace test
     Perft::Perft(Board* board)
     {
         m_print = true;
-        m_time_ms = 0;
+        m_time_us = 1;
         m_board = board;
     }
 
@@ -45,7 +45,7 @@ namespace test
             manager.unmake();
         }
 
-        m_time_ms = (duration_cast<milliseconds>(high_resolution_clock::now() - start)).count();
+        m_time_us = (duration_cast<microseconds>(high_resolution_clock::now() - start)).count();
         printResults(depth, nodes, nodes_path.data(), manager);
         return nodes;
     }
@@ -76,13 +76,14 @@ namespace test
         if(!m_print)
             return;
         
-        for(int i = 0; i < manager.n_moves; i++){
-            auto move = Move(manager.move_list[i]);
-            int from = move.getFrom();
-            int to = move.getTo();
-            printf("Move: %s %lu\n", Piece::notation((*m_board)[from], to).c_str(), nodes_path[i]);
-        }
-        printf("Depth %d, Time: %lu ms, Count: %lu", depth, m_time_ms, nodes);
+        // for(int i = 0; i < manager.n_moves; i++){
+        //     auto move = Move(manager.move_list[i]);
+        //     int from = move.getFrom();
+        //     int to = move.getTo();
+        //     printf("Move: %s %lu\n", Piece::notation((*m_board)[from], to).c_str(), nodes_path[i]);
+        // }
+        printf("NPS: %lu\n", m_time_us != 0 ? (nodes * 1000000 / m_time_us) : 0);
+        printf("Depth %d, Time: %lu us, Count: %lu", depth, m_time_us, nodes);
         if (depth >= perft_max_depth || !m_init_pos){
             printf("\n\n");
             return;

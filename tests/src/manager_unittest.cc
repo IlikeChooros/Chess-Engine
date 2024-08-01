@@ -8,24 +8,28 @@ namespace{
 using namespace chess;
 
 // Fixture for playing moves with the manager
-class ManagerTest : public ::testing::Test{
+class ManagerTest : public ::testing::Test
+{
     protected:
     Board board;
     Manager manager;
 
-    void SetUp() override {
+    void SetUp() override 
+    {
         board.init();
         manager = Manager(&board);
     }
 
     // Load a fen string into the board and generate moves
-    void loadFen(const char* fen){
+    void loadFen(const char* fen)
+    {
         board.loadFen(fen);
         manager.reload();
     }
 
     // Check if a list of moves contains a move
-    void containsMove(std::string from, std::string to, bool does_contain = true){
+    void containsMove(std::string from, std::string to, bool does_contain = true)
+    {
         std::list<Manager::PieceMoveInfo> moves = manager.getPieceMoves(str_to_square(from));
         for(auto& move : moves){
             if(square_to_str(move.x + move.y * 8) == to){
@@ -42,7 +46,8 @@ class ManagerTest : public ::testing::Test{
     }
 
     // Check if a list of moves is equal to a list of expected moves
-    void expectMoves(std::string from, std::list<std::string> expected){
+    void expectMoves(std::string from, std::list<std::string> expected)
+    {
         std::list<Manager::PieceMoveInfo> moves = manager.getPieceMoves(str_to_square(from));
         std::list<std::string> moves_str;
         for(auto move : moves){
@@ -54,7 +59,8 @@ class ManagerTest : public ::testing::Test{
     }
 
     // Move a piece from one square to another
-    void move(std::string from, std::string to){
+    void move(std::string from, std::string to)
+    {
         manager.movePiece(str_to_square(from), str_to_square(to));
     }
 };
@@ -62,27 +68,31 @@ class ManagerTest : public ::testing::Test{
 
 // Manager tests
 
-TEST_F(ManagerTest, movePiece){
+TEST_F(ManagerTest, movePiece)
+{
     manager.movePiece(str_to_square("e2"), str_to_square("e4"));
 
     EXPECT_EQ(board[str_to_square("e4")], Piece::createPiece(Piece::Pawn, Piece::White));
     EXPECT_EQ(board[str_to_square("e2")], 0);
 }
 
-TEST_F(ManagerTest, getPieceMoves){
+TEST_F(ManagerTest, getPieceMoves)
+{
     expectMoves("e2", {"e3", "e4"});
     std::list<Manager::PieceMoveInfo> moves = manager.getPieceMoves(str_to_square("e1"));
     EXPECT_EQ(moves.size(), 0);
 }
 
-TEST_F(ManagerTest, loadFenEnpassant){
+TEST_F(ManagerTest, loadFenEnpassant)
+{
     loadFen("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3");
 
     EXPECT_EQ(board.enpassantTarget(), str_to_square("f6"));
     containsMove("e5", "f6");
 }
 
-TEST_F(ManagerTest, loadCheckmatePos){
+TEST_F(ManagerTest, loadCheckmatePos)
+{
     loadFen("6k1/ppp3Q1/2np4/2b1p2N/4P3/3P1P2/PPP1KP1P/8 b - - 1 27");
 
     // Check if the checkmate position is detected
@@ -90,7 +100,8 @@ TEST_F(ManagerTest, loadCheckmatePos){
 }
 
 // Position tests
-TEST_F(ManagerTest, checkBasicCastlingRights){
+TEST_F(ManagerTest, checkBasicCastlingRights)
+{
     loadFen("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
 
     // Check if the castling moves are present
@@ -98,7 +109,8 @@ TEST_F(ManagerTest, checkBasicCastlingRights){
     containsMove("e1", "c1");
 }
 
-TEST_F(ManagerTest, checkCastlingRightsAfterMove){
+TEST_F(ManagerTest, checkCastlingRightsAfterMove)
+{
     loadFen("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
 
     manager.movePiece(str_to_square("e1"), str_to_square("e2"));
@@ -122,25 +134,29 @@ TEST_F(ManagerTest, checkCastlingRightsAfterMove){
 // Test move generation
 
 // Test special pawn cases, when enpassant is possible and the rook is pinning the pawn
-TEST_F(ManagerTest, testMoveGenEnpassantPin){
+TEST_F(ManagerTest, testMoveGenEnpassantPin)
+{
     loadFen("8/8/8/r2Pp2K/8/8/k7/8 w - e6 0 1");
     // Can't enpassant because of pin
     containsMove("d5", "e6", false);
 }
 
-TEST_F(ManagerTest, testMoveGenEnpassantPinNotPinned){
+TEST_F(ManagerTest, testMoveGenEnpassantPinNotPinned)
+{
     loadFen("8/8/8/r2Pp1PK/8/8/k7/8 w - e6 0 1");
     // Enpassant should be possible, there is a pawn near the king
     containsMove("d5", "e6");
 }
 
-TEST_F(ManagerTest, testMoveGenCheckmate){
+TEST_F(ManagerTest, testMoveGenCheckmate)
+{
     loadFen("rnbqkbnr/ppppp2p/5p2/6pQ/3PP3/8/PPP2PPP/RNB1KBNR b KQkq - 1 3");
     // Checkmate position, so there should be no moves
     ASSERT_EQ(manager.impl()->n_moves, 0);
 }
 
-TEST_F(ManagerTest, testMoveGenCapturePromotion){
+TEST_F(ManagerTest, testMoveGenCapturePromotion)
+{
     loadFen("rnbqkbnr/pP3ppp/8/8/4p3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 5");
 
     // Check if the promotion capture move is present
@@ -156,7 +172,8 @@ TEST_F(ManagerTest, testMoveGenCapturePromotion){
     }
 }
 
-TEST_F(ManagerTest, testMoveGenPromotion){
+TEST_F(ManagerTest, testMoveGenPromotion)
+{
     loadFen("r1bqkbnr/pP3ppp/2n5/8/4pP2/8/PPPP2PP/RNBQKBNR w KQkq - 1 6");
 
     // Check if the promotion move is present
@@ -174,16 +191,13 @@ TEST_F(ManagerTest, testMoveGenPromotion){
 }
 
 
-TEST_F(ManagerTest, testPreft){
+TEST_F(ManagerTest, testPreft)
+{
     test::Perft preft(&board);
 
-    uint64_t expected[] = {
-        20, 400, 8902, 197281, 4865609, 119060324
-    };
-
-    for(unsigned int i = 1; i < sizeof(expected)/sizeof(expected[0]); i++){
+    for(unsigned int i = 1; i <= test::Perft::perft_max_depth; i++){
         uint64_t nodes = preft.run(i);
-        ASSERT_EQ(nodes, expected[i - 1]);
+        ASSERT_EQ(nodes, test::Perft::nodes_perft[i - 1]);
     }
 }
 

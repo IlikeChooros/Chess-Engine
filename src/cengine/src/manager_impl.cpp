@@ -696,31 +696,17 @@ namespace chess{
                 return false;
             }
 
-            // Get the position of the attacking piece (attacks_to = 1 << pos)
-            int attacking_pos = bitScanForward(king_attack);
+            int attacker = bitScanForward(king_attack);
+            const int offsets[2] = {0, enpassant_dir[is_white]};
+            int offset = offsets[move.isEnPassant()];
 
-            // Check if the the given move can block the check or capture the attacking piece
-            if (move.isCapture()){
-                // Check if we can capture the attacking pawn
-                if (move.isEnPassant() && king_attack & (1ULL << (to + enpassant_dir[is_white]))){
-                    return true;
-                }
-                // Check if the move is not a capture of the attacking piece
-                if (attacking_pos != to){
-                    return false;
-                }
-            } else {
-                // Check if the move can block the check, we will need to the bitboards, since the attacks
-                // are also bitboards
-                // int bitmove = 1 << to;
-
-                // TODO: Implement blocking check
-                uint64_t bitmove = 1ULL << to;
-                if ((in_between[attacking_pos][king] & bitmove) == 0){
-                    return false;
-                }
+            // If the piece is pinned it cannot capture the checking piece
+            if (pinned & (1ULL << from)){
+                return false;
             }
 
+            // Check if the move can block the check or capture the attacking piece
+            return (in_between[attacker][king] | king_attack) & (1ULL << (to + offset));
         } else {
             // Check if the king can't move to the given square
             if (attacks_to[!is_white][to] != 0){
