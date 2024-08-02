@@ -24,6 +24,13 @@ namespace chess{
         static const int n_piece_rays[6];
         static const bool is_piece_sliding[6];
 
+        // Helper bitboards
+        static uint64_t in_between[64][64];
+        static uint64_t pawnAttacks[2][64];
+        static uint64_t knightAttacks[64];
+        static uint64_t kingAttacks[64];
+
+
         static const int ROOK_TYPE = Piece::Rook - 1;
         static const int BISHOP_TYPE = Piece::Bishop - 1;
         static const int QUEEN_TYPE = Piece::Queen - 1;
@@ -62,6 +69,11 @@ namespace chess{
          * @brief Get the castling rights
          */
         inline CastlingRights& castlingRights() {return this->m_castling_rights; };
+
+        /**
+         * @brief Get the captured piece
+         */
+        inline int& capturedPiece() {return this->m_captured_piece; };
 
         /**
          * @brief Get raw board data
@@ -134,6 +146,7 @@ namespace chess{
         int m_enpassant_target;
         int m_halfmove_clock;
         int m_fullmove_counter;
+        int m_captured_piece;
         uint64_t m_bitboards[2][6]; // 0: white, 1: black, contains bitboards for each piece type
         CastlingRights m_castling_rights;
     };

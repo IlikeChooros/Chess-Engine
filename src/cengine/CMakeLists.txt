@@ -7,6 +7,7 @@ target_sources(cengine
         src/manager.cpp
         src/manager_impl.cpp
         src/test.cpp
+        src/move_gen.cpp
         src/ui.cpp
 )
 

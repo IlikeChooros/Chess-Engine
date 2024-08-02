@@ -21,7 +21,7 @@ namespace test
     class Perft
     {
         uint64_t perft(int depth);
-        void printResults(int depth, uint64_t nodes, const uint64_t* nodes_path, ManagerImpl &manager);
+        void printResults(int depth, uint64_t nodes, const uint64_t* nodes_path);
 
         bool m_print;
         uint64_t m_time_us;

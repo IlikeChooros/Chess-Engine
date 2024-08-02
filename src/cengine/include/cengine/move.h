@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 
 #include "types.h"
 
@@ -86,4 +87,31 @@ class Move
     
     private:
     uint32_t m_move;
+};
+
+// Move list class, stores a list of moves
+class MoveList
+{
+    public:
+    typedef uint32_t move_t;
+
+    MoveList(): n_moves(0) {}
+    MoveList(const MoveList& other){
+        *this = other;
+    }
+    MoveList& operator=(const MoveList& other){
+        n_moves = other.n_moves;
+        memcpy(moves, other.moves, other.n_moves * sizeof(move_t));
+        return *this;
+    }
+
+    inline size_t size() const {return n_moves;}
+    inline void add(move_t move) {moves[n_moves++] = move;}
+    inline void clear() {n_moves = 0;}
+    inline Move operator[](size_t i) {return Move(moves[i]);}
+    inline move_t* begin() {return moves;}
+    inline move_t* end() {return moves + n_moves;}
+
+    uint32_t moves[256];
+    size_t n_moves;
 };

@@ -57,21 +57,25 @@ namespace test
             m_expected = nodes_perft[depth - 1]; 
        
         m_board->loadFen(fen.c_str());
-        ManagerImpl manager(m_board);
-        auto start = high_resolution_clock::now();
         
-        // auto ml = manager.move_list;
-        // size_t moves = manager.generateMoves();
+        auto start = high_resolution_clock::now();
+        ManagerImpl manager(m_board);
+        manager.validateCastlingRights();
+        auto ml = manager.move_list;
+        size_t moves = manager.generateMoves();
 
-        MoveList ml;
-        size_t moves = manager.gen_legal_moves(&ml);
+        // validate_castling_rights(m_board);
+        // MoveList ml;
+        // GameHistory gh;
+        // gh.push(m_board, Move());
+        // size_t moves = gen_legal_moves(&ml, m_board);
 
         std::vector<uint64_t> nodes_path(moves, 1);
         
         
         if(depth == 1){
             m_time_us = (duration_cast<microseconds>(high_resolution_clock::now() - start)).count();
-            printResults(1, moves, nodes_path.data(), manager);
+            printResults(1, moves, nodes_path.data());
 
             // if (new_nodes != size_t(manager.n_moves)){
             //     printf("New nodes: %lu, old nodes: %d\n", new_nodes, manager.n_moves);
@@ -101,25 +105,28 @@ namespace test
         for(size_t i = 0; i < moves; i++){
             auto move = Move(ml[i]);
             manager.make(move);
+            // make(move, m_board);
+            // gh.push(m_board, move);
             nodes_path[i] = perft(depth - 1);
             nodes += nodes_path[i];
+            // unmake(move, m_board, &gh);
             manager.unmake();
         }
 
         m_time_us = (duration_cast<microseconds>(high_resolution_clock::now() - start)).count();
-        printResults(depth, nodes, nodes_path.data(), manager);
+        printResults(depth, nodes, nodes_path.data());
         return nodes;
     }
 
     uint64_t Perft::perft(int depth)
     {
         ManagerImpl manager(m_board);
+        auto ml = manager.move_list;
+        size_t moves = manager.generateMoves();
 
-        // auto ml = manager.move_list;
-        // size_t moves = manager.generateMoves();
-
-        MoveList ml;
-        size_t moves = manager.gen_legal_moves(&ml);
+        // MoveList ml;
+        // GameHistory gh;
+        // size_t moves = gen_legal_moves(&ml, m_board);
 
         if(depth == 1){
             return (uint64_t)moves;
@@ -129,14 +136,17 @@ namespace test
         for(size_t i = 0; i < moves; i++){
             auto move = Move(ml[i]);
             manager.make(move);
+            // make(move, m_board);
+            // gh.push(m_board, move);
             nodes += perft(depth - 1);
+            // unmake(move, m_board, &gh);
             manager.unmake();
         }
         
         return nodes;
     }
 
-    void Perft::printResults(int depth, uint64_t nodes, const uint64_t* nodes_path, ManagerImpl &manager)
+    void Perft::printResults(int depth, uint64_t nodes, const uint64_t* nodes_path)
     {
         if(!m_print)
             return;

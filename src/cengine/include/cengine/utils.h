@@ -66,6 +66,16 @@ inline int bitScanForward(uint64_t bb){
     #endif
 }
 
+/**
+ * @brief Pop the least significant bit that is 1 from a bitboard and return its index
+ */
+inline int pop_lsb1(uint64_t& b)
+{
+    int lsb1 = bitScanForward(b);
+    b &= b - 1;
+    return lsb1;
+}
+
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> dtimer_t;
 
 #if DEBUG_PERFORMANCE

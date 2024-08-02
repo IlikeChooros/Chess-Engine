@@ -93,6 +93,13 @@ namespace chess
             return Rook | color;
         }
 
+        /**
+         * @brief Return the opposite color
+         */
+        static inline int opposite(int color){
+            return color ^ colorMask;
+        }
+
         static std::string notation(int piece, int square){
             std::string str = "";
             if (piece == Empty)

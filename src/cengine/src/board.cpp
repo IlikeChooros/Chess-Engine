@@ -66,6 +66,14 @@ namespace chess
         false, false, false, true, true, true // Pawn, Knight, King, Bishop, Rook, Queen
     };
 
+
+    // Helper bitboards
+    uint64_t Board::in_between[64][64] = {0};
+    uint64_t Board::pawnAttacks[2][64] = {0};
+    uint64_t Board::knightAttacks[64] = {0};
+    uint64_t Board::kingAttacks[64] = {0};
+
+
     /**
      * @brief Initialize the board with the default chess pieces
      */
@@ -76,6 +84,7 @@ namespace chess
         m_fullmove_counter = 1;  
         m_enpassant_target = 0;
         m_castling_rights = CastlingRights::ALL;
+        m_captured_piece = Piece::Empty;
 
         board = std::unique_ptr<int[]>(new int[64]());
 
@@ -223,6 +232,8 @@ namespace chess
         std::string full_move;
         ss >> full_move;
         m_fullmove_counter = std::stoi(full_move);
+
+        m_captured_piece = Piece::Empty;
 
         // Update bitboards
         updateBitboards();
