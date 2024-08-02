@@ -15,6 +15,34 @@
 
 namespace chess
 {
+
+    class MoveList
+    {
+        public:
+        typedef uint32_t move_t;
+
+        MoveList(): n_moves(0) {}
+        MoveList(const MoveList& other){
+            n_moves = other.n_moves;
+            memcpy(moves, other.moves, other.n_moves * sizeof(move_t));
+        }
+        MoveList& operator=(const MoveList& other){
+            n_moves = other.n_moves;
+            memcpy(moves, other.moves, other.n_moves * sizeof(move_t));
+            return *this;
+        }
+
+        inline size_t size() const {return n_moves;}
+        inline void add(move_t move) {moves[n_moves++] = move;}
+        inline void clear() {n_moves = 0;}
+        inline move_t& operator[](size_t i) {return moves[i];}
+        inline move_t* begin() {return moves;}
+        inline move_t* end() {return moves + n_moves;}
+
+        move_t moves[256];
+        size_t n_moves;
+    };
+
     // Struct to store history of moves
     struct CHistory
     {
@@ -24,9 +52,9 @@ namespace chess
         uint32_t enpassant_target:6; // 7 bits for square (0 - 63)
         uint32_t halfmove_clock:6; // 6 bits for halfmove clock (0 - 63 (max is 50))
         uint32_t fullmove_counter:10; // 11 bits for fullmove counter (0 - 1023)
-        uint32_t castling_rights:CastlingRights::bits; // 4 bits for castling rights
+        uint32_t castling_rights:CastlingRights::bits; // 3 bits for castling rights
         uint32_t game_state:2; // 2 bits for game state
-        uint32_t reserved:10;
+        uint32_t reserved:11;
         // That gives total of 64 bits, instead of 6*32 = 192 bits
     };
 
@@ -41,6 +69,8 @@ namespace chess
         static const int castling_flags[2];
         static uint64_t in_between[64][64];
         static uint64_t pawnAttacks[2][64];
+        static uint64_t knightAttacks[64];
+        static uint64_t kingAttacks[64];
 
         typedef enum{
             Normal = 0,
@@ -74,6 +104,19 @@ namespace chess
         uint64_t xRayBishopAttacks(uint64_t occupied, uint64_t blockers, int square);
         
 
+        size_t gen_legal_moves(MoveList* moves);
+        void validate_castling_rights();
+
+        /**
+         * @brief Pop the least significant bit that is 1 from a bitboard and return its index
+         */
+        inline int pop_lsb1(uint64_t& bitboard) 
+        {
+            int lsb1 = bitScanForward(bitboard);
+            bitboard &= (bitboard - 1);
+            return lsb1;
+        }
+
         std::list<CHistory> history;
         std::vector<int> move_list;
         int n_moves;
@@ -81,8 +124,6 @@ namespace chess
         Move curr_move;
         Move prev_move;
         int captured_piece;
-        int black_king_pos;
-        int white_king_pos;
         GameState state;  
     };
 }

@@ -25,12 +25,14 @@ namespace chess{
 
     uint64_t ManagerImpl::in_between[64][64] = {};
     uint64_t ManagerImpl::pawnAttacks[2][64] = {};
+    uint64_t ManagerImpl::knightAttacks[64] = {};
+    uint64_t ManagerImpl::kingAttacks[64] = {};
 
     // Helper functions
 
     /**
      * @brief Generates the attacks for a piece
-     * @param type The type of the piece (Piece::Rook, Piece::Bishop, Piece::Queen)
+     * @param type The type of the piece (Piece::Rook - 1, Piece::Bishop - 1, Piece::Queen - 1, Piece::Knight - 1, Piece::King - 1)
      * @param occupied The bitboard of the occupied squares
      * @param square The square of the piece
      */
@@ -63,6 +65,28 @@ namespace chess{
         return attacks;
     }
 
+    uint64_t mailboxPawnMoves(uint64_t occupied, int square, bool is_white)
+    {
+        const int ranks[2] = {1, 6};
+        int rank = square >> 3;
+        uint64_t moves = 0;
+        for(int j = 0; j < 2; j++){
+            int n = Board::mailbox[Board::mailbox64[square] + Board::pawn_move_offsets[is_white][j]];
+
+            // Check if the square is outside of the board or if it's occupied
+            if (n == -1 || occupied & (1ULL << n)){
+                break;
+            }
+            moves |= 1ULL << n;
+
+            // Break if the pawn is not on the 2nd (white) or 7th (black) rank
+            if(rank != ranks[is_white]){
+                break;
+            }
+        }
+        return moves;
+    }
+
     // C'tor
 
     ManagerImpl::ManagerImpl(Board* board)
@@ -71,13 +95,13 @@ namespace chess{
         this->captured_piece = Piece::Empty;
         this->n_moves = 0;
         this->move_list = std::vector<int>(256, 0);
-
-        // load data from the board
         this->board = board;
 
         if (board == nullptr)
             return;
+
         init();
+        validate_castling_rights();
         generateMoves();
         pushHistory();
     }
@@ -90,8 +114,6 @@ namespace chess{
         this->captured_piece = other.captured_piece;
         this->curr_move = other.curr_move;
         this->prev_move = other.prev_move;
-        this->black_king_pos = other.black_king_pos;
-        this->white_king_pos = other.white_king_pos;
         this->history = other.history;
         this->state = other.state;
         return *this;
@@ -99,8 +121,6 @@ namespace chess{
 
     void ManagerImpl::init()
     {
-        white_king_pos = bitScanForward(board->bitboards(true)[Piece::King - 1]);
-        black_king_pos = bitScanForward(board->bitboards(false)[Piece::King - 1]);
 
         // Initialize the in_between array
         // Taken from: https://www.chessprogramming.org/Square_Attacked_By
@@ -138,6 +158,9 @@ namespace chess{
 
         // Init piece attacks
         for(int i = 0; i < 64; i++){
+            knightAttacks[i] = mailboxAttacks(Piece::Knight - 1, 0, i, false);
+            kingAttacks[i] = mailboxAttacks(Piece::King - 1, 0, i, false);
+
             // Pawn attacks
             for(int j = 0; j < 2; j++){
                 for(int k = 0; k < 2; k++){
@@ -161,8 +184,7 @@ namespace chess{
         this->n_moves = 0;
         this->move_list = std::vector<int>(256, 0);
         this->history.clear();
-        this->black_king_pos = bitScanForward(board->bitboards(false)[Piece::King - 1]);
-        this->white_king_pos = bitScanForward(board->bitboards(true)[Piece::King - 1]);
+        validate_castling_rights();
         generateMoves();
         pushHistory();
     }
@@ -245,12 +267,6 @@ namespace chess{
             board->bitboards(is_white)[Piece::Pawn - 1] |= 1ULL << to; // add the pawn to the bitboard (not moved yet)
         }
 
-        // Restore the king position
-        if (Piece::getType(iboard[to]) == Piece::King){
-            int *king_pos = is_white ? &white_king_pos : &black_king_pos;
-            *king_pos = from;
-        }
-
         // Restore the moved piece
         iboard[from] = iboard[to];
         iboard[to] = Piece::Empty;
@@ -300,8 +316,6 @@ namespace chess{
 
         // Update castling rights & king position
         if (Piece::getType(iboard[from]) == Piece::King){
-            int *king_pos = is_white ? &white_king_pos : &black_king_pos;
-            *king_pos = to;
             board->m_castling_rights.remove(Piece::isWhite(iboard[from]) ? CastlingRights::WHITE : CastlingRights::BLACK);
         } else if (Piece::getType(iboard[from]) == Piece::Rook){
             // If the rook is moved from the starting position, remove the castling rights for that side
@@ -386,6 +400,501 @@ namespace chess{
     }
 
     /**
+     * @brief Validates the castling rights, it may only delete the invalid rights
+     */
+    void ManagerImpl::validate_castling_rights(){
+        const int kings[2] = {
+            bitScanForward(board->bitboards(false)[Piece::King - 1]),
+            bitScanForward(board->bitboards(true)[Piece::King - 1])
+        };
+        const int castling_rights[2][2] = {
+            {CastlingRights::BLACK_QUEEN, CastlingRights::BLACK_KING},
+            {CastlingRights::WHITE_QUEEN, CastlingRights::WHITE_KING}
+        };
+        int* iboard = board->getBoard();
+        CastlingRights cr(board->castlingRights().rights());
+
+        // Check if the rooks are in the correct position
+        for (int is_white = 0; is_white < 2; is_white++){
+            for(int i = 0; i < 2; i++){
+                int rook_target = castling_data[is_white][i + 1];
+                if (Piece::getType(iboard[rook_target]) != Piece::Rook){
+                    cr.remove(castling_rights[is_white][i]);
+                }
+            }
+        }
+        // Check if the king is in the correct position
+        for (int is_white = 0; is_white < 2; is_white++){
+            if (kings[is_white] != castling_data[is_white][0]){
+                cr.remove(castling_rights[is_white][0]);
+                cr.remove(castling_rights[is_white][1]);
+            }
+        }
+        board->castlingRights() = cr;
+    }
+
+    /**
+     * @brief Optimized version of `generateMoves()`, generates all possible moves for the current board state
+     */
+    size_t ManagerImpl::gen_legal_moves(MoveList* moves){
+        bool is_white = board->getSide() == Piece::White;
+        bool is_enemy = !is_white;
+        uint64_t occupied = board->occupied();
+        uint64_t occupied_noking = occupied ^ board->bitboards(is_white)[Piece::King - 1];
+        uint64_t enemy_pieces = board->occupied(!is_white);
+        uint64_t allied_pieces = occupied ^ enemy_pieces;
+        int king = bitScanForward(board->bitboards(is_white)[Piece::King - 1]);
+        moves->clear();
+
+        // Bitboard for the enemy attacks
+        uint64_t bitboard;
+        uint64_t danger = 0;
+
+        // Generate attacks for enemy bishops
+        bitboard = board->bitboards(is_enemy)[Piece::Bishop - 1];
+        while(bitboard) danger |= bishopAttacks(occupied_noking, pop_lsb1(bitboard));
+        
+
+        // Generate attacks for enemy rooks
+        bitboard = board->bitboards(is_enemy)[Piece::Rook - 1];
+        while (bitboard) danger |= rookAttacks(occupied_noking, pop_lsb1(bitboard));
+        
+
+        // Generate attacks for enemy knights
+        bitboard = board->bitboards(is_enemy)[Piece::Knight - 1];
+        while (bitboard) danger |= knightAttacks[pop_lsb1(bitboard)];
+        
+
+        // Generate attacks for enemy queen(s)
+        bitboard = board->bitboards(is_enemy)[Piece::Queen - 1];
+        while(bitboard){
+            int sq = pop_lsb1(bitboard);
+            danger |= rookAttacks(occupied_noking, sq) | bishopAttacks(occupied_noking, sq);
+        }
+
+        // Generate attacks for enemy pawns
+        bitboard = board->bitboards(is_enemy)[Piece::Pawn - 1];
+        while(bitboard) danger |= pawnAttacks[is_enemy][pop_lsb1(bitboard)];
+        
+        // Generate attacks for enemy king
+        danger |= kingAttacks[bitScanForward(board->bitboards(is_enemy)[Piece::King - 1])];
+
+        // Now generate pins
+        // Source: https://www.chessprogramming.org/Pinned_Pieces
+        uint64_t pinned = 0;
+        uint64_t pinners = 0;
+        uint64_t in_between_pins = 0;
+        uint64_t pinner = xRayRookAttacks(occupied, allied_pieces, king) & board->oppRooksQueens(is_white);
+        pinners |= pinner;
+
+        while(pinner){
+            int sq = bitScanForward(pinner);
+            pinned |= in_between[sq][king] & allied_pieces;
+            in_between_pins |= in_between[sq][king];
+            pinner &= pinner - 1;
+        }
+        pinner = xRayBishopAttacks(occupied, allied_pieces, king) & board->oppBishopsQueens(is_white);
+        pinners |= pinner;
+
+        while(pinner){
+            int sq = bitScanForward(pinner);
+            pinned |= in_between[sq][king] & allied_pieces;
+            in_between_pins |= in_between[sq][king];
+            pinner &= pinner - 1;
+        }
+
+        // See if the king is in check
+        if (danger & board->bitboards(is_white)[Piece::King - 1]){
+            // Check the number of attackers
+            uint64_t attackers = 0;
+            attackers |= bishopAttacks(occupied, king) & board->oppBishopsQueens(is_white);
+            attackers |= rookAttacks(occupied, king) & board->oppRooksQueens(is_white);
+            attackers |= knightAttacks[king] & board->bitboards(is_enemy)[Piece::Knight - 1];
+            attackers |= pawnAttacks[is_white][king] & board->bitboards(is_enemy)[Piece::Pawn - 1];
+
+            // If there are more than one attackers, the king is in double check, only king moves are allowed
+            if (attackers & (attackers - 1)){
+                // Generate king moves
+                // King can only move to evade the check
+                uint64_t kmoves = kingAttacks[king] & ~occupied & ~danger;
+                uint64_t captures = kingAttacks[king] & enemy_pieces & ~danger;
+
+                while(kmoves) moves->add(Move(king, pop_lsb1(kmoves), Move::FLAG_NONE).move());
+                while(captures) moves->add(Move(king, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
+                
+                return moves->size();
+            }
+
+            // Generate moves to block the check,
+            // The things to look out for when generating moves:
+            // - My pieces might be pinned:
+            //   - pinned pieces cannot move when the king is in check (them moving would expose the king)
+            // - Pieces can only either capture the attacker or block the path
+            // - Enpassant is possible only if the attacker is a pawn
+            // - King may only move to evade the check
+            int attackers_sq = bitScanForward(attackers);
+            uint64_t block_path = in_between[attackers_sq][king]; // squares in-between the attacker
+            uint64_t block_moves = 0;
+
+            // Generate moves for not pinned pieces
+            uint64_t not_pinned = ~pinned & allied_pieces;
+            
+            // Generate moves for bishops
+            bitboard = board->bitboards(is_white)[Piece::Bishop - 1] & not_pinned;
+            while(bitboard){
+                int sq = pop_lsb1(bitboard);
+                block_moves = bishopAttacks(occupied, sq);
+                uint64_t captures = block_moves & attackers;
+                block_moves &= ~occupied & block_path;
+                // If that's a capture, add the move
+                if (captures){
+                    moves->add(Move(sq, attackers_sq, Move::FLAG_CAPTURE).move());
+                }
+
+                while(block_moves){
+                    moves->add(Move(sq, pop_lsb1(block_moves), Move::FLAG_NONE).move());
+                }
+            }
+
+            // Generate moves for rooks
+            bitboard = board->bitboards(is_white)[Piece::Rook - 1] & not_pinned;
+            while(bitboard){
+                int sq = pop_lsb1(bitboard);
+                block_moves = rookAttacks(occupied, sq);
+                uint64_t captures = block_moves & attackers;
+                block_moves &= ~occupied & block_path;
+
+                // If that's a capture, add the move
+                if (captures){
+                    moves->add(Move(sq, attackers_sq, Move::FLAG_CAPTURE).move());
+                }
+
+                while(block_moves){
+                    moves->add(Move(sq, pop_lsb1(block_moves), Move::FLAG_NONE).move());
+                }
+            }
+
+            // Generate moves for queens
+            bitboard = board->bitboards(is_white)[Piece::Queen - 1] & not_pinned;
+            while(bitboard){
+                int sq = pop_lsb1(bitboard);
+                block_moves = (rookAttacks(occupied, sq) | bishopAttacks(occupied, sq));
+                uint64_t captures = block_moves & attackers;
+                block_moves &= ~occupied & block_path;
+                // If that's a capture, add the move
+                if (captures){
+                    moves->add(Move(sq, attackers_sq, Move::FLAG_CAPTURE).move());
+                }
+
+                while(block_moves){
+                    moves->add(Move(sq, pop_lsb1(block_moves), Move::FLAG_NONE).move());
+                }
+            }
+
+            // Generate moves for knights
+            bitboard = board->bitboards(is_white)[Piece::Knight - 1] & not_pinned;
+            while(bitboard){
+                int sq = pop_lsb1(bitboard);
+                block_moves = knightAttacks[sq];
+                uint64_t captures = block_moves & attackers;
+                block_moves &= ~occupied & block_path;
+                // If that's a capture, add the move
+                if (captures){
+                    moves->add(Move(sq, attackers_sq, Move::FLAG_CAPTURE).move());
+                }
+
+                while(block_moves){
+                    moves->add(Move(sq, pop_lsb1(block_moves), Move::FLAG_NONE).move());
+                }
+            }
+
+            // Generate moves for pawns
+            // Enpassant is possible when the king is in check (only if the attacker is a pawn)
+            bitboard = board->bitboards(is_white)[Piece::Pawn - 1] & not_pinned;
+            const int offset[2] = {8, -8};
+            const int ranks[2] = {1, 6};
+            while(bitboard){
+                int sq = pop_lsb1(bitboard);
+                uint64_t captures = pawnAttacks[is_white][sq] & attackers;
+                int rank = sq >> 3;
+
+                if (board->enpassantTarget() == (attackers_sq + offset[is_white])){
+                    moves->add(Move(sq, board->enpassantTarget(), Move::FLAG_ENPASSANT_CAPTURE).move());
+                }
+                // If that's a capture, add the move
+                if (captures){
+                    // Generate captures promoting moves (the pawn is on the either 2nd or 7th rank)
+                    if (rank == ranks[is_enemy]){
+                        moves->add(Move(sq, attackers_sq, Move::FLAG_ROOK_PROMOTION_CAPTURE).move());
+                        moves->add(Move(sq, attackers_sq, Move::FLAG_BISHOP_PROMOTION_CAPTURE).move());
+                        moves->add(Move(sq, attackers_sq, Move::FLAG_KNIGHT_PROMOTION_CAPTURE).move());
+                        moves->add(Move(sq, attackers_sq, Move::FLAG_QUEEN_PROMOTION_CAPTURE).move());
+                    } else {
+                        moves->add(Move(sq, attackers_sq, Move::FLAG_CAPTURE).move());
+                    }
+                }
+
+                // Generate normal pawn moves
+                int n = Board::mailbox[Board::mailbox64[sq] + Board::pawn_move_offsets[is_white][0]];
+                uint64_t pmoves = (1ULL << n) & ~occupied;
+
+                // If the pawn push is blocked, stop here
+                if(!pmoves)
+                    continue;
+
+                if (pmoves & block_path){
+                    // If the pawn is on the 2nd (black) or 7th rank (white), generate promotion moves
+                    if (rank == ranks[!is_white]){
+                        int to = bitScanForward(pmoves);
+                        moves->add(Move(sq, to, Move::FLAG_ROOK_PROMOTION).move());
+                        moves->add(Move(sq, to, Move::FLAG_BISHOP_PROMOTION).move());
+                        moves->add(Move(sq, to, Move::FLAG_KNIGHT_PROMOTION).move());
+                        moves->add(Move(sq, to, Move::FLAG_QUEEN_PROMOTION).move());
+                        continue;
+                    }      
+                    moves->add(Move(sq, n, Move::FLAG_NONE).move());
+                }
+
+                // If the pawn is on the 2nd (white) or 7th rank (black), generate double pawn push
+                if (rank == ranks[is_white]){
+                    n = Board::mailbox[Board::mailbox64[sq] + Board::pawn_move_offsets[is_white][1]];
+                    if ((1ULL << n) & ~occupied & block_path){
+                        moves->add(Move(sq, n, Move::FLAG_DOUBLE_PAWN).move());
+                    }
+                }
+            }
+
+            // Generate moves for the king (it can only evade the check)
+            uint64_t kmoves = kingAttacks[king] & ~occupied & ~danger;
+            uint64_t captures = kingAttacks[king] & enemy_pieces & ~danger;
+
+            while(kmoves) moves->add(Move(king, pop_lsb1(kmoves), Move::FLAG_NONE).move());
+            while(captures) moves->add(Move(king, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
+            
+            return moves->size();
+        }
+
+        // If the king is not in check, generate all possible moves
+        // The things to look out for when generating moves:
+        // - My pieces might be pinned:
+        //   - pinned pieces may move only along the pin line (or capture the attacker)
+        //   - there may be only one pinner for each pinned piece
+        //   - special pin pawn enpassant case 
+        // - King cannot move the attacked square
+        // - King cannot castle if the square between target position (included) and
+        // starting position is attacked
+
+        uint64_t bmoves, captures;
+
+        // Generate moves for bishops
+        bitboard = board->bitboards(is_white)[Piece::Bishop - 1];
+        while(bitboard){
+            int sq = pop_lsb1(bitboard);
+            bmoves = bishopAttacks(occupied, sq);
+            captures = bmoves & enemy_pieces; 
+            bmoves &= ~occupied;
+
+            // If the piece is pinned, restrict the moves
+            if (pinned & (1ULL << sq)){
+                bmoves &= in_between_pins;
+                captures &= pinners;
+            }
+
+            while(bmoves) moves->add(Move(sq, pop_lsb1(bmoves), Move::FLAG_NONE).move());
+            while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
+        }
+
+        // Generate moves for rooks
+        bitboard = board->bitboards(is_white)[Piece::Rook - 1];
+        while(bitboard){
+            int sq = pop_lsb1(bitboard);
+            bmoves = rookAttacks(occupied, sq);
+            captures = bmoves & enemy_pieces;
+            bmoves &= ~occupied;
+
+            // If the piece is pinned, restrict the moves
+            if (pinned & (1ULL << sq)){
+                bmoves &= in_between_pins;
+                captures &= pinners;
+            }
+
+            while(bmoves) moves->add(Move(sq, pop_lsb1(bmoves), Move::FLAG_NONE).move());
+            while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
+        }
+
+        // Generate moves for queens
+        bitboard = board->bitboards(is_white)[Piece::Queen - 1];
+        while(bitboard){
+            int sq = pop_lsb1(bitboard);
+            bmoves = (rookAttacks(occupied, sq) | bishopAttacks(occupied, sq));
+            captures = bmoves & enemy_pieces;
+            bmoves &= ~occupied;
+
+            // If the piece is pinned, restrict the moves
+            if (pinned & (1ULL << sq)){
+                bmoves &= in_between_pins;
+                captures &= pinners;
+            }
+
+            while(bmoves) moves->add(Move(sq, pop_lsb1(bmoves), Move::FLAG_NONE).move());
+            while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
+        }
+
+        // Generate moves for knights
+        bitboard = board->bitboards(is_white)[Piece::Knight - 1];
+        while(bitboard){
+            int sq = pop_lsb1(bitboard);
+            bmoves = knightAttacks[sq];
+            captures = bmoves & enemy_pieces;
+            bmoves &= ~occupied;
+
+            // If the piece is pinned, restrict the moves
+            if (pinned & (1ULL << sq)){
+                bmoves &= in_between_pins;
+                captures &= pinners;
+            }
+
+            while(bmoves) moves->add(Move(sq, pop_lsb1(bmoves), Move::FLAG_NONE).move());
+            while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
+        }
+
+        // Generate moves for pawns
+        bitboard = board->bitboards(is_white)[Piece::Pawn - 1];
+        const int offset[2] = {8, -8};
+        const int ranks[2] = {1, 6}; // board is inversed, so the ranks are different
+        while(bitboard){
+            int sq = pop_lsb1(bitboard);
+            uint64_t enpassant_target = 1ULL << board->enpassantTarget();
+            captures = pawnAttacks[is_white][sq] & enemy_pieces;
+            int rank = sq >> 3;
+
+            // If the piece is pinned, restrict the moves
+            if (pinned & (1ULL << sq)){
+                captures &= pinners;
+                enpassant_target &= in_between_pins;
+            }
+
+            // Generate captures promoting moves (the pawn is on the either 2nd or 7th rank)
+            if (rank == ranks[is_enemy]){
+                while(captures) {
+                    int cap_sq = pop_lsb1(captures);
+                    moves->add(Move(sq, cap_sq, Move::FLAG_ROOK_PROMOTION_CAPTURE).move());
+                    moves->add(Move(sq, cap_sq, Move::FLAG_BISHOP_PROMOTION_CAPTURE).move());
+                    moves->add(Move(sq, cap_sq, Move::FLAG_KNIGHT_PROMOTION_CAPTURE).move());
+                    moves->add(Move(sq, cap_sq, Move::FLAG_QUEEN_PROMOTION_CAPTURE).move());
+                }
+            } else {
+                while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
+            }
+
+            // Enpassant is possible only if the last move was a double pawn move
+            if (enpassant_target & pawnAttacks[is_white][sq]){
+                // If the enpassant is possible, we should check if the pawn is pinned
+                // Consider a board with enpassant target at d6
+                // . . . . . . . . 8
+                // . . . . . . . . 7
+                // . . . x . . . . 6
+                // R . P p . . . K 5
+                // k . . . . . . . 4
+                // . . . . . . . . 3
+                // . . . . . . . . 2
+                // . . . . . . . . 1
+                // a b c d e f g h
+                // Taking the pawn here would expose the king to the rook / queen
+                // So we should check if the pawn is pinned to the king 
+                // (now without the black pawn)
+                uint64_t occ = occupied ^ (1ULL << (board->enpassantTarget() - offset[is_white]));
+                uint64_t opRQ = board->oppRooksQueens(is_white);
+                uint64_t ppiner = xRayRookAttacks(occ, allied_pieces, king) & opRQ;
+                while(ppiner){
+                    pinned |= in_between[pop_lsb1(ppiner)][king] & allied_pieces;
+                }   
+                
+                // If the pawn is not pinned or it can move along the pin line, add the move
+                if (((pinned & (1ULL << sq)) == 0) || (in_between_pins & enpassant_target)){
+                    moves->add(Move(sq, board->enpassantTarget(), Move::FLAG_ENPASSANT_CAPTURE).move());
+                }
+            }
+
+            // Generate normal pawn moves
+            int n = Board::mailbox[Board::mailbox64[sq] + Board::pawn_move_offsets[is_white][0]];
+            bmoves = (1ULL << n) & ~occupied;
+
+            // If the pawn push is blocked, stop here
+            if(!bmoves)
+                continue;
+
+            // Check if the pawn is pinned, if it is, restrict the moves
+            if (pinned & (1ULL << sq)){
+                bmoves &= in_between_pins;
+            }
+
+            // this move might not be possible (because of pin)
+            if (bmoves){
+                // If the pawn is on the 2nd (black) or 7th rank (white), generate promotion moves
+                if (rank == ranks[!is_white]){
+                    int to = bitScanForward(bmoves);
+                    moves->add(Move(sq, to, Move::FLAG_ROOK_PROMOTION).move());
+                    moves->add(Move(sq, to, Move::FLAG_BISHOP_PROMOTION).move());
+                    moves->add(Move(sq, to, Move::FLAG_KNIGHT_PROMOTION).move());
+                    moves->add(Move(sq, to, Move::FLAG_QUEEN_PROMOTION).move());
+                    continue;
+                }      
+                moves->add(Move(sq, n, Move::FLAG_NONE).move());
+            }
+
+            // If the pawn is on the 2nd (white) or 7th rank (black), generate double pawn push
+            if (rank == ranks[is_white]){
+                n = Board::mailbox[Board::mailbox64[sq] + Board::pawn_move_offsets[is_white][1]];
+                bmoves = (1ULL << n) & ~occupied;
+
+                // Check if the pawn is pinned, if it is, restrict the moves
+                if (pinned & (1ULL << sq)){
+                    bmoves &= in_between_pins;
+                }
+
+                // this move might not be possible (because of pin)
+                if (bmoves){
+                    moves->add(Move(sq, n, Move::FLAG_DOUBLE_PAWN).move());
+                }
+            }
+        }
+
+        // Generate moves for the king
+        bmoves = kingAttacks[king] & ~occupied & ~danger;
+        captures = kingAttacks[king] & enemy_pieces & ~danger;
+
+        while(bmoves) moves->add(Move(king, pop_lsb1(bmoves), Move::FLAG_NONE).move());
+        while(captures) moves->add(Move(king, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
+
+        // Generate castling moves, I assume that castling rights are correct
+        // Hence I always verify the castling rights after reloading the manager and on creating one
+        if (board->castlingRights().hasColor(is_white)){
+            bool king_side = board->castlingRights().hasKing();
+            bool queen_side = board->castlingRights().hasQueen();
+            uint64_t queen_path = 0b00001100, king_path = 0b01100000;
+
+            if(is_white){
+                queen_path <<= 56;
+                king_path <<= 56;
+            }
+
+            // King can castle safely only if the square between target position and starting position
+            // aren't occupied and aren't attacked
+            if (king_side && (king_path & (~occupied) & (~danger)) == king_path){
+                moves->add(Move(king, king + 2, Move::FLAG_KING_CASTLE).move());
+            }
+
+            if (queen_side && (queen_path & (~occupied) & (~danger)) == queen_path){
+                moves->add(Move(king, king - 2, Move::FLAG_QUEEN_CASTLE).move());
+            }
+        }
+
+        return moves->size();
+    }
+
+
+    /**
      * @brief Generates all possible moves for the current board state
      * @return The number of moves generated
      */
@@ -401,7 +910,6 @@ namespace chess{
         int n_pseudo_moves = 0;
         int* iboard = this->board->getBoard();
         bool is_white = board->getSide() == Piece::White;
-        const int kings[2] = {black_king_pos, white_king_pos};
 
         std::unique_ptr<int[]> pseudo_moves(new int[256]);
         
@@ -416,7 +924,7 @@ namespace chess{
         // Generate pseudo-legal moves
         uint64_t occupied = board->occupied();
         uint64_t blockers = board->occupied(is_white);
-        int king = kings[is_white];
+        int king = bitScanForward(board->bitboards(is_white)[Piece::King - 1]);
 
         // First generate for the opposite side with the king removed (for xRay attacks)
         generatePseudoMoves(!is_white, occupied ^ (1ULL << king), blockers ^ (1ULL << king), nullptr);
@@ -623,7 +1131,7 @@ namespace chess{
      */
     uint64_t ManagerImpl::rookAttacks(uint64_t occupied, int rook)
     {
-        return mailboxAttacks(Piece::Rook - 1, occupied, rook);
+        return mailboxAttacks(Piece::Rook - 1, occupied, rook, true);
     }
 
     /**
@@ -631,7 +1139,7 @@ namespace chess{
      */
     uint64_t ManagerImpl::bishopAttacks(uint64_t occupied, int bishop)
     {
-        return mailboxAttacks(Piece::Bishop - 1, occupied, bishop);
+        return mailboxAttacks(Piece::Bishop - 1, occupied, bishop, true);
     }
 
     /**
@@ -671,14 +1179,18 @@ namespace chess{
 
                 // Check if the move is enpassant (special pawn case)
                 if (move.isEnPassant()){
-                    // Check with x-ray attacks, without the pawn target
-                    uint64_t occupied = board->occupied() ^ (1ULL << (to + enpassant_dir[is_white]));
-                    uint64_t blockers = board->occupied(is_white);
-                    uint64_t pinner = xRayRookAttacks(occupied, blockers, king) & board->oppRooksQueens(is_white);
-                    while(pinner){
-                        int sq = bitScanForward(pinner);
-                        pinned |= in_between[sq][king] & blockers;
-                        pinner &= pinner - 1;
+                    int rank = (from >> 3) << 3;
+                    uint64_t oppRQ = board->oppRooksQueens(is_white);
+                    if(in_between[rank][rank + 7] & oppRQ){
+                        // Check with x-ray attacks, without the pawn target
+                        uint64_t occupied = board->occupied() ^ (1ULL << (to + enpassant_dir[is_white]));
+                        uint64_t blockers = board->occupied(is_white);
+                        uint64_t pinner = xRayRookAttacks(occupied, blockers, king) & board->oppRooksQueens(is_white);
+                        while(pinner){
+                            int sq = bitScanForward(pinner);
+                            pinned |= in_between[sq][king] & blockers;
+                            pinner &= pinner - 1;
+                        }
                     }
                 }
 
@@ -691,7 +1203,8 @@ namespace chess{
             }
             
             // If there is more than one piece attacking the king, the move is invalid
-            if (king_attack & (king_attack - 1)){
+            // or the piece is pinned it cannot capture the checking piece
+            if (king_attack & (king_attack - 1) || pinned & (1ULL << from)){
                 // More than one piece is attacking the king
                 return false;
             }
@@ -700,21 +1213,12 @@ namespace chess{
             const int offsets[2] = {0, enpassant_dir[is_white]};
             int offset = offsets[move.isEnPassant()];
 
-            // If the piece is pinned it cannot capture the checking piece
-            if (pinned & (1ULL << from)){
-                return false;
-            }
-
             // Check if the move can block the check or capture the attacking piece
             return (in_between[attacker][king] | king_attack) & (1ULL << (to + offset));
-        } else {
-            // Check if the king can't move to the given square
-            if (attacks_to[!is_white][to] != 0){
-                return false;
-            }
         }
 
-        return true;
+        // King move, so the square must not be attacked by the enemy
+        return attacks_to[!is_white][to] == 0;
     }
 
     /**
@@ -786,9 +1290,8 @@ namespace chess{
         }
 
         // There are no moves available, so check if the king is in check
-        const int kings[2] = {black_king_pos, white_king_pos};
         bool is_white = board->getSide() == Piece::White;
-        uint64_t king_attack = attacks_to[!is_white][kings[is_white]];
+        uint64_t king_attack = attacks_to[!is_white][bitScanForward(board->bitboards(is_white)[Piece::King - 1])];
         
         if (king_attack == 0){
             // Stalemate
