@@ -62,7 +62,7 @@ void init_board(chess::Board* board)
  * @brief Validate the castling rights, it may delete the castling rights 
  * if the rooks or the king are not in the correct position
  */
-void validate_castling_rights(chess::Board* board)
+void verify_castling_rights(chess::Board* board)
 {
     using namespace chess;
     const int castling_data[2][3] = {
@@ -78,7 +78,7 @@ void validate_castling_rights(chess::Board* board)
         {CastlingRights::WHITE_QUEEN, CastlingRights::WHITE_KING}
     };
     int* iboard = board->getBoard();
-    CastlingRights cr(board->castlingRights().rights());
+    CastlingRights cr(board->castlingRights().get());
 
     // Check if the rooks are in the correct position
     for (int is_white = 0; is_white < 2; is_white++){
@@ -96,7 +96,8 @@ void validate_castling_rights(chess::Board* board)
             cr.remove(castling_rights[is_white][1]);
         }
     }
-    board->castlingRights() = cr;
+
+    board->m_castling_rights = cr;
 }
 
 /**
@@ -206,9 +207,8 @@ uint64_t xRayBishopAttacks(uint64_t occupied, uint64_t blockers, int bishopsq)
  * @brief Make a move on the board, updates the board state (board array, bitboards, side to move, etc.)
  * @param move The move to make 
  * @param board The board to update
- * @attention After calling this, you should push game history
  */
-void make(Move& move, chess::Board* board)
+void make(Move& move, chess::Board* board, chess::GameHistory* ghistory)
 {
     using namespace chess;
 
@@ -312,6 +312,7 @@ void make(Move& move, chess::Board* board)
 
     // Now update the side to move
     board->getSide() = Piece::opposite(board->getSide());
+    ghistory->push(board, move);
 }
 
 /**
@@ -324,11 +325,12 @@ void unmake(Move& move, chess::Board* board, chess::GameHistory* ghistory)
 {
     using namespace chess;
 
-    if(ghistory->size() == 1)
+    if(ghistory->size() <= 1)
         return;
 
     // Pop current move from history & get the previous one
-    auto history = ghistory->pop();   
+    ghistory->pop();
+    auto history = ghistory->back();   
     int* iboard = board->getBoard();
     int from = move.getFrom(), to = move.getTo(), captured_pos = to;
     bool is_white = history.side_to_move == Piece::White;
@@ -564,14 +566,16 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
         // Generate moves for pawns
         // Enpassant is possible when the king is in check (only if the attacker is a pawn)
         bitboard = board->bitboards(is_white)[Piece::Pawn - 1] & not_pinned;
-        const int offset[2] = {8, -8};
+        const int offset[2] = {-8, 8};
         const int ranks[2] = {1, 6};
         while(bitboard){
             int sq = pop_lsb1(bitboard);
             uint64_t captures = Board::pawnAttacks[is_white][sq] & attackers;
+            uint64_t enpassant = board->enpassantTarget() ? Board::pawnAttacks[is_white][sq] & (1ULL << (board->enpassantTarget())) : 0;
             int rank = sq >> 3;
 
-            if (board->enpassantTarget() == (attackers_sq + offset[is_white])){
+            // If the enpassant is possible and the attacker is on a valid capture square, then add the move
+            if (enpassant && attackers & (1ULL << (board->enpassantTarget() + offset[is_white]))){
                 moves->add(Move(sq, board->enpassantTarget(), Move::FLAG_ENPASSANT_CAPTURE).move());
             }
             // If that's a capture, add the move
@@ -717,7 +721,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
     const int ranks[2] = {1, 6}; // board is inversed, so the ranks are different
     while(bitboard){
         int sq = pop_lsb1(bitboard);
-        uint64_t enpassant_target = 1ULL << board->enpassantTarget();
+        uint64_t enpassant_target = board->enpassantTarget() ? 1ULL << board->enpassantTarget() : 0;
         captures = Board::pawnAttacks[is_white][sq] & enemy_pieces;
         int rank = sq >> 3;
 
@@ -761,10 +765,15 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
             uint64_t ppiner = xRayRookAttacks(occ, allied_pieces, king) & opRQ;
             while(ppiner){
                 pinned |= Board::in_between[pop_lsb1(ppiner)][king] & allied_pieces;
-            }   
+            }
             
+            // Check again if the pawn is pinned
+            if (pinned & (1ULL << sq)){
+                enpassant_target &= in_between_pins;
+            }
+
             // If the pawn is not pinned or it can move along the pin line, add the move
-            if (((pinned & (1ULL << sq)) == 0) || (in_between_pins & enpassant_target)){
+            if (enpassant_target){
                 moves->add(Move(sq, board->enpassantTarget(), Move::FLAG_ENPASSANT_CAPTURE).move());
             }
         }
@@ -792,7 +801,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
                 moves->add(Move(sq, to, Move::FLAG_KNIGHT_PROMOTION).move());
                 moves->add(Move(sq, to, Move::FLAG_QUEEN_PROMOTION).move());
                 continue;
-            }      
+            }
             moves->add(Move(sq, n, Move::FLAG_NONE).move());
         }
 
@@ -822,14 +831,18 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
 
     // Generate castling moves, I assume that castling rights are correct
     // Hence I always verify the castling rights after reloading the manager and on creating one
-    if (board->castlingRights().hasColor(is_white)){
-        bool king_side = board->castlingRights().hasKing();
-        bool queen_side = board->castlingRights().hasQueen();
+    verify_castling_rights(board);
+    const uint32_t colors[2] = { CastlingRights::BLACK, CastlingRights::WHITE };
+    if (board->castlingRights().has(colors[is_white])){
+        bool king_side = (board->castlingRights().getKing() & colors[is_white]) != 0;
+        bool queen_side = (board->castlingRights().getQueen() & colors[is_white]) != 0;
         uint64_t queen_path = 0b00001100, king_path = 0b01100000;
+        uint64_t queen_path_no_occ = 0b00001110;
 
         if(is_white){
             queen_path <<= 56;
             king_path <<= 56;
+            queen_path_no_occ <<= 56;
         }
 
         // King can castle safely only if the square between target position and starting position
@@ -838,7 +851,8 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
             moves->add(Move(king, king + 2, Move::FLAG_KING_CASTLE).move());
         }
 
-        if (queen_side && (queen_path & (~occupied) & (~danger)) == queen_path){
+        // Additionally space between rook and king should be empty (in king's side case `king_path` = `king_path_no_occ`)
+        if (queen_side && (queen_path & (~occupied) & (~danger)) == queen_path && (queen_path_no_occ & (~occupied)) == queen_path_no_occ){
             moves->add(Move(king, king - 2, Move::FLAG_QUEEN_CASTLE).move());
         }
     }

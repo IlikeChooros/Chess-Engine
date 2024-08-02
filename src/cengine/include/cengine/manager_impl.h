@@ -44,27 +44,26 @@ namespace chess
         void make(Move& move);
         void unmake();
         GameState evalState();
-        int generatePseudoMoves(bool is_white, uint64_t occupied, uint64_t enemy_pieces, int* move_list);
-        bool validateMove(Move& move, int king_pos, bool is_white, uint64_t pinnedbb, uint64_t pinners, uint64_t in_between_bb);
-        void addMove(int from, int to, int flags, int* move_list, int& n_moves);
-        void addAttack(int from, int to, bool piece_is_white);
-        void handleCapture(Move& move);
-        void handleMove(Move& move);
-        void checkKingCastling(bool is_white, int j, int king_index);
-        void handleCastlingMove(bool is_king_castle, int from, int to);
+        // int generatePseudoMoves(bool is_white, uint64_t occupied, uint64_t enemy_pieces, int* move_list);
+        // bool validateMove(Move& move, int king_pos, bool is_white, uint64_t pinnedbb, uint64_t pinners, uint64_t in_between_bb);
+        // void addMove(int from, int to, int flags, int* move_list, int& n_moves);
+        // void addAttack(int from, int to, bool piece_is_white);
+        // void handleCapture(Move& move);
+        // void handleMove(Move& move);
+        // void checkKingCastling(bool is_white, int j, int king_index);
+        // void handleCastlingMove(bool is_king_castle, int from, int to);
         void pushHistory();
 
         /**
          * @brief Validate castling rights, should be called once after loading a FEN string
          */
-        inline void validateCastlingRights() { validate_castling_rights(board); }
+        inline void validateCastlingRights() { verify_castling_rights(board); }
 
         GameHistory history;
-        std::vector<int> move_list;
+        std::vector<uint32_t> move_list;
         int n_moves;
         Board* board;
         Move curr_move;
-        Move prev_move;
         int captured_piece;
         GameState state;  
     };

@@ -42,6 +42,9 @@ namespace test
 
     Perft& Perft::operator=(Perft&& other)
     {
+        m_expected = other.m_expected;
+        m_print = other.m_print;
+        m_time_us = other.m_time_us;
         m_board = other.m_board;
         return *this;
     }
@@ -60,44 +63,14 @@ namespace test
         
         auto start = high_resolution_clock::now();
         ManagerImpl manager(m_board);
-        manager.validateCastlingRights();
-        auto ml = manager.move_list;
         size_t moves = manager.generateMoves();
-
-        // validate_castling_rights(m_board);
-        // MoveList ml;
-        // GameHistory gh;
-        // gh.push(m_board, Move());
-        // size_t moves = gen_legal_moves(&ml, m_board);
+        auto ml = manager.move_list;
 
         std::vector<uint64_t> nodes_path(moves, 1);
         
-        
         if(depth == 1){
             m_time_us = (duration_cast<microseconds>(high_resolution_clock::now() - start)).count();
-            printResults(1, moves, nodes_path.data());
-
-            // if (new_nodes != size_t(manager.n_moves)){
-            //     printf("New nodes: %lu, old nodes: %d\n", new_nodes, manager.n_moves);
-
-            //     for (int i = 0; i < manager.n_moves; i++){
-            //         bool found = false;
-            //         for(size_t j = 0; j < new_nodes; j++){
-            //             if (ml[j] == (uint32_t)manager.move_list[i]){
-            //                 found = true;
-            //                 break;
-            //             }
-            //         }
-
-            //         if (!found){
-            //             auto move = Move(manager.move_list[i]);
-            //             int from = move.getFrom();
-            //             int to = move.getTo();
-            //             printf("Not found: %s\n", Piece::notation((*m_board)[from], to).c_str());
-            //         }
-            //     }
-            // }            
-            
+            printResults(1, moves, nodes_path.data());          
             return moves;
         }
 
@@ -121,12 +94,39 @@ namespace test
     uint64_t Perft::perft(int depth)
     {
         ManagerImpl manager(m_board);
-        auto ml = manager.move_list;
         size_t moves = manager.generateMoves();
+        auto ml = manager.move_list;
 
         // MoveList ml;
         // GameHistory gh;
         // size_t moves = gen_legal_moves(&ml, m_board);
+
+        // MoveList ml2;
+        // GameHistory gh;
+        // gh.push(m_board, Move());
+        // size_t new_nodes = gen_legal_moves(&ml2, m_board);
+
+        // if (new_nodes != size_t(manager.n_moves)){
+        //     printf("New nodes: %lu, old nodes: %d\n", new_nodes, manager.n_moves);
+        //     printf("FEN: %s\n", m_board->getFen().c_str());
+
+        //     for (size_t i = 0; i < new_nodes; i++){
+        //         bool found = false;
+        //         for(size_t j = 0; j < moves; j++){
+        //             if (ml2[i].move() == (uint32_t)manager.move_list[j]){
+        //                 found = true;
+        //                 break;
+        //             }
+        //         }
+
+        //         if (!found){
+        //             auto move = Move(ml2[i]);
+        //             int from = move.getFrom();
+        //             int to = move.getTo();
+        //             printf("Not found: %s\n", Piece::notation((*m_board)[from], to).c_str());
+        //         }
+        //     }
+        // }
 
         if(depth == 1){
             return (uint64_t)moves;
@@ -157,7 +157,7 @@ namespace test
         //     int to = move.getTo();
         //     printf("Move: %s %lu\n", Piece::notation((*m_board)[from], to).c_str(), nodes_path[i]);
         // }
-        printf("NPS: %lu\n", m_time_us != 0 ? (nodes * 1000000 / m_time_us) : 0);
+        printf("\nNPS: %lu\n", m_time_us != 0 ? (nodes * 1000000 / m_time_us) : 0);
         printf("Depth %d, Time: %lu us, Count: %lu", depth, m_time_us, nodes);
         if (m_expected != 0){
             printf(" %s %lu (expected)\n\n", nodes == m_expected ? "=" : "!=", m_expected);

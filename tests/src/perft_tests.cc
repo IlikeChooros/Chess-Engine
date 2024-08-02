@@ -10,33 +10,23 @@ namespace
 
         void SetUp() override 
         {
-            board.init();
+            init_board(&board);
             perft = test::Perft(&board);
-        }
-
-        void loadTest(const test::PerftTestData::PerftData& data)
-        {
-            board.loadFen(data.fen.c_str());
-        }
-
-        void runTest(const test::PerftTestData::PerftData& data)
-        {
-            loadTest(data);
-            perft.setExpected(data.nodes);
-            uint64_t nodes = perft.run(data.depth);
-            ASSERT_EQ(nodes, data.nodes) << " for given FEN = " << data.fen 
-                                         << " and depth = " << data.depth 
-                                         << " nodes are invalid";
         }
     };
 
     
     TEST_F(PerftTest, PerftTest)
     {
-        for (size_t i = 0; i < 6; i++)
+        for (size_t i = 0; i < 23; i++)
         {
+            auto t = test::PerftTestData::data[i];
             printf("Running test %zu...", i + 1);
-            runTest(test::PerftTestData::data[i]);
+            perft.setExpected(t.nodes);
+            uint64_t nodes = perft.run(t.depth, t.fen);
+            ASSERT_EQ(nodes, t.nodes) << " for given FEN = " << t.fen 
+                                         << " and depth = " << t.depth 
+                                         << " nodes are invalid";
         }
     }
 

@@ -10,8 +10,8 @@ namespace chess
         uint32_t m_rights;
 
         public:
-        static const uint32_t MASK = 0b1111;
-        static const uint64_t KING_CASTLE_MASK = 0b101;
+        static const uint32_t MASK              = 0b1111;
+        static const uint64_t KING_CASTLE_MASK  = 0b0101;
         static const uint64_t QUEEN_CASTLE_MASK = 0b1010;
 
         static const uint32_t NONE = 0;
@@ -43,10 +43,12 @@ namespace chess
         bool has(int rights) const {return m_rights & rights;};
         bool hasKing() const {return (m_rights & KING_CASTLE_MASK) != 0;};
         bool hasQueen() const {return (m_rights & QUEEN_CASTLE_MASK) != 0;};
+        uint32_t getKing() const {return m_rights & KING_CASTLE_MASK;};
+        uint32_t getQueen() const {return m_rights & QUEEN_CASTLE_MASK;};
         bool hasColor(bool is_white) const {return m_rights & (is_white ? WHITE : BLACK);};
         void add(int rights) {m_rights |= (rights & MASK);};
         void remove(int rights = ALL) {m_rights &= (~rights) & MASK;};
-        uint32_t rights() const {return m_rights;};
+        uint32_t get() const {return m_rights;};
 
         operator int() const {return m_rights & MASK;};
         operator bool() const {return !none();};

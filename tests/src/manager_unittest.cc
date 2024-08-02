@@ -17,7 +17,9 @@ class ManagerTest : public ::testing::Test
     void SetUp() override 
     {
         board.init();
+        init_board(&board);
         manager = Manager(&board);
+        manager.generateMoves();
     }
 
     // Load a fen string into the board and generate moves
@@ -193,12 +195,8 @@ TEST_F(ManagerTest, testMoveGenPromotion)
 
 TEST_F(ManagerTest, testPreft)
 {
-    test::Perft preft(&board);
-
-    for(unsigned int i = 1; i <= test::Perft::perft_max_depth; i++){
-        uint64_t nodes = preft.run(i);
-        ASSERT_EQ(nodes, test::Perft::nodes_perft[i - 1]);
-    }
+    test::Perft perft(&board);
+    ASSERT_EQ(perft.run(6), test::Perft::nodes_perft[5]);
 }
 
 } // namespace

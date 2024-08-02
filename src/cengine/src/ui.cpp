@@ -108,6 +108,7 @@ namespace ui
 
         // Init resources
         manager = Manager(&board);
+        manager.generateMoves();
 
         std::filesystem::path binary_path = std::filesystem::path(argv[0]).parent_path();
         if(!pieces_texture.loadFromFile(binary_path / "img/ChessPiecesArray.png")){

@@ -37,6 +37,8 @@ endif()
 
 install(TARGETS ${PROJECT_NAME})
 
+include(CTest)
+
 # Tests
 enable_testing()
 add_subdirectory(tests)

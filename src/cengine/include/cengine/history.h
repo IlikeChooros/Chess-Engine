@@ -20,7 +20,7 @@ namespace chess
         uint32_t fullmove_counter:10; // 11 bits for fullmove counter (0 - 1023)
         uint32_t castling_rights:CastlingRights::bits; // 3 bits for castling rights
         uint32_t game_state:2; // 2 bits for game state
-        uint32_t reserved:11;
+        uint32_t reserved:10;
         // That gives total of 64 bits, instead of 6*32 = 192 bits
     };
 
@@ -38,11 +38,14 @@ namespace chess
             return history.size();
         }
 
-        CHistory pop() 
+        CHistory& back()
         {
-            CHistory h = history.back();
+            return history.back();
+        }
+
+        void pop() 
+        {
             history.pop_back();
-            return h;
         }
 
         void push(Board* board, Move move) 
@@ -54,7 +57,7 @@ namespace chess
             h.enpassant_target = board->enpassantTarget();
             h.halfmove_clock = board->halfmoveClock();
             h.fullmove_counter = board->fullmoveCounter();
-            h.castling_rights = board->castlingRights().rights();
+            h.castling_rights = board->castlingRights().get();
             h.game_state = 0;
             history.push_back(h);
         }

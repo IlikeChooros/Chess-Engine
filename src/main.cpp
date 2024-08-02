@@ -2,16 +2,15 @@
 
 int main(int argc, char** argv)
 {
-    chess::Board board;
+    using namespace chess;
+    Board board;
     init_board(&board);
+    // board.loadFen("8/8/8/4k3/3P2K1/2p5/B7/8 b - d3 0 3");
 
     test::Perft p(&board);
-    p.setPrint(true);
+    p.setPrint(true);   
 
-    p.setExpected(p.nodes_perft[5]);
-    p.run(4);
-
-    for(int i = 0; i < 6; i++)
+    for(int i = 0; i < 23; i++)
     {
         auto test = test::PerftTestData::data[i];
         p.setExpected(test.nodes);
