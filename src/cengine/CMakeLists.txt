@@ -9,6 +9,7 @@ target_sources(cengine
         src/test.cpp
         src/move_gen.cpp
         src/ui.cpp
+        src/uci.cpp
 )
 
 target_include_directories(cengine PUBLIC include)

@@ -69,6 +69,26 @@ class Move
      */
     int getPromotionPiece() const {return getFlags() & MASK_PROMOTION_PIECE;};
 
+    /**
+     * @brief Get the promotion piece, if the move is a promotion
+     * @param c The character representing the piece
+     * @return 0 - Knight, 1 - Bishop, 2 - Rook, 3 - Queen (default)
+     */
+    static int getPromotionPiece(char c) {
+        switch(c){
+            case 'n':
+                return 0;
+            case 'b':
+                return 1;
+            case 'r':
+                return 2;
+            case 'q':
+                return 3;
+            default:
+                return 3;
+        }
+    };
+
     operator int() const {return m_move;};
     operator bool() const {return m_move != 0;};
 
@@ -111,6 +131,7 @@ class MoveList
     inline Move operator[](size_t i) {return Move(moves[i]);}
     inline move_t* begin() {return moves;}
     inline move_t* end() {return moves + n_moves;}
+    inline const uint32_t* data() const {return moves;}
 
     uint32_t moves[256];
     size_t n_moves;

@@ -3,7 +3,6 @@
 
 namespace chess
 {
-
     /*
         Using mailbox approach to represent the board
     */
@@ -72,7 +71,9 @@ namespace chess
     uint64_t Board::pawnAttacks[2][64] = {0};
     uint64_t Board::knightAttacks[64] = {0};
     uint64_t Board::kingAttacks[64] = {0};
+    uint64_t Board::queenAttacks[64] = {0};
 
+    const char Board::startFen[57] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     /**
      * @brief Initialize the board with the default chess pieces

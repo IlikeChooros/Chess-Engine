@@ -22,7 +22,6 @@ namespace
         {
             auto t = test::PerftTestData::data[i];
             printf("Running test %zu...", i + 1);
-            perft.setExpected(t.nodes);
             uint64_t nodes = perft.run(t.depth, t.fen);
             ASSERT_EQ(nodes, t.nodes) << " for given FEN = " << t.fen 
                                          << " and depth = " << t.depth 

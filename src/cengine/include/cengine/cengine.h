@@ -7,3 +7,4 @@
 #include "move.h"
 #include "test.h"
 #include "move_gen.h"
+#include "uci.h"

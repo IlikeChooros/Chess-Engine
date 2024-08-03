@@ -100,32 +100,8 @@ namespace chess
             return color ^ colorMask;
         }
 
-        static std::string notation(int piece, int square){
-            std::string str = "";
-            if (piece == Empty)
-                return " ";
-
-            switch (piece & pieceMask)
-            {
-                case Knight:
-                    str += "N";
-                    break;
-                case King:
-                    str += "K";
-                    break;
-                case Bishop:
-                    str += "B";
-                    break;
-                case Rook:
-                    str += "R";
-                    break;
-                case Queen:
-                    str += "Q";
-                    break;
-                default:
-                    break;
-            }
-            return str + square_to_str(square);
+        static std::string notation(int from, int to){
+            return square_to_str(from) + square_to_str(to);
         }
 
 

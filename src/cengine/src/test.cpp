@@ -4,7 +4,7 @@
 namespace test
 {
 
-    // Got this from: 
+    // Source (added some cases):
     // https://gist.github.com/peterellisjones/8c46c28141c162d1d8a0f0badbc9cff9
     const PerftTestData::PerftData PerftTestData::data[] = {
             {1, 8, "r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2"},
@@ -14,6 +14,8 @@ namespace test
             {1, 44, "2kr3r/p1ppqpb1/bn2Qnp1/3PN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQ - 3 2"},
             {1, 39, "rnb2k1r/pp1Pbppp/2p5/q7/2B5/8/PPPQNnPP/RNB1K2R w KQ - 3 9"},
             {1, 9, "2r5/3pk3/8/2P5/8/2K5/8/8 w - - 5 4"},
+            {1, 6, "3k4/8/8/K1Pp3r/8/8/8/8 w - d6 0 2"},
+            {1, 24, "rn1qkbnr/ppp1pppp/8/8/4p1b1/5Q2/PPPP1PPP/RNBK1BNR w kq - 2 4"},
             {3, 62379, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"},
             {3, 89890, "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"},
             {6, 1134888, "3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1"},
@@ -29,22 +31,18 @@ namespace test
             {6, 92683, "8/P1k5/K7/8/8/8/8/8 w - - 0 1"},
             {6, 2217, "K1k5/8/P7/8/8/8/8/8 w - - 0 1"},
             {7, 567584, "8/k1P5/8/1K6/8/8/8/8 w - - 0 1"},
-            {4, 23527, "8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1"}
+            {4, 23527, "8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1"},
     };
 
     Perft::Perft(Board* board)
     {
-        m_expected = 0;
         m_print = true;
-        m_time_us = 1;
         m_board = board;
     }
 
     Perft& Perft::operator=(Perft&& other)
     {
-        m_expected = other.m_expected;
         m_print = other.m_print;
-        m_time_us = other.m_time_us;
         m_board = other.m_board;
         return *this;
     }
@@ -53,116 +51,39 @@ namespace test
      * @brief Run the perft test at the specified depth >= 1
      */
     uint64_t Perft::run(int depth, std::string fen)
-    {
-        using namespace std::chrono;
-
-        if (fen == Board().init().getFen() && depth >= 1 && depth <= perft_max_depth)
-            m_expected = nodes_perft[depth - 1]; 
-       
+    {       
         m_board->loadFen(fen.c_str());
-        
-        auto start = high_resolution_clock::now();
-        ManagerImpl manager(m_board);
-        size_t moves = manager.generateMoves();
-        auto ml = manager.move_list;
-
-        std::vector<uint64_t> nodes_path(moves, 1);
-        
-        if(depth == 1){
-            m_time_us = (duration_cast<microseconds>(high_resolution_clock::now() - start)).count();
-            printResults(1, moves, nodes_path.data());          
-            return moves;
-        }
-
-        uint64_t nodes = 0;
-        for(size_t i = 0; i < moves; i++){
-            auto move = Move(ml[i]);
-            manager.make(move);
-            // make(move, m_board);
-            // gh.push(m_board, move);
-            nodes_path[i] = perft(depth - 1);
-            nodes += nodes_path[i];
-            // unmake(move, m_board, &gh);
-            manager.unmake();
-        }
-
-        m_time_us = (duration_cast<microseconds>(high_resolution_clock::now() - start)).count();
-        printResults(depth, nodes, nodes_path.data());
-        return nodes;
+        uint64_t total = perft<true>(depth);
+        if(m_print)
+            printf("Nodes: %lu\n\n", total);
+        return total;
     }
 
+    template <bool root>
     uint64_t Perft::perft(int depth)
     {
         ManagerImpl manager(m_board);
         size_t moves = manager.generateMoves();
         auto ml = manager.move_list;
 
-        // MoveList ml;
-        // GameHistory gh;
-        // size_t moves = gen_legal_moves(&ml, m_board);
-
-        // MoveList ml2;
-        // GameHistory gh;
-        // gh.push(m_board, Move());
-        // size_t new_nodes = gen_legal_moves(&ml2, m_board);
-
-        // if (new_nodes != size_t(manager.n_moves)){
-        //     printf("New nodes: %lu, old nodes: %d\n", new_nodes, manager.n_moves);
-        //     printf("FEN: %s\n", m_board->getFen().c_str());
-
-        //     for (size_t i = 0; i < new_nodes; i++){
-        //         bool found = false;
-        //         for(size_t j = 0; j < moves; j++){
-        //             if (ml2[i].move() == (uint32_t)manager.move_list[j]){
-        //                 found = true;
-        //                 break;
-        //             }
-        //         }
-
-        //         if (!found){
-        //             auto move = Move(ml2[i]);
-        //             int from = move.getFrom();
-        //             int to = move.getTo();
-        //             printf("Not found: %s\n", Piece::notation((*m_board)[from], to).c_str());
-        //         }
-        //     }
-        // }
-
         if(depth == 1){
+            if (root && m_print) 
+                for(size_t i = 0; i < moves; i++)
+                    printf("%s: %lu\n", Piece::notation(Move(ml[i]).getFrom(), Move(ml[i]).getTo()).c_str(), 1UL);
             return (uint64_t)moves;
         }
 
-        uint64_t nodes = 0;
+        uint64_t nodes = 0, cnodes = 0;
         for(size_t i = 0; i < moves; i++){
             auto move = Move(ml[i]);
             manager.make(move);
-            // make(move, m_board);
-            // gh.push(m_board, move);
-            nodes += perft(depth - 1);
-            // unmake(move, m_board, &gh);
+            cnodes = perft<false>(depth - 1);
+            nodes += cnodes;
             manager.unmake();
+            if (root && m_print)
+                printf("%s: %lu\n", Piece::notation(move.getFrom(), move.getTo()).c_str(), cnodes);
         }
         
         return nodes;
-    }
-
-    void Perft::printResults(int depth, uint64_t nodes, const uint64_t* nodes_path)
-    {
-        if(!m_print)
-            return;
-        
-        // for(int i = 0; i < manager.n_moves; i++){
-        //     auto move = Move(manager.move_list[i]);
-        //     int from = move.getFrom();
-        //     int to = move.getTo();
-        //     printf("Move: %s %lu\n", Piece::notation((*m_board)[from], to).c_str(), nodes_path[i]);
-        // }
-        printf("\nNPS: %lu\n", m_time_us != 0 ? (nodes * 1000000 / m_time_us) : 0);
-        printf("Depth %d, Time: %lu us, Count: %lu", depth, m_time_us, nodes);
-        if (m_expected != 0){
-            printf(" %s %lu (expected)\n\n", nodes == m_expected ? "=" : "!=", m_expected);
-            return;
-        }
-        printf("\n\n");
     }
 }

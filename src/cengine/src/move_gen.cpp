@@ -45,6 +45,7 @@ void init_board(chess::Board* board)
     for(int i = 0; i < 64; i++){
         Board::knightAttacks[i] = mailboxAttacks(Piece::Knight - 1, 0, i, false);
         Board::kingAttacks[i] = mailboxAttacks(Piece::King - 1, 0, i, false);
+        Board::queenAttacks[i] = mailboxAttacks(Piece::Queen - 1, 0, i, true);
 
         // Pawn attacks
         for(int j = 0; j < 2; j++){
@@ -438,25 +439,16 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
     // Source: https://www.chessprogramming.org/Pinned_Pieces
     uint64_t pinned = 0;
     uint64_t pinners = 0;
-    uint64_t in_between_pins = 0;
     uint64_t pinner = xRayRookAttacks(occupied, allied_pieces, king) & board->oppRooksQueens(is_white);
     pinners |= pinner;
 
-    while(pinner){
-        int sq = bitScanForward(pinner);
-        pinned |= Board::in_between[sq][king] & allied_pieces;
-        in_between_pins |= Board::in_between[sq][king];
-        pinner &= pinner - 1;
-    }
+    while(pinner) pinned |= Board::in_between[pop_lsb1(pinner)][king] & allied_pieces;
+
     pinner = xRayBishopAttacks(occupied, allied_pieces, king) & board->oppBishopsQueens(is_white);
     pinners |= pinner;
 
-    while(pinner){
-        int sq = bitScanForward(pinner);
-        pinned |= Board::in_between[sq][king] & allied_pieces;
-        in_between_pins |= Board::in_between[sq][king];
-        pinner &= pinner - 1;
-    }
+    while(pinner) pinned |= Board::in_between[pop_lsb1(pinner)][king] & allied_pieces;
+    
 
     // See if the king is in check
     if (danger & board->bitboards(is_white)[Piece::King - 1]){
@@ -653,7 +645,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
 
         // If the piece is pinned, restrict the moves
         if (pinned & (1ULL << sq)){
-            bmoves &= in_between_pins;
+            bmoves &= Board::in_between[bitScanForward(pinners & Board::queenAttacks[sq])][king];
             captures &= pinners;
         }
 
@@ -671,7 +663,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
 
         // If the piece is pinned, restrict the moves
         if (pinned & (1ULL << sq)){
-            bmoves &= in_between_pins;
+            bmoves &= Board::in_between[bitScanForward(pinners & Board::queenAttacks[sq])][king];
             captures &= pinners;
         }
 
@@ -689,7 +681,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
 
         // If the piece is pinned, restrict the moves
         if (pinned & (1ULL << sq)){
-            bmoves &= in_between_pins;
+            bmoves &= Board::in_between[bitScanForward(pinners & Board::queenAttacks[sq])][king];
             captures &= pinners;
         }
 
@@ -702,15 +694,14 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
     while(bitboard){
         int sq = pop_lsb1(bitboard);
         bmoves = Board::knightAttacks[sq];
-        captures = bmoves & enemy_pieces;
-        bmoves &= ~occupied;
 
-        // If the piece is pinned, restrict the moves
+        // If knight is pinned, it cannot move
         if (pinned & (1ULL << sq)){
-            bmoves &= in_between_pins;
-            captures &= pinners;
+            continue;
         }
 
+        captures = bmoves & enemy_pieces;
+        bmoves &= ~occupied;
         while(bmoves) moves->add(Move(sq, pop_lsb1(bmoves), Move::FLAG_NONE).move());
         while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
     }
@@ -722,13 +713,15 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
     while(bitboard){
         int sq = pop_lsb1(bitboard);
         uint64_t enpassant_target = board->enpassantTarget() ? 1ULL << board->enpassantTarget() : 0;
+        uint64_t pinline = 0;
         captures = Board::pawnAttacks[is_white][sq] & enemy_pieces;
         int rank = sq >> 3;
 
         // If the piece is pinned, restrict the moves
         if (pinned & (1ULL << sq)){
+            pinline = Board::in_between[bitScanForward(pinners & Board::queenAttacks[sq])][king];
             captures &= pinners;
-            enpassant_target &= in_between_pins;
+            enpassant_target &= pinline;
         }
 
         // Generate captures promoting moves (the pawn is on the either 2nd or 7th rank)
@@ -763,13 +756,14 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
             uint64_t occ = occupied ^ (1ULL << (board->enpassantTarget() - offset[is_white]));
             uint64_t opRQ = board->oppRooksQueens(is_white);
             uint64_t ppiner = xRayRookAttacks(occ, allied_pieces, king) & opRQ;
+            uint64_t ppinned = 0;
             while(ppiner){
-                pinned |= Board::in_between[pop_lsb1(ppiner)][king] & allied_pieces;
+                ppinned |= Board::in_between[pop_lsb1(ppiner)][king] & allied_pieces;
             }
             
             // Check again if the pawn is pinned
-            if (pinned & (1ULL << sq)){
-                enpassant_target &= in_between_pins;
+            if (ppinned & (1ULL << sq)){
+                enpassant_target &= pinline;
             }
 
             // If the pawn is not pinned or it can move along the pin line, add the move
@@ -788,7 +782,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
 
         // Check if the pawn is pinned, if it is, restrict the moves
         if (pinned & (1ULL << sq)){
-            bmoves &= in_between_pins;
+            bmoves &= pinline;
         }
 
         // this move might not be possible (because of pin)
@@ -812,7 +806,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
 
             // Check if the pawn is pinned, if it is, restrict the moves
             if (pinned & (1ULL << sq)){
-                bmoves &= in_between_pins;
+                bmoves &= pinline;
             }
 
             // this move might not be possible (because of pin)

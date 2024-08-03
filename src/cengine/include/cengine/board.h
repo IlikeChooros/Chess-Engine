@@ -29,7 +29,10 @@ namespace chess{
         static uint64_t pawnAttacks[2][64];
         static uint64_t knightAttacks[64];
         static uint64_t kingAttacks[64];
+        static uint64_t queenAttacks[64];
 
+        // Starting position
+        static const char startFen[57];
 
         static const int ROOK_TYPE = Piece::Rook - 1;
         static const int BISHOP_TYPE = Piece::Bishop - 1;
