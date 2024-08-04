@@ -38,6 +38,11 @@ namespace chess
             return history.size();
         }
 
+        int age() 
+        {
+            return history.size() - 1;
+        }
+
         CHistory& back()
         {
             return history.back();

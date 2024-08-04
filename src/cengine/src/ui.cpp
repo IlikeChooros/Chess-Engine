@@ -108,6 +108,7 @@ namespace ui
 
         // Init resources
         manager = Manager(&board);
+        manager.init();
         manager.generateMoves();
 
         std::filesystem::path binary_path = std::filesystem::path(argv[0]).parent_path();
@@ -134,7 +135,15 @@ namespace ui
                     handleInput(&manager, event, &window, &state);
                 }
             }
-            
+
+            // Handle computer move
+            if (state.current_color != state.player_color){
+                manager.search();
+                manager.makeEngineMove();
+                state.current_color ^= Piece::colorMask;
+            }
+        
+        
             if (timer.getElapsedTime().asMicroseconds() > FRAME_US){
                 // Clear & redraw the window
                 window.clear();

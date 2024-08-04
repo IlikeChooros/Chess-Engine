@@ -22,6 +22,31 @@ namespace chess
         bool isPromotion(uint32_t from, uint32_t to);
 
         /**
+         * @brief Initialize the boards, search and evaluation
+         */
+        inline void init() { m_impl->init(); }
+
+        /**
+         * @brief Search for the best move
+         */
+        inline void search() { search_result = m_impl->search(); }
+
+        /**
+         * @brief Make the engine move, search should be called before this
+         */
+        inline void makeEngineMove() { 
+            if (!search_result.move)
+                return;
+            m_impl->make(search_result.move);
+            m_impl->generateMoves();
+        }
+
+        /**
+         * @brief Get the search result, should be called after makeEngineMove
+         */
+        inline SearchResult getSearchResult() { return search_result; }
+
+        /**
          * @brief Reload the manager, should be called after changing the board (for example after loading a FEN string)
          */
         inline void reload() { m_impl->reload(); }
@@ -53,5 +78,6 @@ namespace chess
 
     private:
         std::unique_ptr<ManagerImpl> m_impl;
+        SearchResult search_result;
     };
 }

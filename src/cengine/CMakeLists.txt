@@ -8,6 +8,9 @@ target_sources(cengine
         src/manager_impl.cpp
         src/test.cpp
         src/move_gen.cpp
+        src/eval.cpp
+        src/search.cpp
+        src/hash.cpp
         src/ui.cpp
         src/uci.cpp
 )

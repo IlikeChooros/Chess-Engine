@@ -15,7 +15,7 @@
 #   if DEBUG_PERFORMANCE
 #       define DEBUG_LEVEL DEBUG_LEVEL_ERR
 #   else
-#       define DEBUG_LEVEL DEBUG_LEVEL_NONE 
+#       define DEBUG_LEVEL DEBUG_LEVEL_DETAILS 
 #   endif
 #endif
 

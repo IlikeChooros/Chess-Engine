@@ -8,11 +8,10 @@ namespace chess{
     ManagerImpl::ManagerImpl(Board* board)
     {
         this->state = GameState::Normal;
-        this->captured_piece = Piece::Empty;
         this->n_moves = 0;
-        this->move_list = std::vector<uint32_t>(256, 0);
         this->board = board;
         this->curr_move = Move();
+        this->search_params = DEFAULT_SEARCH_PARAMS;
 
         if (board == nullptr)
             return;
@@ -25,19 +24,10 @@ namespace chess{
         this->board = other.board;
         this->n_moves = other.n_moves;
         this->move_list = std::move(other.move_list);
-        this->captured_piece = other.captured_piece;
         this->curr_move = other.curr_move;
         this->history = other.history;
         this->state = other.state;
         return *this;
-    }
-
-    /**
-     * @brief Initializes the board bitboards, should be called once before generating moves
-     */
-    void ManagerImpl::init()
-    {
-        init_board(board);
     }
 
     /**
@@ -46,51 +36,12 @@ namespace chess{
     void ManagerImpl::reload()
     {
         this->state = GameState::Normal;
-        this->captured_piece = Piece::Empty;
         this->curr_move = Move();
         this->n_moves = 0;
-        this->move_list = std::vector<uint32_t>(256, 0);
+        this->move_list.clear();
         this->history.clear();
         (void)generateMoves();
         pushHistory();
-    }
-
-    /**
-     * @brief Makes a move, updating the board, the side to move and the move history
-     * @attention User should call `generateMoves()` after calling this function
-     */
-    void ManagerImpl::make(Move& move)
-    {
-        ::make(move, board, &history);
-        curr_move = move;
-    }
-
-    /**
-     * @brief Unmakes current move, restoring the board to the previous state, 
-     * may be called only once after `make()`
-     * @attention User should call `generateMoves()` after calling this function
-     */
-    void ManagerImpl::unmake()
-    {
-        ::unmake(curr_move, board, &history);
-    }
-
-    /**
-     * @brief Pushes the current move to the history stack
-     */
-    void ManagerImpl::pushHistory(){
-        history.push(board, curr_move);
-    }
-
-    /**
-     * @brief Generate all legal moves for the current board state
-     */
-    int ManagerImpl::generateMoves(){
-        MoveList ml;
-        void(::gen_legal_moves(&ml, board));
-        move_list = std::vector<uint32_t>(ml.begin(), ml.end());
-        n_moves = ml.size();
-        return n_moves;
     }
 
     /**

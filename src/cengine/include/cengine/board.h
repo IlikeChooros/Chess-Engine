@@ -24,7 +24,7 @@ namespace chess{
         static const int n_piece_rays[6];
         static const bool is_piece_sliding[6];
 
-        // Helper bitboards
+        // Helper bitboards initialized in move_gen.cpp
         static uint64_t in_between[64][64];
         static uint64_t pawnAttacks[2][64];
         static uint64_t knightAttacks[64];
@@ -34,6 +34,8 @@ namespace chess{
         // Starting position
         static const char startFen[57];
 
+        // Piece types
+        static const int PAWN_TYPE = Piece::Pawn - 1;
         static const int ROOK_TYPE = Piece::Rook - 1;
         static const int BISHOP_TYPE = Piece::Bishop - 1;
         static const int QUEEN_TYPE = Piece::Queen - 1;

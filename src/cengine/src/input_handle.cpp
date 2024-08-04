@@ -28,6 +28,9 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
     state->state = InputState::None;
     static int from = -1;
 
+    if (state->current_color != state->player_color)
+        return;
+
     if(event.type == sf::Event::MouseButtonPressed){
         auto mouse = sf::Mouse::getPosition(*window);
         int size, offset_x;
@@ -41,7 +44,7 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
             return;
 
         if (from == -1){
-            if (Piece::getColor(manager->board()->board[y*8 + x]) != manager->board()->getSide()){
+            if (Piece::getColor(manager->board()->board[y*8 + x]) != state->player_color){
                 return;
             }
             from = to;
@@ -60,7 +63,10 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
                 square_to_str(from).c_str(), 
                 square_to_str(to).c_str()
             );
-            manager->movePiece(from, to, state->move_flags);
+            
+            if(manager->movePiece(from, to, state->move_flags)){
+                state->current_color ^= Piece::colorMask;
+            }
             from = -1;
             state->state = InputState::Move;
             state->move_flags = -1;

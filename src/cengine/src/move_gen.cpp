@@ -309,7 +309,6 @@ void make(Move& move, chess::Board* board, chess::GameHistory* ghistory)
 
     // Update the bitboard for the piece
     board->updateBitboard(is_white, Piece::getType(iboard[to]) - 1, from, to);
-    dbitboard(board->bitboards(is_white)[Piece::getType(iboard[to]) - 1]);
 
     // Now update the side to move
     board->getSide() = Piece::opposite(board->getSide());
@@ -389,8 +388,25 @@ void unmake(Move& move, chess::Board* board, chess::GameHistory* ghistory)
     move = history.move;
 }
 
-// Generate all possible moves for the current board state, board should be initialized
-size_t gen_legal_moves(MoveList* moves, chess::Board* board){
+// Generate all possible captures, not optimized yet, 
+// internally uses gen_legal_moves and filters the captures
+void gen_captures(MoveList* ml, chess::Board* board)
+{
+    MoveList all;
+    void(::gen_legal_moves(&all, board));
+    for(size_t i = 0; i < all.size(); i++){
+        if(all[i].isCapture()){
+            ml->add(all.moves[i]);
+        }
+    }
+}
+
+// Generate all possible moves for the current board state, board should be initialized,
+// Perfmormance: ~ 11M NPS on perft(6) (AMD Ryzer 9 6900HX) + GCC 11.4.0
+// How to improve:
+// - use magic bitboards for sliding pieces
+size_t gen_legal_moves(MoveList* moves, chess::Board* board)
+{
     using namespace chess;
 
     bool is_white = board->getSide() == Piece::White;
@@ -400,6 +416,13 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
     uint64_t enemy_pieces = board->occupied(!is_white);
     uint64_t allied_pieces = occupied ^ enemy_pieces;
     int king = bitScanForward(board->bitboards(is_white)[Piece::King - 1]);
+
+    if (board->bitboards(is_white)[Piece::King - 1] == 0){
+        for(int i = 0; i < 1; i++){
+            printf("LOL");
+        }
+    }
+
     moves->clear();
 
     // Bitboard for the enemy attacks
@@ -436,7 +459,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board){
     danger |= Board::kingAttacks[bitScanForward(board->bitboards(is_enemy)[Piece::King - 1])];
 
     // Now generate pins
-    // Source: https://www.chessprogramming.org/Pinned_Pieces
+    // Source (modified): https://www.chessprogramming.org/Pinned_Pieces
     uint64_t pinned = 0;
     uint64_t pinners = 0;
     uint64_t pinner = xRayRookAttacks(occupied, allied_pieces, king) & board->oppRooksQueens(is_white);

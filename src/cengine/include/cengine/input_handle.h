@@ -19,6 +19,8 @@ struct BoardWindowState{
     int from;
     int to;
     int move_flags = -1;
+    int player_color = chess::Piece::Black;
+    int current_color = chess::Piece::White;
 };
 
 void handleInput(chess::Manager* manager, sf::Event& event, sf::RenderWindow* window, BoardWindowState* state);
