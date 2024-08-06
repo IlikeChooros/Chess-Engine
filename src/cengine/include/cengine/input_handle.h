@@ -23,5 +23,5 @@ struct BoardWindowState{
     int current_color = chess::Piece::White;
 };
 
-void handleInput(chess::Manager* manager, sf::Event& event, sf::RenderWindow* window, BoardWindowState* state);
+void handleInput(chess::Manager* manager, sf::Event& event, sf::RenderWindow* window, BoardWindowState* state, bool handle_board);
 void getBoardSize(int& size, int& offset_x, sf::RenderWindow* window);

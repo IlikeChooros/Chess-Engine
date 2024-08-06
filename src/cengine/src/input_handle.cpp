@@ -22,13 +22,25 @@ void getBoardSize(int& size, int& offset, RenderWindow* window){
  * @param event The event to handle
  * @param window The window to get the input from
  */
-void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWindowState* state)
+void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWindowState* state, bool handle_board)
 {
     auto prev_state = state->state;
     state->state = InputState::None;
     static int from = -1;
 
-    if (state->current_color != state->player_color)
+    if(event.type == sf::Event::KeyPressed){
+        if(event.key.code == sf::Keyboard::Escape){
+            window->close();
+            return;
+        }
+
+        // Print fen
+        if(event.key.code == sf::Keyboard::P){
+            printf("Fen: %s\n", manager->board()->getFen().c_str());
+        }
+    }
+
+    if (!handle_board || state->current_color != state->player_color)
         return;
 
     if(event.type == sf::Event::MouseButtonPressed){
@@ -71,24 +83,7 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
             state->state = InputState::Move;
             state->move_flags = -1;
         }
-    } else if(event.type == sf::Event::KeyPressed){
-        if(event.key.code == sf::Keyboard::Escape){
-            window->close();
-            return;
-        }
-
-        // Undo move
-        if(event.key.code == sf::Keyboard::Z){
-            manager->unmake();
-            (void)manager->generateMoves();
-        }
-
-        // Print fen
-        if(event.key.code == sf::Keyboard::P){
-            printf("Fen: %s\n", manager->board()->getFen().c_str());
-        }
-    }
-     else {
+    } else {
         state->state = prev_state; // Do nothing
     }
 }

@@ -184,7 +184,6 @@ namespace chess
         Board board_copy(*board);
         int last_irreversible = board_copy.irreversibleIndex();
         void(::gen_legal_moves(&ml, &board_copy, &cache));
-        order_moves(&ml, &board_copy, &cache, sc);
         int side_eval = board_copy.getSide() == Piece::White ? 1 : -1;
 
         // Look for draw conditions
@@ -205,6 +204,7 @@ namespace chess
         // Iterative deepening
         while(time_taken < params.time){
             int alpha = MIN, beta = MAX;
+            order_moves(&ml, &board_copy, &cache, sc);
 
             // Loop through all the moves and evaluate them
             for (size_t i = 0; i < ml.size(); i++){
@@ -217,6 +217,11 @@ namespace chess
                 if (score > eval){
                     eval = score;
                     best_move = ml[i];
+
+                    printf("%s: %.2f (depth=%d time=%lums)\n", 
+                        Piece::notation(best_move.getFrom(), best_move.getTo()).c_str(), 
+                        float(eval * side_eval) / 100.0f, depth, time_taken
+                    );
                 }
 
                 // Update the timer, check if time is up
@@ -233,10 +238,9 @@ namespace chess
 
         depth--;
         eval *= side_eval;
-        time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - t1).count();
-        printf("Best: %s: %d (depth=%d time=%lums)\n", 
+        printf("%s: %.2f (depth=%d time=%lums)\n", 
             Piece::notation(best_move.getFrom(), best_move.getTo()).c_str(), 
-            eval, depth, time_taken
+            float(eval) / 100.0f, depth, time_taken
         );
         
         return SearchResult{best_move, eval, depth, time_taken, ONGOING};

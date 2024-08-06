@@ -1,6 +1,5 @@
 #include <cengine/ui.h>
 
-static sf::RenderWindow window = sf::RenderWindow(sf::VideoMode(1500, 1000), "CEngine");
 static sf::Texture pieces_texture;
 static sf::Font font;
 static sf::Sprite pieces_sprite;
@@ -94,7 +93,7 @@ namespace ui
     }
 
 
-    void drawBoard(Board& board);
+    void drawBoard(sf::RenderWindow& window, Board& board);
 
 
     /**
@@ -135,6 +134,7 @@ namespace ui
         std::mutex mutex;
         bool wait_for_engine = false;
         Clock timer;
+        RenderWindow window = sf::RenderWindow(sf::VideoMode(1500, 1000), "CEngine");
 
         while(window.isOpen()){
             Event event; 
@@ -147,13 +147,14 @@ namespace ui
                 // First lock the mutex
                 std::unique_lock<std::mutex> lock(mutex, std::try_to_lock);
                 if (!lock.owns_lock() || wait_for_engine){ // Search is running we can't handle input (modify the board/state)
+                    handleInput(&manager, event, &window, &state, false);
                     continue;
                 }
 
                 if(state.state == InputState::Promote){
                     promotion.handleInput(event, &window, &state);
                 } else {
-                    handleInput(&manager, event, &window, &state);
+                    handleInput(&manager, event, &window, &state, true);
                 }
 
                 if (manager.getSearchResult().status != GameStatus::ONGOING){
@@ -177,7 +178,7 @@ namespace ui
             if (timer.getElapsedTime().asMicroseconds() > FRAME_US){
                 // Clear & redraw the window
                 window.clear();
-                drawBoard(board);
+                drawBoard(window, board);
                 window.display();
                 timer.restart();
             }
@@ -224,7 +225,7 @@ namespace ui
      * @param board The board to draw the square from
      * @param sprite The sprite to draw the piece from
      */
-    void drawSquare(int r, int size, const int offset, Board* board, sf::Sprite* sprite){      
+    void drawSquare(sf::RenderWindow& window, int r, int size, const int offset, Board* board, sf::Sprite* sprite){      
         static auto LIGHT = sf::Color(158, 97, 55), 
               DARK = sf::Color(73, 25, 25);
         
@@ -266,7 +267,7 @@ namespace ui
      * @param offset The x offset of the board (in pixels)
      * @param manager The manager to get the moves from
      */
-    void drawSelectedPieceMoves(int from, int size, const int offset, Manager* manager){
+    void drawSelectedPieceMoves(sf::RenderWindow& window, int from, int size, const int offset, Manager* manager){
         // Draw the selected square
         int x = from % 8,
             y = from / 8;
@@ -297,18 +298,18 @@ namespace ui
      * @brief Draw the chess board
      * @param board The board to draw
      */
-    void drawBoard(Board& board){
+    void drawBoard(sf::RenderWindow& window, Board& board){
         // Get maximum size of the chess board
         int size, offset_x;
         getBoardSize(size, offset_x, &window);     
         // Draw the chess board
         for (int r = 0; r < 64; r++){
-            drawSquare(r, size, offset_x, &board, &pieces_sprite);
+            drawSquare(window, r, size, offset_x, &board, &pieces_sprite);
         }
 
         // If there is a selected piece by the user, draw it
         if (state.state == InputState::Select){
-            drawSelectedPieceMoves(state.from, size, offset_x, &manager);
+            drawSelectedPieceMoves(window, state.from, size, offset_x, &manager);
         }
         else if (state.state == InputState::Promote){
             window.draw(promotion);

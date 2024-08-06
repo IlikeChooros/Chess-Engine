@@ -3,10 +3,21 @@
   - [x] Pawn moves:
     - [x] Valid pinned pawn moves -> when a pawn is pinned to the king, and tries to enpassant capture
     - [x] Promotion moves (-.-)
-  - [ ] Overall:
+  - [x] Overall:
     - [x] When king is in check -> the first check works fine, but every subsequent check the pieces doesn't care about the king's situation
     - [x] king check detection -> valid move generation for king when in check by sliding pieces
-    - [ ] Perft test 
-    - [ ] Game over detection
-    - [ ] 50 move rule detection
-    - [ ] Threefold repetition detection
+    - [x] Perft test 
+    - [x] Game over detection
+    - [x] 50 move rule detection
+    - [x] Threefold repetition detection
+  - [ ] Search
+    - [x] Move ordering
+      - [x] History heuristic (for quiet moves)
+      - [x] For captures: MVV/LVA
+    - [x] Iterative deepening
+    - [x] Time management
+    - [ ] BUG: King sometimes can be captured:
+      - 6k1/5pp1/1Q2b2p/4P3/7P/8/3r2PK/3q4 w - - 1 34
+      - 
+  - [ ] Evaluation
+    - [ ] Pawn structure (phalanx) 

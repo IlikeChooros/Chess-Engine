@@ -124,6 +124,30 @@ namespace chess
         bool is_white = board->getSide() == Piece::White;
         bool is_enemy = !is_white;
         int whotomove[2] = {1, 1};
+        int king_sq = bitScanForward(board->bitboards(is_white)[Piece::King - 1]);
+        int eking_sq = bitScanForward(board->bitboards(is_enemy)[Piece::King - 1]);
+
+        const uint64_t file_bitboards[8] = {
+            0x0101010101010101ULL,
+            0x0202020202020202ULL,
+            0x0404040404040404ULL,
+            0x0808080808080808ULL,
+            0x1010101010101010ULL,
+            0x2020202020202020ULL,
+            0x4040404040404040ULL,
+            0x8080808080808080ULL
+        };
+
+        const uint64_t rank_bitboards[8] = {
+            0x00000000000000FFULL,
+            0x000000000000FF00ULL,
+            0x0000000000FF0000ULL,
+            0x00000000FF000000ULL,
+            0x000000FF00000000ULL,
+            0x0000FF0000000000ULL,
+            0x00FF000000000000ULL,
+            0xFF00000000000000ULL
+        };
 
         // Count the material & piece square tables
         for (int type = 0; type < 6; type++){
@@ -161,17 +185,6 @@ namespace chess
             eval += pawn_table.get(pawn_hash);
         } else {
             int pawn_eval = 0;
-            // Calculate pawn structure
-            const uint64_t file_bitboards[8] = {
-                0x0101010101010101ULL,
-                0x0202020202020202ULL,
-                0x0404040404040404ULL,
-                0x0808080808080808ULL,
-                0x1010101010101010ULL,
-                0x2020202020202020ULL,
-                0x4040404040404040ULL,
-                0x8080808080808080ULL
-            };
 
             // Doubled pawns
             uint64_t pawns = board->bitboards(is_white)[Piece::Pawn - 1];
@@ -221,28 +234,26 @@ namespace chess
             eval += pawn_eval;
         }
 
-        const uint64_t enemy_board_side[2] = {
-            0xFFFFFFFF00000000ULL, // for black
-            0x00000000FFFFFFFFULL, // for white
-        };
-        // Mobility / Activity
-        uint64_t allied_activity = c->activity & enemy_board_side[is_white];
-        uint64_t enemy_activity = c->danger & enemy_board_side[is_enemy];
+        // const uint64_t enemy_board_side[2] = {
+        //     0xFFFFFFFF00000000ULL, // for black
+        //     0x00000000FFFFFFFFULL, // for white
+        // };
+        // // Mobility / Activity (doesn't work properly -> enemy activity is too high)
+        // uint64_t allied_activity = c->activity & enemy_board_side[is_white];
+        // uint64_t enemy_activity = c->danger & enemy_board_side[is_enemy];
 
-        eval += (pop_count(allied_activity) - pop_count(enemy_activity)) * 5;
+        // eval += (pop_count(allied_activity) - pop_count(enemy_activity)) * 5;
         
 
         // King square tables
-        uint64_t king = board->bitboards(is_white)[Piece::King - 1];
-        uint64_t eking = board->bitboards(is_enemy)[Piece::King - 1];
         bool is_endgame = false;
 
-        if (pop_count(board->queens()) && pop_count(board->pieces()) <= 6){
+        if (pop_count(board->pieces()) <= 6){
             is_endgame = true;
         }
 
-        eval += king_square_tables[is_white][is_endgame][bitScanForward(king)];
-        eval -= king_square_tables[is_enemy][is_endgame][bitScanForward(eking)];
+        eval += king_square_tables[is_white][is_endgame][king_sq];
+        eval -= king_square_tables[is_enemy][is_endgame][eking_sq];
 
         return eval * whotomove[is_white];
     }
