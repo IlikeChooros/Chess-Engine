@@ -6,6 +6,7 @@
 
 #include "manager.h"
 #include "input_handle.h"
+#include "threads.h"
 
 
 namespace ui

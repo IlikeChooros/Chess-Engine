@@ -76,6 +76,23 @@ inline int pop_lsb1(uint64_t& b)
     return lsb1;
 }
 
+inline int pop_count(uint64_t b){
+    #if defined(__GNUC__) || defined(__clang__)
+        return __builtin_popcountll(b);
+    #elif defined(_MSC_VER)
+        return __popcnt64(b);
+    #else
+        // Popcount implementation for other compilers
+        // Using Brian Kernighan's Algorithm
+        int count = 0;
+        while (b) {
+            b &= b - 1;
+            count++;
+        }
+        return count;
+    #endif
+}
+
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> dtimer_t;
 
 #if DEBUG_PERFORMANCE

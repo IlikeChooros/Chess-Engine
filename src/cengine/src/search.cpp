@@ -2,30 +2,86 @@
 
 namespace chess
 {
-    constexpr int MIN = -(2 << 29),
-                  MAX = 2 << 29;
-
-    static std::map<uint64_t, TranspositionEntry> transp_table;
+    constexpr int MIN = -(1 << 29),
+                  MAX = 1 << 29,
+                  MATE = -(1 << 28) + 1;
 
 
     // Quiescence (no quiet) search, runs aplha beta on captures only and evaluates the position
-    int quiescence(Board* board, int alpha, int beta){
-        int eval = evaluate(board);
-        return eval;
-        // if (eval >= beta)
-        //     return beta;
-        // if (alpha < eval)
-        //     alpha = eval;
+    int quiescence(Board* b, GameHistory* gh, int alpha, int beta, int depth){
+        MoveList ml;
+        CacheMoveGen cache;
+        ::gen_legal_moves(&ml, b, &cache);
+        auto status = get_status(b, gh, &ml, &cache);
         
-        // GameHistory gh;
-        // gh.push(board, Move());
+        if (status != ONGOING){
+            if (status == DRAW || status == STALEMATE)
+                return 0;
+            if (status == CHECKMATE)
+                return MATE;
+        }
+
+        return evaluate(b, &cache, &ml);
+
+        // if (depth == 0)
+        //     return evaluate(b);
+        
         // MoveList ml;
-        // ::gen_captures(&ml, board);
+        // GameHistory gh;
+        // gh.push(b, Move());
+        // ::gen_captures(&ml, b);
+
+        // if (ml.size() == 0)
+        //     return evaluate(b);
+        
+        // int best = MIN;
         // for (size_t i = 0; i < ml.size(); i++){
         //     Move m(ml[i]);
-        //     ::make(m, board, &gh);
-        //     int score = -quiescence(-beta, -alpha, board);
-        //     ::unmake(m, board, &gh);
+        //     ::make(m, b, &gh);
+        //     best = std::max(best, -quiescence(b, -beta, -alpha, depth - 1));
+        //     ::unmake(m, b, &gh);
+
+        //     alpha = std::max(alpha, best);
+        //     if (alpha >= beta){
+        //         return best;
+        //     }
+        // }
+        // return best;
+
+        // GameHistory gh;
+        // gh.push(b, Move());
+        // MoveList ml;
+        // void(::gen_captures(&ml, b));
+        // int best = MIN;
+
+        // for (size_t i = 0; i < ml.size(); i++){
+        //     Move m(ml[i]);
+        //     ::make(m, b, &gh);
+        //     best = std::max(best, -quiescence(b, -beta, -alpha));
+        //     ::unmake(m, b, &gh);
+
+        //     alpha = std::max(alpha, best);
+        //     if (alpha >= beta){
+        //         return best;
+        //     }
+        // }
+
+        // return best;
+
+        // if (eval >= beta)
+        //     return beta;
+        // alpha = std::max(alpha, eval);
+        
+        // GameHistory gh;
+        // gh.push(b, Move());
+        // MoveList ml;
+        // ::gen_captures(&ml, b);
+
+        // for (size_t i = 0; i < ml.size(); i++){
+        //     Move m(ml[i]);
+        //     ::make(m, b, &gh);
+        //     int score = -quiescence(b, -beta, -alpha);
+        //     ::unmake(m, b, &gh);
 
         //     if (score >= beta)
         //         return beta;
@@ -35,192 +91,39 @@ namespace chess
         // return alpha;
     }
 
-    // int quiescence(Board* b, int alpha, int beta, bool is_max){
-    //     int eval = evaluate(b);
-
-    //     GameHistory gh;
-    //     gh.push(b, Move());
-    //     MoveList ml;
-    //     ::gen_captures(&ml, b);
-        
-    //     if(is_max){
-    //         if (eval >= beta)
-    //             return beta;
-    //         if (alpha < eval)
-    //             alpha = eval;
-
-    //         for (size_t i = 0; i < ml.size(); i++){
-    //             Move m(ml[i]);
-    //             ::make(m, b, &gh);
-    //             int score = quiescence(b, alpha, beta, false);
-    //             ::unmake(m, b, &gh);
-
-    //             if (score >= beta)
-    //                 return beta;
-    //             if (score > alpha)
-    //                 alpha = score;
-    //         }
-    //         return alpha;
-    //     } else {
-    //         if (eval <= alpha)
-    //             return alpha;
-    //         if (eval < beta)
-    //             beta = eval;
-
-    //         for (size_t i = 0; i < ml.size(); i++){
-    //             Move m(ml[i]);
-    //             ::make(m, b, &gh);
-    //             int score = quiescence(b, alpha, beta, true);
-    //             ::unmake(m, b, &gh);
-
-    //             if (score <= alpha)
-    //                 return alpha;
-    //             if (score < beta)
-    //                 beta = score;
-    //         }
-    //         return beta;
-    //     }
-    // }
-
-    // int alphabetaMax(Board* board, GameHistory* gh, int alpha, int beta, int depth);
-    // int alphabetaMin(Board* board, GameHistory* gh, int alpha, int beta, int depth);
-
-    // int alphabetaMax(Board* board, GameHistory* gh, int alpha, int beta, int depth){
-    //     if (depth == 0) 
-    //         return quiescence(alpha, beta, board);
-
-    //     int best = MIN;
-    //     MoveList ml;
-    //     void(::gen_legal_moves(&ml, board));
-
-    //     for (size_t i = 0; i < ml.size(); i++){
-    //         Move m(ml[i]);
-    //         ::make(m, board, gh);
-    //         int score = alphabetaMin(board, gh, alpha, beta, depth - 1);
-    //         ::unmake(m, board, gh);
-            
-    //         if (score > best){
-    //             best = score;
-    //             if (score > alpha)
-    //                 alpha = score;
-    //         }
-    //         if (score >= beta) // Cut-off
-    //             return score;
-    //     }
-
-    //     return best;
-    // }
-
-    // int alphabetaMin(Board* board, GameHistory* gh, int alpha, int beta, int depth){
-    //     if (depth == 0) 
-    //         return -quiescence(alpha, beta, board);
-
-    //     int best = MAX;
-    //     MoveList ml;
-    //     void(::gen_legal_moves(&ml, board));
-
-    //     for (size_t i = 0; i < ml.size(); i++){
-    //         Move m(ml[i]);
-    //         ::make(m, board, gh);
-    //         int score = alphabetaMax(board, gh, alpha, beta, depth - 1);
-    //         ::unmake(m, board, gh);
-
-    //         if (score < best){
-    //             best = score;
-    //             if (score < beta)
-    //                 alpha = score;
-    //         }
-    //         if (score <= alpha) // Cut-off
-    //             return score;
-    //     }
-
-    //     return best;
-    // }
-
-    // int alphaBeta(Board* b, GameHistory* gh, int alpha, int beta, int depth, bool is_max){
-    //     if (depth == 0)
-    //         return quiescence(b, alpha, beta);
-        
-    //     MoveList ml;
-    //     void(::gen_legal_moves(&ml, b));
-    //     int best;
-    //     Move best_move;
-
-    //     // Lookup transposition table and check for possible cutoffs
-    //     uint64_t hash = get_hash(b);
-    //     if (transp_table.find(hash) != transp_table.end()){
-    //         TranspositionEntry entry = transp_table[hash];
-    //         if (entry.depth >= depth){
-    //             if (entry.nodeType == TranspositionEntry::PV)
-    //                 return entry.score;
-    //         }
-    //     }
-
-    //     if (is_max){
-    //         best = MIN;
-    //         for (size_t i = 0; i < ml.size(); i++){
-    //             Move m(ml[i]);
-    //             ::make(m, b, gh);
-    //             int score = alphaBeta(b, gh, alpha, beta, depth - 1, false);
-    //             ::unmake(m, b, gh);
-
-    //             if (score > best){
-    //                 best = score;
-    //                 best_move = m;
-    //             }
-
-    //             alpha = std::max(alpha, best);
-    //             if (best >= beta){
-    //                 // transp_table[hash] = {hash, depth, TranspositionEntry::ALL, best, best_move, gh->age()};
-    //                 return best; // beta cutoff
-    //             }
-    //         }
-    //     } else {
-    //         best = MAX;
-    //         for (size_t i = 0; i < ml.size(); i++){
-    //             Move m(ml[i]);
-    //             ::make(m, b, gh);
-    //             int score = alphaBeta(b, gh, alpha, beta, depth - 1, true);
-    //             ::unmake(m, b, gh);
-
-    //             if (score < best){
-    //                 best = score;
-    //                 best_move = m;
-    //             }
-
-    //             beta = std::min(beta, best);
-    //             if (best <= alpha){
-    //                 // transp_table[hash] = {hash, depth, TranspositionEntry::CUT, best, best_move, gh->age()};
-    //                 return best; // alpha cutoff
-    //             }
-    //         }
-    //     }
-
-    //     // Store the best move in the transposition table
-    //     transp_table[hash] = {hash, depth, TranspositionEntry::PV, best, best_move, gh->age()};
-    //     return best;
-    // }
-
     // Negamax with alpha-beta pruning
-    int negaAlphaBeta(Board* b, GameHistory* gh, int alpha, int beta, int depth){
+    int negaAlphaBeta(Board* b, GameHistory* gh, SearchCache* sc, int alpha, int beta, int depth){
         if (depth == 0)
-            return quiescence(b, alpha, beta);
+            return quiescence(b, gh, alpha, beta, 8);
 
+        CacheMoveGen cache;
         MoveList ml;
-        void(::gen_legal_moves(&ml, b));
-        int best = MIN;
+        void(::gen_legal_moves(&ml, b, &cache));
+        order_moves(&ml, b, &cache, sc);
+        int best = MATE;
+        int last_irreversible = b->irreversibleIndex();
+        TTable<TEntry> *ttable = &sc->getTT();
+
+        // Look for draw conditions
+        uint64_t hash = get_hash(b);
+        auto status = get_status(b, gh, &ml, &cache);
+        if (status != ONGOING){
+            if (status == DRAW || status == STALEMATE)
+                best = 0;
+            ttable->get(hash) = {hash, depth, TEntry::EXACT, best, Move(), gh->age()};
+            return best;
+        }
 
         // Lookup transposition table and check for possible cutoffs
         int old_alpha = alpha;
-        uint64_t hash = get_hash(b);
-        if (transp_table.find(hash) != transp_table.end()){
-            TranspositionEntry entry = transp_table[hash];
+        if (ttable->contains(hash)){
+            TEntry entry = ttable->get(hash);
             if (entry.depth >= depth){
-                if (entry.nodeType == TranspositionEntry::EXACT)
+                if (entry.nodeType == TEntry::EXACT)
                     return entry.score;
-                if (entry.nodeType == TranspositionEntry::LOWERBOUND)
+                if (entry.nodeType == TEntry::LOWERBOUND)
                     alpha = std::max(alpha, entry.score);
-                if (entry.nodeType == TranspositionEntry::UPPERBOUND)
+                if (entry.nodeType == TEntry::UPPERBOUND)
                     beta = std::min(beta, entry.score);
                 
                 if (alpha >= beta)
@@ -231,54 +134,111 @@ namespace chess
         for (size_t i = 0; i < ml.size(); i++){
             Move m(ml[i]);
             ::make(m, b, gh);
-            best = std::max(best, -negaAlphaBeta(b, gh, -beta, -alpha, depth - 1));
+            best = std::max(best, -negaAlphaBeta(b, gh, sc, -beta, -alpha, depth - 1));
             ::unmake(m, b, gh);
+            b->irreversibleIndex() = last_irreversible;
 
             alpha = std::max(alpha, best);
             if (alpha >= beta){
-                // Cut-offs
-                // The score is a lower bound of the true score
-                if (best <= old_alpha)
-                    transp_table[hash] = {hash, depth, TranspositionEntry::UPPERBOUND, best, m, gh->age()};
-                else 
-                    transp_table[hash] = {hash, depth, TranspositionEntry::LOWERBOUND, best, m, gh->age()};
+                if (best <= old_alpha){
+                    // Alpha cutoff
+                    ttable->get(hash) = {hash, depth, TEntry::UPPERBOUND, best, m, gh->age()};
+                }
+                else {
+                    // Beta cutoff
+                    sc->getHH().update(b->getSide() == Piece::White, m, depth);
+                    ttable->get(hash) = {hash, depth, TEntry::LOWERBOUND, best, m, gh->age()};
+                }                    
                 return best;
             }
         }
 
         // Store the best move in the transposition table
-        transp_table[hash] = {hash, depth, TranspositionEntry::EXACT, best, ml[0], gh->age()};
+        ttable->get(hash) = {hash, depth, TEntry::EXACT, best, Move(), gh->age()};
         return best;
     }
 
 
     /**
-     * @brief Search for the best move using the alpha-beta pruning algorithm
+     * @brief Search for the best move using the alpha-beta pruning algorithm,
+     * thread unsafe only if GameHistory is shared between threads (board is copied)
+     * 
+     * TODO:
+     * - [x] Implement iterative deepening
+     * - [ ] Implement quiescence search
+     * - [x] Add time management
+     * - Enhancements:
+     *  - [x] Move ordering
+     *  - [ ] SEE
      */
-    SearchResult search(Board* board, GameHistory* gh, SearchParams params)
+    SearchResult search(Board* board, GameHistory* gh, SearchCache* sc, SearchParams params)
     {
+        if (!board || !gh || !sc)
+            return {Move(), 0, ONGOING};
+
+        // Initialize variables
         int eval = MIN;
         Move best_move;
-
         MoveList ml;
-        void(::gen_legal_moves(&ml, board));
+        CacheMoveGen cache;
+        Board board_copy(*board);
+        int last_irreversible = board_copy.irreversibleIndex();
+        void(::gen_legal_moves(&ml, &board_copy, &cache));
+        order_moves(&ml, &board_copy, &cache, sc);
+        int side_eval = board_copy.getSide() == Piece::White ? 1 : -1;
 
-        for (size_t i = 0; i < ml.size(); i++){
-            Move m = ml[i];
-            ::make(m, board, gh);
-            int score = -negaAlphaBeta(board, gh, MIN, MAX, params.depth);
-            ::unmake(m, board, gh);
-
-            printf("%s: %d\n", Piece::notation(ml[i].getFrom(), ml[i].getTo()).c_str(), score);
-
-            if (score > eval){
-                eval = score;
-                best_move = ml[i];
-            }
+        // Look for draw conditions
+        auto status = get_status(&board_copy, gh, &ml, &cache);
+        if (status != ONGOING){
+            if (status == DRAW || status == STALEMATE)
+                return {Move(), 0,  DRAW};
+            if (status == CHECKMATE)
+                return {Move(), MATE, 0, 0, CHECKMATE};
         }
 
-        printf("Best: %s: %d\n", Piece::notation(best_move.getFrom(), best_move.getTo()).c_str(), eval);
+        // Prepare the timer
+        using namespace std::chrono;
+        high_resolution_clock::time_point t1 = high_resolution_clock::now();
+        int depth = 1;
+        uint64_t time_taken = 0;
+
+        // Iterative deepening
+        while(time_taken < params.time){
+            int alpha = MIN, beta = MAX;
+
+            // Loop through all the moves and evaluate them
+            for (size_t i = 0; i < ml.size(); i++){
+                Move m(ml[i]);
+                ::make(m, &board_copy, gh);
+                int score = -negaAlphaBeta(&board_copy, gh, sc, -beta, -alpha, depth);
+                ::unmake(m, &board_copy, gh);
+                board_copy.irreversibleIndex() = last_irreversible;
+
+                if (score > eval){
+                    eval = score;
+                    best_move = ml[i];
+                }
+
+                // Update the timer, check if time is up
+                time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - t1).count();
+                if (time_taken >= params.time)
+                    break;
+
+                alpha = std::max(alpha, eval);
+                if (alpha >= beta)
+                    break;
+            }
+            depth++;
+        }
+
+        depth--;
+        eval *= side_eval;
+        time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - t1).count();
+        printf("Best: %s: %d (depth=%d time=%lums)\n", 
+            Piece::notation(best_move.getFrom(), best_move.getTo()).c_str(), 
+            eval, depth, time_taken
+        );
         
-        return {best_move, eval};
+        return SearchResult{best_move, eval, depth, time_taken, ONGOING};
     }
 }

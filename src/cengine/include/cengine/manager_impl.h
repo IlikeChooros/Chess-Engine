@@ -7,6 +7,8 @@
 #include <vector>
 #include <cmath>
 #include <chrono>
+#include <thread>
+#include <mutex>
 
 #include "board.h"
 #include "move.h"
@@ -24,20 +26,18 @@ namespace chess
     {
     public:
 
-        typedef enum{
-            Normal = 0,
-            Checkmate = 1,
-            Draw = 2,
-            Repetition = 3,
-        } GameState;
-
         ManagerImpl(Board* board = nullptr);
         ManagerImpl(const ManagerImpl& other) = delete;
         ManagerImpl& operator=(ManagerImpl&& other);
 
 
         void reload();
-        GameState evalState();
+
+        /**
+         * @brief Returns the current game status
+         * @return The current game status
+         */
+        inline GameStatus getStatus() { return get_status(board, &history, &move_list, &cache); }
 
         /**
          * @brief Initializes the board bitboards, should be called once before generating moves
@@ -53,45 +53,62 @@ namespace chess
          * @return The number of moves generated
          */
         inline int generateMoves() { 
-            n_moves = ::gen_legal_moves(&move_list, board); 
+            n_moves = ::gen_legal_moves(&move_list, board, &cache); 
             return n_moves;
         }
 
         /**
-         * @brief Searches for the best move in the current position
-         * @return The best move found
+         * @brief Searches for the best move in the current position, 
+         * if history is not read/modifed by another thread, then thread safe
+         * @return The best move found & its score
          */
-        inline SearchResult search() { return ::chess::search(board, &history, search_params); }
+        inline SearchResult search() noexcept {
+            return ::chess::search(board, &history, &sc, search_params); 
+        }
 
         /**
-         * @brief Pushes the current move to the history stack
+         * @brief Pushes the current move to the history stack, thread safe
          */
-        inline void pushHistory(){ history.push(board, curr_move); }
+        inline void pushHistory() { 
+            std::lock_guard<std::mutex> l(mutex);
+            history.push(board, curr_move); 
+        }
 
         /**
-         * @brief Makes a move, updating the board, the side to move and the move history
+         * @brief Makes a move, updating the board, the side to move and the move history, thread safe
          * @attention User should call `generateMoves()` after calling this function
          */
-        void make(Move& move) { ::make(move, board, &history); curr_move = move;}
+        inline void make(Move& move) { 
+            std::lock_guard<std::mutex> l(mutex); 
+            ::make(move, board, &history); 
+            curr_move = move;
+        }
 
         /**
          * @brief Unmakes current move, restoring the board to the previous state, 
-         * may be called only once after `make()`
+         * may be called only once after `make()`, thread safe
          * @attention User should call `generateMoves()` after calling this function
          */
-        inline void unmake() { ::unmake(curr_move, board, &history); }
+        inline void unmake() noexcept { 
+            std::lock_guard<std::mutex> l(mutex); 
+            ::unmake(curr_move, board, &history); 
+        }
 
         /**
          * @brief Sets the search parameters for the search function
          */
         inline void setSearchParams(SearchParams params) { search_params = params; }
 
+        inline std::mutex& getMutex() { return mutex; }
+
+        std::mutex mutex;
+        CacheMoveGen cache;
         GameHistory history;
         MoveList move_list;
         int n_moves;
         Board* board;
         Move curr_move;
-        GameState state;  
         SearchParams search_params;
+        SearchCache sc;
     };
 }

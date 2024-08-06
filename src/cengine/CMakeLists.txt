@@ -11,6 +11,8 @@ target_sources(cengine
         src/eval.cpp
         src/search.cpp
         src/hash.cpp
+        src/threads.cpp
+        src/move_ordering.cpp
         src/ui.cpp
         src/uci.cpp
 )

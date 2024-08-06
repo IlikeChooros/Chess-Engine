@@ -75,19 +75,45 @@ namespace chess
 
     const char Board::startFen[57] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-    /**
-     * @brief Initialize the board with the default chess pieces
-     */
-    Board& Board::init(){     
-
+    Board::Board()
+    {
+        board = std::make_unique<int[]>(64);
         m_side = Piece::White;
         m_halfmove_clock = 0;
         m_fullmove_counter = 1;  
         m_enpassant_target = 0;
         m_castling_rights = CastlingRights::ALL;
         m_captured_piece = Piece::Empty;
+        m_irreversible_index = 0;
+    }
 
-        board = std::unique_ptr<int[]>(new int[64]());
+    Board::Board(const Board& other)
+    {
+        *this = other;
+    }
+
+    Board& Board::operator=(const Board& other)
+    {
+        m_side = other.m_side;
+        m_halfmove_clock = other.m_halfmove_clock;
+        m_fullmove_counter = other.m_fullmove_counter;
+        m_enpassant_target = other.m_enpassant_target;
+        m_castling_rights = other.m_castling_rights;
+        m_captured_piece = other.m_captured_piece;
+        m_irreversible_index = other.m_irreversible_index;
+
+        board = std::make_unique<int[]>(64);
+        for (int i = 0; i < 64; i++){
+            board[i] = other.board[i];
+        }
+        updateBitboards();
+        return *this;
+    }
+
+    /**
+     * @brief Initialize the board with the default chess pieces
+     */
+    Board& Board::init(){
 
         for (auto i=0; i < 8; i++){
             board[i + 8] = Piece::createPiece(Piece::Pawn, Piece::Black);

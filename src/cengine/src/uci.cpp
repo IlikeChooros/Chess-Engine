@@ -6,65 +6,6 @@
 
 namespace uci
 {
-
-    /*
-
-    STARTPOS 7:
-    d2d4 269605607
-    e2e4 309478267
-    
-    (expected)
-    d2d4: 269605599
-    e2e4: 309478263
-
-    STARTPOS moves e2e4 (6):
-    d7d5 25292264
-    d7d5: 25292260
-
-    STARTPOS moves e2e4 d7d5 (5):
-    d1f3 1260402
-    d1e2 809376
-
-    d1f3: 1260400
-    d1e2: 809374
-
-    STARTPOS moves e2e4 d7d5 d1f3 (4):
-    position startpos moves e2e4 d7d5 d1f3
-    go perft 4
-    d5e4 43885
-    c8g4 42032
-
-    d5e4: 43884
-    c8g4: 42031
-
-    STARTPOS moves e2e4 d7d5 d1f3 d5e4 (3):
-    position startpos moves e2e4 d7d5 d1f3 d5e4
-    go perft 3
-
-    e1d1 1175
-
-    e1d1: 1174
-
-    STARTPOS moves e2e4 d7d5 d1f3 d5e4 e1d1 (2):
-    position startpos moves e2e4 d7d5 d1f3 d5e4 e1d1
-    go perft 2
-
-    c8g4 25
-
-    c8g4: 24
-
-    STARTPOS moves e2e4 d7d5 d1f3 d5e4 e1d1 c8g4 (1):
-position startpos moves e2e4 d7d5 d1f3 d5e4 e1d1 c8g4
-go perft 1
-
-
-    f3d3: 1
-
-
-
-    */
-
-
     /**
      * @brief Print an error message and throw an exception
      * 
@@ -105,13 +46,16 @@ go perft 1
     }
 
     /**
-     * @brief Run perft test at given depth, board should be already initialized
+     * @brief Run perft test at given depth, board should be already initialized,
+     * thread safe
      */
     void perft(chess::Manager* manager, int depth)
     {
-        test::Perft perft(manager->impl()->board);
+        using namespace chess;
+        Board copy(*manager->impl()->board);
+        test::Perft perft(&copy);
         perft.setPrint(true);
-        perft.run(depth, manager->impl()->board->getFen());
+        perft.run(depth, copy.getFen());
     }
 
     /**
@@ -168,55 +112,56 @@ go perft 1
         }
     }
 
-    void uciLoopImpl(chess::Manager* manager,FILE* input, FILE* output)
+    std::string uciReadCommand(chess::Manager* manager, char* input)
     {
+        std::string output;
         char buffer[4096];
-        while (true)
-        {
-            readInput(input, buffer, 4096);
-            
-            std::istringstream iss(buffer);
-            std::string command;
-            iss >> command;
+               
+        std::istringstream iss(buffer);
+        std::string command;
+        iss >> command;
 
-            if (command == "uci"){
-                fprintf(output, "id name CEngine\n");
-                fprintf(output, "id author Lucas\n");
-                fprintf(output, "uciok\n");
-            }
-            else if (command == "isready"){
-                fprintf(output, "readyok\n");
-            }
-            else if (command == "quit"){
-                break;
-            }
-            else if (command == "ucinewgame"){
-                manager->reload();
-            }
-            else if (command == "getfen"){
-                fprintf(output, "%s\n\n", manager->impl()->board->getFen().c_str());
-            }
-            else if (command == "position"){
-                position(manager, iss);
-            }
-            else if (command == "go"){
-                // Check if any command follows, else search for the best move
-                if(!(iss >> command)){
-                    // Search for the best move
-                }
-                else {
-                    if (command == "perft"){
-                        int depth;
-                        if(!(iss >> depth)){
-                            fail("(perft): Depth not specified or invalid\n");
-                        }
-                        perft(manager, depth);
-                    }
-                }
-            }
-
-            fflush(output);
+        if (command == "uci"){
+            output = "id name CEngine\n";
+            output += "id author Lucas\n";
+            output += "uciok\n";
         }
+        else if (command == "isready"){
+            output = "readyok\n";
+        }
+        else if (command == "position"){
+            position(manager, iss);
+        }
+        else if (command == "go"){
+            // Check if any command follows, else search for the best move
+            if(!(iss >> command)){
+                // Search for the best move
+                command = "search";
+            }
+
+            if (command == "perft"){
+                int depth;
+                if(!(iss >> depth)){
+                    fail("(perft): Depth not specified or invalid\n");
+                }
+                perft(manager, depth);
+            }
+            else if (command == "search"){
+                manager->search();
+                auto result = manager->getSearchResult();
+                output = (result.move.move() != 0 ? 
+                    chess::Piece::notation(result.move.getFrom(), result.move.getTo()) : "0000"
+                ) + "\n";
+            }
+        }
+        else if (command == "quit"){
+            exit(0);
+        }
+        else if (command == "getfen"){
+            output = manager->impl()->board->getFen() + "\n";
+        }
+
+        return output;
     }
 
     void uciLoop(FILE* input, FILE* output)
@@ -228,12 +173,35 @@ go perft 1
         manager->impl()->init();
 
         try{
-            uciLoopImpl(manager.get(), input, output);
+            while(1){
+                char buffer[4096];
+                readInput(input, buffer, sizeof(buffer));
+                auto out = uciReadCommand(manager.get(), buffer);
+                fprintf(output, "%s", out.c_str());
+            }
         }
         catch (std::exception& e){
             fprintf(stderr, "Error: %s\n", e.what());
             fflush(output);
-            uciLoopImpl(manager.get(), input, output);
         }
     }
+
+    // UCI
+
+    UCI::UCI() {}
+
+    void UCI::sendCommand(std::string comm)
+    {
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_command = comm;
+            m_ready = false;
+        }        
+        // Send the command to the queue
+        m_queue.enqueue([this](){
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_result = uciReadCommand(nullptr, (char*)m_command.c_str());
+        });
+    }
+
 }

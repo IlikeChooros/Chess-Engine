@@ -4,6 +4,7 @@
 #include "move.h"
 #include "board.h"
 #include "utils.h"
+#include "cache.h"
 
 void init_board(chess::Board* board);
 void verify_castling_rights(chess::Board* board);
@@ -17,7 +18,7 @@ uint64_t xRayRookAttacks(uint64_t occupied, uint64_t blockers, int square);
 uint64_t xRayBishopAttacks(uint64_t occupied, uint64_t blockers, int square);
 
 void gen_captures(MoveList* ml, chess::Board* board);
-size_t gen_legal_moves(MoveList* move_list, chess::Board* board);
+size_t gen_legal_moves(MoveList* move_list, chess::Board* board, chess::CacheMoveGen* cache = nullptr);
 
 void make(Move& move, chess::Board* board, chess::GameHistory* ghistory);
 void unmake(Move& move, chess::Board* board, chess::GameHistory* history);

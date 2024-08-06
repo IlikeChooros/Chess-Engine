@@ -58,4 +58,22 @@ namespace chess
 
         return hash;
     }
+
+    // Generate a hash for a given pawn structure
+    uint64_t get_pawn_hash(Board* board)
+    {
+        uint64_t hash = 0;
+
+        uint64_t white = board->bitboards(true)[Piece::Pawn];
+        uint64_t black = board->bitboards(false)[Piece::Pawn];
+
+        while(white){
+            hash ^= hash_pieces[0][Piece::Pawn - 1][pop_lsb1(white)];
+        }
+        while(black){
+            hash ^= hash_pieces[1][Piece::Pawn - 1][pop_lsb1(black)];
+        }
+
+        return hash;
+    }
 }

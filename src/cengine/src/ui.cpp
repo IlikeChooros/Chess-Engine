@@ -88,6 +88,7 @@ namespace ui
                 state->state = InputState::None;
                 state->from = -1;
                 state->move_flags = -1;
+                state->current_color ^= Piece::colorMask;
             }
         }
     }
@@ -120,6 +121,19 @@ namespace ui
         pieces_sprite.setScale(2, 2);
         promotion = PromotionWindow(font, pieces_texture, &manager, 750, 400);
         
+        std::cout << "Enter side (w/b): ";
+        char side;
+        while(!(std::cin >> side)){
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Invalid input, enter side (w/b): ";
+        }
+        state.player_color = side == 'w' ? Piece::White : Piece::Black;
+
+        
+        TaskQueue queue;
+        std::mutex mutex;
+        bool wait_for_engine = false;
         Clock timer;
 
         while(window.isOpen()){
@@ -129,21 +143,37 @@ namespace ui
                     window.close();
                     break;
                 }
+
+                // First lock the mutex
+                std::unique_lock<std::mutex> lock(mutex, std::try_to_lock);
+                if (!lock.owns_lock() || wait_for_engine){ // Search is running we can't handle input (modify the board/state)
+                    continue;
+                }
+
                 if(state.state == InputState::Promote){
                     promotion.handleInput(event, &window, &state);
                 } else {
                     handleInput(&manager, event, &window, &state);
                 }
+
+                if (manager.getSearchResult().status != GameStatus::ONGOING){
+                    std::cout << "Game over\n";
+                    break;
+                }
+
+                if (state.current_color != state.player_color){
+                    wait_for_engine = true;
+                    // Search for the best move asynchronously
+                    queue.enqueue([&mutex, &wait_for_engine](){
+                        std::lock_guard<std::mutex> lock(mutex);
+                        manager.search();
+                        manager.makeEngineMove();
+                        wait_for_engine = false;
+                        state.current_color ^= Piece::colorMask;
+                    });
+                }
             }
 
-            // Handle computer move
-            if (state.current_color != state.player_color){
-                manager.search();
-                manager.makeEngineMove();
-                state.current_color ^= Piece::colorMask;
-            }
-        
-        
             if (timer.getElapsedTime().asMicroseconds() > FRAME_US){
                 // Clear & redraw the window
                 window.clear();

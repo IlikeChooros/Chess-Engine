@@ -29,22 +29,22 @@ namespace chess
         /**
          * @brief Search for the best move
          */
-        inline void search() { search_result = m_impl->search(); }
+        inline void search() { m_search_result = m_impl->search(); }
 
         /**
          * @brief Make the engine move, search should be called before this
          */
         inline void makeEngineMove() { 
-            if (!search_result.move)
+            if (!m_search_result.move)
                 return;
-            m_impl->make(search_result.move);
+            m_impl->make(m_search_result.move);
             m_impl->generateMoves();
         }
 
         /**
          * @brief Get the search result, should be called after makeEngineMove
          */
-        inline SearchResult getSearchResult() { return search_result; }
+        inline SearchResult getSearchResult() { return m_search_result; }
 
         /**
          * @brief Reload the manager, should be called after changing the board (for example after loading a FEN string)
@@ -64,7 +64,7 @@ namespace chess
         /**
          * @brief Get the current game state
          */
-        inline ManagerImpl::GameState getState() { return m_impl->state; }
+        inline GameStatus getState() { return m_impl->getStatus(); }
 
         /**
          * @brief Get the board
@@ -78,6 +78,7 @@ namespace chess
 
     private:
         std::unique_ptr<ManagerImpl> m_impl;
-        SearchResult search_result;
+        SearchResult m_search_result;
+        bool is_searching;
     };
 }

@@ -4,7 +4,7 @@
 namespace chess
 {
     // Source: https://www.chessprogramming.org/Simplified_Evaluation_Function
-    const int piece_values[6] = {100, 320, 330, 500, 900, 20000};
+    const int piece_values[6] = {100, 320, 20000, 330, 500, 900};
     int white_piece_square_table[6][64] = {
         // for white
         // pawn
@@ -78,6 +78,7 @@ namespace chess
     };
     static int ***piece_square_table = nullptr;
     static int ***king_square_tables = nullptr;
+    static TTable<int> pawn_table;
 
     /**
      * @brief Initialize the boards for evaluation
@@ -117,12 +118,12 @@ namespace chess
     /**
      * @brief Evaluation function for the board in centipawns
      */
-    int evaluate(Board* board)
+    int evaluate(Board* board, CacheMoveGen* c, MoveList* ml)
     {
         int eval = 0;
         bool is_white = board->getSide() == Piece::White;
         bool is_enemy = !is_white;
-        int whotomove[2] = {-1, 1};
+        int whotomove[2] = {1, 1};
 
         // Count the material & piece square tables
         for (int type = 0; type < 6; type++){
@@ -144,13 +145,128 @@ namespace chess
                 eval += piece_square_table[is_white][type][sq];
             }
         }
+        
+        // Bonus for having the bishop pair
+        if (pop_count(board->bitboards(is_white)[Piece::Bishop - 1]) >= 2){
+            eval += 50;
+        }
+        if (pop_count(board->bitboards(is_enemy)[Piece::Bishop - 1]) >= 2){
+            eval -= 50;
+        }
 
-        // if (eval == 45){
-        //     printf("%s", board->getFen().c_str());
-        //     dbitboard(board->occupied(false));
-        //     dbitboard(board->occupied(true));
-        // }
+        // Pawn structure
+        // Try to get hashed pawn structure (already calculated)
+        uint64_t pawn_hash = get_pawn_hash(board);
+        if (pawn_table.contains(pawn_hash)){
+            eval += pawn_table.get(pawn_hash);
+        } else {
+            int pawn_eval = 0;
+            // Calculate pawn structure
+            const uint64_t file_bitboards[8] = {
+                0x0101010101010101ULL,
+                0x0202020202020202ULL,
+                0x0404040404040404ULL,
+                0x0808080808080808ULL,
+                0x1010101010101010ULL,
+                0x2020202020202020ULL,
+                0x4040404040404040ULL,
+                0x8080808080808080ULL
+            };
+
+            // Doubled pawns
+            uint64_t pawns = board->bitboards(is_white)[Piece::Pawn - 1];
+            uint64_t epawns = board->bitboards(is_enemy)[Piece::Pawn - 1];
+            for (int i = 0; i < 8; i++){
+                uint64_t file = file_bitboards[i];
+                if (pawns & file && pop_count(pawns & file) > 1){
+                    pawn_eval -= 10;
+                }
+                if (epawns & file && pop_count(epawns & file) > 1){
+                    pawn_eval += 10;
+                }
+            }
+
+            // Isolated pawns
+            for (int i = 0; i < 8; i++){
+                uint64_t file = file_bitboards[i];
+                if (pawns & file){
+                    if (!(pawns & (file >> 1)) && !(pawns & (file << 1))){
+                        pawn_eval -= 10;
+                    }
+                }
+                if (epawns & file){
+                    if (!(epawns & (file >> 1)) && !(epawns & (file << 1))){
+                        pawn_eval += 10;
+                    }
+                }
+            }
+
+            // Connected pawns
+            for (int i = 0; i < 8; i++){
+                uint64_t file = file_bitboards[i];
+                if (pawns & file){
+                    if (pawns & (file >> 8) || pawns & (file << 8)){
+                        pawn_eval += 10;
+                    }
+                }
+                if (epawns & file){
+                    if (epawns & (file >> 8) || epawns & (file << 8)){
+                        pawn_eval -= 10;
+                    }
+                }
+            }
+
+            // Store the pawn hash
+            pawn_table.store(pawn_hash, pawn_eval);
+            eval += pawn_eval;
+        }
+
+        const uint64_t enemy_board_side[2] = {
+            0xFFFFFFFF00000000ULL, // for black
+            0x00000000FFFFFFFFULL, // for white
+        };
+        // Mobility / Activity
+        uint64_t allied_activity = c->activity & enemy_board_side[is_white];
+        uint64_t enemy_activity = c->danger & enemy_board_side[is_enemy];
+
+        eval += (pop_count(allied_activity) - pop_count(enemy_activity)) * 5;
+        
+
+        // King square tables
+        uint64_t king = board->bitboards(is_white)[Piece::King - 1];
+        uint64_t eking = board->bitboards(is_enemy)[Piece::King - 1];
+        bool is_endgame = false;
+
+        if (pop_count(board->queens()) && pop_count(board->pieces()) <= 6){
+            is_endgame = true;
+        }
+
+        eval += king_square_tables[is_white][is_endgame][bitScanForward(king)];
+        eval -= king_square_tables[is_enemy][is_endgame][bitScanForward(eking)];
 
         return eval * whotomove[is_white];
+    }
+
+    /**
+     * @brief Get the status of the game (ongoing, checkmate, stalemate, draw)
+     */
+    GameStatus get_status(Board* b, GameHistory* gh, MoveList* ml, CacheMoveGen* cache)
+    {
+        if (b->halfmoveClock() >= 100){
+            return DRAW;
+        }
+
+        if (ml->size() == 0){
+            if (cache->danger & (1 << b->bitboards(b->getSide() == Piece::White)[Piece::King - 1])){
+                return CHECKMATE;
+            }
+            return STALEMATE;
+        }
+
+        if (gh->repetitions(b, gh->back().hash) >= 3){
+            return DRAW;
+        }
+
+        return ONGOING;
     }
 }

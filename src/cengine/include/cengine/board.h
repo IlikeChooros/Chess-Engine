@@ -42,8 +42,9 @@ namespace chess{
         static const int KING_TYPE = Piece::King - 1;
         static const int KNIGHT_TYPE = Piece::Knight - 1;
 
-        Board() = default;
-        Board(const Board& other) = delete;
+        Board();
+        Board(const Board& other);
+        Board& operator=(const Board& other);
         
         Board& init();
         void loadFen(const char* fen);
@@ -64,6 +65,11 @@ namespace chess{
          * @brief Get the halfmove clock
          */
         inline int& halfmoveClock() {return this->m_halfmove_clock; };
+
+        /**
+         * @brief Get the irreversible index
+         */
+        inline int& irreversibleIndex() {return this->m_irreversible_index; };
 
         /**
          * @brief Get the fullmove counter
@@ -125,6 +131,21 @@ namespace chess{
         inline uint64_t oppBishopsQueens(bool is_white) {
             return this->m_bitboards[!is_white][BISHOP_TYPE] | this->m_bitboards[!is_white][QUEEN_TYPE];
         }
+
+        /**
+         * @brief Get the pieces bitboard
+         */
+        inline uint64_t pieces() {
+            return m_bitboards[0][KNIGHT_TYPE] | m_bitboards[0][ROOK_TYPE] | m_bitboards[0][BISHOP_TYPE] | m_bitboards[0][QUEEN_TYPE] |
+                   m_bitboards[1][KNIGHT_TYPE] | m_bitboards[1][ROOK_TYPE] | m_bitboards[1][BISHOP_TYPE] | m_bitboards[1][QUEEN_TYPE];
+        }
+
+        /**
+         * @brief Get the queens bitboard
+         */
+        inline uint64_t queens() {
+            return m_bitboards[0][QUEEN_TYPE] | m_bitboards[1][QUEEN_TYPE];
+        }
         
         /**
          * @brief Moves given piece from one square to another on the bitboard
@@ -152,6 +173,7 @@ namespace chess{
         int m_halfmove_clock;
         int m_fullmove_counter;
         int m_captured_piece;
+        int m_irreversible_index; // last irreversible move index
         uint64_t m_bitboards[2][6]; // 0: white, 1: black, contains bitboards for each piece type
         CastlingRights m_castling_rights;
     };
