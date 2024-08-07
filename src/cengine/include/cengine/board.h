@@ -11,8 +11,8 @@
 #include "utils.h"
 #include "castling_rights.h"
 
-
 namespace chess{
+
     class Board
     {
     public:

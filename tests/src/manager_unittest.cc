@@ -17,8 +17,8 @@ class ManagerTest : public ::testing::Test
     void SetUp() override 
     {
         board.init();
-        init_board(&board);
         manager = Manager(&board);
+        manager.init();
         manager.generateMoves();
     }
 

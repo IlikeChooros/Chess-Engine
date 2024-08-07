@@ -3,7 +3,7 @@
 /**
  * @brief Initialize the board, generate the in_between array and piece attacks bitboards
  */
-void init_board(chess::Board* board)
+void init_board()
 {
     // Initialize the in_between array
     // Taken from: https://www.chessprogramming.org/Square_Attacked_By
@@ -171,6 +171,11 @@ uint64_t rookAttacks(uint64_t occupied, int rook)
 {
     using namespace chess;
     return mailboxAttacks(Piece::Rook - 1, occupied, rook, true);
+    // auto& rookMagics = MagicBitboards::rookMagics[rook];
+    // occupied &= rookMagics.mask;
+    // occupied *= rookMagics.magic;
+    // occupied >>= rookMagics.shift;
+    // return MagicBitboards::rookAttacks[occupied];
 }
 
 /**
@@ -180,6 +185,11 @@ uint64_t bishopAttacks(uint64_t occupied, int bishop)
 {
     using namespace chess;
     return mailboxAttacks(Piece::Bishop - 1, occupied, bishop, true);
+    // auto& bishopMagics = MagicBitboards::bishopMagics[bishop];
+    // occupied &= bishopMagics.mask;
+    // occupied *= bishopMagics.magic;
+    // occupied >>= bishopMagics.shift;
+    // return MagicBitboards::bishopAttacks[occupied];
 }
 
 /**
@@ -416,14 +426,14 @@ void gen_captures(MoveList* ml, chess::Board* board)
 /**
  * @brief Get the pinner for a given square
  */
-inline int get_pinner(uint64_t pinners, int sq, uint64_t *attacks_from)
+inline int get_pinner(uint64_t pinners, int sq, int king)
 {
     uint64_t pinner = pinners;
     uint64_t bitsq = 1ULL << sq;
     int pinner_sq = 0;
     while(pinner){
         pinner_sq = pop_lsb1(pinner);
-        if (attacks_from[pinner_sq] & bitsq){
+        if (chess::Board::in_between[pinner_sq][king] & bitsq){
             break;
         }
     }
@@ -725,7 +735,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
         // If the piece is pinned, restrict the moves
         if (pinned & (1ULL << sq)){
             // Get the pinning piece
-            int pinner_sq = get_pinner(pinners, sq, cache->attacks_from);
+            int pinner_sq = get_pinner(pinners, sq, king);
             bmoves &= Board::in_between[pinner_sq][king];
             captures &= (1ULL << pinner_sq);
         }
@@ -747,7 +757,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
         // If the piece is pinned, restrict the moves
         if (pinned & (1ULL << sq)){
             // Get the pinning piece
-            int pinner_sq = get_pinner(pinners, sq, cache->attacks_from);
+            int pinner_sq = get_pinner(pinners, sq, king);
             bmoves &= Board::in_between[pinner_sq][king];
             captures &= (1ULL << pinner_sq);
         }
@@ -769,7 +779,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
         // If the piece is pinned, restrict the moves
         if (pinned & (1ULL << sq)){
             // Get the pinning piece
-            int pinner_sq = get_pinner(pinners, sq, cache->attacks_from);
+            int pinner_sq = get_pinner(pinners, sq, king);
             bmoves &= Board::in_between[pinner_sq][king];
             captures &= (1ULL << pinner_sq);
         }
@@ -812,7 +822,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
         // If the piece is pinned, restrict the moves
         if (pinned & (1ULL << sq)){
             // Get the pinning piece & update the pin line
-            int pinner_sq = get_pinner(pinners, sq, cache->attacks_from);
+            int pinner_sq = get_pinner(pinners, sq, king);
             pinline = Board::in_between[pinner_sq][king];
             captures &= (1ULL << pinner_sq);
             enpassant_target &= pinline;

@@ -69,9 +69,10 @@ namespace chess
     // Helper bitboards
     uint64_t Board::in_between[64][64] = {0};
     uint64_t Board::pawnAttacks[2][64] = {0};
-    uint64_t Board::knightAttacks[64] = {0};
-    uint64_t Board::kingAttacks[64] = {0};
-    uint64_t Board::queenAttacks[64] = {0};
+    uint64_t Board::knightAttacks[64]  = {0};
+    uint64_t Board::kingAttacks[64]    = {0};
+    uint64_t Board::queenAttacks[64]   = {0};
+
 
     const char Board::startFen[57] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -265,7 +266,7 @@ namespace chess
         // if moves are present, apply them
         std::string move;
         if ((ss >> move) && move == "moves"){
-            while(ss>>move){
+            while(ss >> move){
                 int from = str_to_square(move.substr(0, 2));
                 int to = str_to_square(move.substr(2, 2));
                 if (isalpha(*move.end())){
@@ -275,6 +276,7 @@ namespace chess
                     }
                     board[from] = promotion | Piece::getColor(board[from]);
                 }
+                m_side ^= Piece::colorMask;
                 board[to] = board[from];
                 board[from] = Piece::Empty;
             }

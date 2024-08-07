@@ -15,7 +15,7 @@ namespace test
             std::string fen;
         } PerftData;
 
-        static const PerftData data[26];
+        static const PerftData data[27];
     };
 
     class Perft
@@ -48,5 +48,26 @@ namespace test
     public:
         TestPerftStockfish(Board* b) : m_board(b) {}
         void run(int depth = 6, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", std::string stockfish_result = "");
+    };
+
+    class TestGamePlay
+    {
+    public:
+        typedef struct{
+            std::string start_pos;
+            std::string end_pos;
+            GameStatus result;
+            int64_t time;
+            int moves;
+            int colorWin;
+        } GameData;
+
+        static constexpr int n_games = 5;
+
+        static void run();
+        static void print(GameData &data);
+        static void printResults();
+
+        static GameData data[n_games];
     };
 }

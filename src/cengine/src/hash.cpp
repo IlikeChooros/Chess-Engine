@@ -8,7 +8,6 @@ namespace chess
     static int hash_turn = 0;
     static int hash_enpassant[8] = {0};
 
-
     // Initialize the hashing tables
     void init_hashing()
     {

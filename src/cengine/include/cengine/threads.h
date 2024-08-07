@@ -30,3 +30,10 @@ class TaskQueue
         std::condition_variable m_cv;
         bool m_stop;
 };
+
+// A thread pool is a task queue with multiple workers = number of hardware threads
+class ThreadPool: public TaskQueue
+{
+    public:
+        ThreadPool(size_t workers = std::thread::hardware_concurrency()): TaskQueue(workers) {}
+};

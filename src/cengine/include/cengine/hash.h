@@ -14,5 +14,5 @@ namespace chess
 {
     void init_hashing();
     uint64_t get_hash(Board* board);
-    uint64_t get_pawn_hash(Board* board);
+    uint64_t get_pawn_hash(Board* board); 
 }

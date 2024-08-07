@@ -107,6 +107,7 @@ namespace ui
         constexpr int FPS = 60, FRAME_US = 1000000 / FPS;
 
         // Init resources
+        state.current_color = board.getSide();
         manager = Manager(&board);
         manager.init();
         manager.generateMoves();
@@ -162,9 +163,24 @@ namespace ui
                     continue;
                 }
 
-                if (manager.getStatus() != GameStatus::ONGOING){
+                auto status = manager.getStatus();
+                if (status != GameStatus::ONGOING){
                     std::cout << "Game over\n";
                     std::cout << board.getFen() << "\n";
+                    std::string msg;
+                    
+                    if (status == GameStatus::CHECKMATE){
+                        msg = "Checkmate, ";
+                        msg += (board.getSide() == Piece::White ? "Black" : "White");
+                        msg += " wins!";
+                    } else if (status == GameStatus::STALEMATE){
+                        msg = "Stalemate!";
+                    } else {
+                        msg = "Draw!";
+                    }
+
+                    std::cout << msg << "\n";
+
                     running = false;
                     continue;
                 }

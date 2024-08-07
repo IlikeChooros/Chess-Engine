@@ -18,6 +18,7 @@
 #include "history.h"
 #include "eval.h"
 #include "search.h"
+#include "magic_bitboards.h"
 
 namespace chess
 {
@@ -40,12 +41,13 @@ namespace chess
         inline GameStatus getStatus() { return get_status(board, &history, &move_list, &cache); }
 
         /**
-         * @brief Initializes the board bitboards, should be called once before generating moves
+         * @brief Initializes all engine components
          */
         inline void init() {
-            init_board(board);
+            init_board();
             init_eval();
             init_hashing();
+            init_magics(false);
         }
 
         /**

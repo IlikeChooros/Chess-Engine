@@ -5,8 +5,9 @@
 #include "board.h"
 #include "utils.h"
 #include "cache.h"
+#include "magic_bitboards.h"
 
-void init_board(chess::Board* board);
+void init_board();
 void verify_castling_rights(chess::Board* board);
 
 uint64_t mailboxAttacks(int type, uint64_t occupied, int square, bool is_sliding = true);

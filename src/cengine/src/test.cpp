@@ -17,6 +17,7 @@ namespace test
             {1, 6, "3k4/8/8/K1Pp3r/8/8/8/8 w - d6 0 2"},
             {1, 24, "rn1qkbnr/ppp1pppp/8/8/4p1b1/5Q2/PPPP1PPP/RNBK1BNR w kq - 2 4"},
             {1, 6, "6k1/5pp1/1Q2b2p/4P3/7P/8/3r2PK/3q4 w - - 1 34 moves b6b4 d1e2 b4f4 e2e5"},
+            {1, 24, "r4rk1/pppb1p2/3bq2p/3NN2Q/2B3p1/8/PP1R2PP/4R2K b - - 0 23 moves d7c8 d5b6 f7f6 h5e8"},
             {3, 62379, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"},
             {3, 89890, "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"},
             {6, 1134888, "3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1"},
@@ -124,6 +125,91 @@ namespace test
             if (!found){
                 std::cout << "Not found " << res << std::endl;
             }
+        }
+    }
+
+
+    const std::string openings[] = {
+        "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2", // e4 e5
+        "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2", // e4 d5
+        "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2", // e4 c5
+        "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2", // e4 c5 Nf3
+        "rnbqkbnr/ppp1pppp/8/3P4/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2",
+        "rnb1kbnr/ppp1pppp/8/3q4/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 3",
+        "rnb1kbnr/ppp1pppp/8/3q4/3P4/8/PPP2PPP/RNBQKBNR b KQkq d3 0 3",
+        "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+        "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
+        "rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR b KQkq - 1 2",
+        "rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3",
+        "rnbqkbnr/pp2pppp/3p4/2p5/3PP3/5N2/PPP2PPP/RNBQKB1R b KQkq d3 0 3",
+        "rnbqkb1r/pp2pppp/3p1n2/2p5/3PP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 1 4",
+        "rnbqkbnr/ppp1pppp/8/3p4/3P4/8/PPP1PPPP/RNBQKBNR w KQkq d6 0 2",
+        "rnbqkbnr/ppp1pppp/8/3p4/3P1B2/8/PPP1PPPP/RN1QKBNR b KQkq - 1 2", // london
+        "rnbqkbnr/ppp1pppp/8/3p4/2PP4/8/PP2PPPP/RNBQKBNR b KQkq c3 0 2",
+        "rnbqkb1r/ppp1pppp/5n2/3p4/2PP4/5N2/PP2PPPP/RNBQKB1R b KQkq c3 0 3",
+        "rnbqkbnr/ppp2ppp/4p3/3P4/3P4/8/PP2PPPP/RNBQKBNR b KQkq - 0 3",
+        "rnbqkb1r/pppp1ppp/4pn2/8/2PP4/8/PP2PPPP/RNBQKBNR w KQkq - 1 3",
+        "rnbqkbnr/pp2pppp/2p5/3p4/2PP4/8/PP2PPPP/RNBQKBNR w KQkq - 0 3",
+    };
+
+
+    TestGamePlay::GameData TestGamePlay::data[TestGamePlay::n_games] = {};
+
+    void TestGamePlay::run()
+    {
+        using namespace std::chrono;
+        {
+            ManagerImpl m;
+            m.init();
+        }
+        for (int i = 0; i < n_games; i++){
+            
+            high_resolution_clock::time_point t1 = high_resolution_clock::now();
+            Board b;
+            b.loadFen(openings[i % (sizeof(openings) / sizeof(openings[0]))].c_str());
+            ManagerImpl m(&b);
+            m.generateMoves();
+
+            // Simulate game
+            GameStatus status = GameStatus::ONGOING;
+            while(status == ONGOING){
+                auto result = m.search();
+                status = m.getStatus();
+                m.make(result.move);
+                m.generateMoves();
+            }
+            
+            // Save game data
+            data[i] = {
+                openings[i % (sizeof(openings) / sizeof(openings[0]))],
+                b.getFen(),
+                m.getStatus(),
+                duration_cast<seconds>(high_resolution_clock::now() - t1).count(),
+                b.fullmoveCounter(),
+                status == CHECKMATE ? b.getSide() == Piece::White ? -1 : 1 : 0
+            };
+
+            // Print game data
+            std::cout << "\nGame " << i + 1 << "\n";
+            print(data[i]);
+        }
+    }
+
+    void TestGamePlay::print(GameData &data)
+    {
+        std::cout << "Start: " << data.start_pos << "\n";
+        std::cout << "End: " << data.end_pos << "\n";
+        std::cout << "Result: " << data.result << "\n";
+        std::cout << "Time: " << data.time << "\n";
+        std::cout << "Moves: " << data.moves << "\n";
+        std::cout << "Color win: " << data.colorWin << "\n";
+    }
+
+    void TestGamePlay::printResults()
+    {
+        for (int i = 0; i < n_games; i++){
+            std::cout << "\nGame " << i + 1 << "\n";
+            print(data[i]);
         }
     }
 }

@@ -13,6 +13,7 @@ target_sources(cengine
         src/hash.cpp
         src/threads.cpp
         src/move_ordering.cpp
+        src/magic_bitboards.cpp
         src/ui.cpp
         src/uci.cpp
 )

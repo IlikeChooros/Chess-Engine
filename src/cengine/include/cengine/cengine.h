@@ -8,3 +8,4 @@
 #include "test.h"
 #include "move_gen.h"
 #include "uci.h"
+#include "magic_bitboards.h"
