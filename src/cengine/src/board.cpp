@@ -262,6 +262,24 @@ namespace chess
 
         m_captured_piece = Piece::Empty;
 
+        // if moves are present, apply them
+        std::string move;
+        if ((ss >> move) && move == "moves"){
+            while(ss>>move){
+                int from = str_to_square(move.substr(0, 2));
+                int to = str_to_square(move.substr(2, 2));
+                if (isalpha(*move.end())){
+                    int promotion = Piece::getPromotionPiece(*move.end());
+                    if (promotion == -1){
+                        return;
+                    }
+                    board[from] = promotion | Piece::getColor(board[from]);
+                }
+                board[to] = board[from];
+                board[from] = Piece::Empty;
+            }
+        }
+
         // Update bitboards
         updateBitboards();
     }

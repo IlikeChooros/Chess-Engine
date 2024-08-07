@@ -22,30 +22,6 @@ namespace uci
     }
 
     /**
-     * @brief Read input from a file
-     * 
-     * @param input The input file
-     * @param buffer The buffer to read into
-     * @param size The size of the buffer
-     */
-    void readInput(FILE* input, char* buffer, size_t size)
-    {
-        if (fgets(buffer, size, input) == NULL){
-            fprintf(stderr, "Error reading input\n");
-            exit(1);
-        }
-
-        // Remove newline
-        size_t len = strlen(buffer);
-        if (len > 0 && buffer[len - 1] == '\n'){
-            buffer[len - 1] = '\0';
-        }
-        if (len == 0){
-            readInput(input, buffer, size);
-        }
-    }
-
-    /**
      * @brief Run perft test at given depth, board should be already initialized,
      * thread safe
      */
@@ -75,9 +51,6 @@ namespace uci
         else if (command == "fen"){
             int n_section = 0;
             while (iss >> command){
-                if (command == "moves"){
-                    break;
-                }
                 fen += command + " ";
                 n_section++;
             }
@@ -89,41 +62,17 @@ namespace uci
         }
         manager->impl()->board->loadFen(fen.c_str());
         manager->reload();
-
-        // Parse moves
-        while (iss >> command){
-            int from = str_to_square(command.substr(0, 2));
-            int to = str_to_square(command.substr(2, 2));
-            int flags = -1;
-
-            // That's a promotion
-            if (command.size() == 5){
-                auto vflags = manager->getFlags(from, to);
-                if (vflags.empty() || vflags.size() != 4){
-                    fail("(position): Invalid promotion move: %s\n", command.c_str());
-                }
-                flags = vflags[0] & (Move::FLAG_PROMOTION | Move::FLAG_CAPTURE);
-                flags |= Move::getPromotionPiece(command[4]);
-            }
-
-            if (!manager->movePiece(from, to, flags)){
-                fail("(position): Invalid move: %s\n", command.c_str());
-            }
-        }
     }
 
-    std::string uciReadCommand(chess::Manager* manager, char* input)
+    std::string uciReadCommImpl(chess::Manager* manager, std::string input)
     {
-        std::string output;
-        char buffer[4096];
-               
-        std::istringstream iss(buffer);
-        std::string command;
+        std::istringstream iss(input);
+        std::string command, output;
         iss >> command;
 
         if (command == "uci"){
             output = "id name CEngine\n";
-            output += "id author Lucas\n";
+            output += "id author IlikeChooros\n";
             output += "uciok\n";
         }
         else if (command == "isready"){
@@ -154,9 +103,6 @@ namespace uci
                 ) + "\n";
             }
         }
-        else if (command == "quit"){
-            exit(0);
-        }
         else if (command == "getfen"){
             output = manager->impl()->board->getFen() + "\n";
         }
@@ -164,44 +110,79 @@ namespace uci
         return output;
     }
 
-    void uciLoop(FILE* input, FILE* output)
+    std::string uciReadCommand(chess::Manager* manager, std::string input)
     {
-        // Set the defaults and initialize the board
-        chess::Board board;
-        std::unique_ptr<chess::Manager> manager(new chess::Manager(&board));
-        board.init();
-        manager->impl()->init();
-
+        std::string output;
         try{
-            while(1){
-                char buffer[4096];
-                readInput(input, buffer, sizeof(buffer));
-                auto out = uciReadCommand(manager.get(), buffer);
-                fprintf(output, "%s", out.c_str());
-            }
+            output = uciReadCommImpl(manager, input);
+        } catch(std::exception& e){
+            output = e.what();
         }
-        catch (std::exception& e){
-            fprintf(stderr, "Error: %s\n", e.what());
-            fflush(output);
-        }
+        return output;
     }
 
     // UCI
 
-    UCI::UCI() {}
+    UCI::UCI(): m_queue(1), m_ready(true)
+    {
+        m_manager = chess::Manager(&m_board);
+        m_manager.init();
+    }
 
+    void UCI::loop()
+    {
+        // Read from standard input commands
+        while(1)
+        {
+            std::string command;
+            std::getline(std::cin, command);
+
+            // if the command is exit, then break
+            if(command == "quit" || command == "exit" || command == "q")
+                break;
+
+            sendCommand(command);
+        }
+    }
+
+    /**
+     * @brief Push new command to the task queue
+     */
     void UCI::sendCommand(std::string comm)
     {
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             m_command = comm;
             m_ready = false;
-        }        
+        }
         // Send the command to the queue
         m_queue.enqueue([this](){
-            std::lock_guard<std::mutex> lock(m_mutex);
-            m_result = uciReadCommand(nullptr, (char*)m_command.c_str());
+            std::lock_guard<std::mutex> lock(this->m_mutex);
+            std::cout << uciReadCommand(&this->m_manager, this->m_command);
+            this->m_ready = true;
         });
     }
 
+    /**
+     * @brief Wheter given task has ended
+     */
+    bool UCI::isReady()
+    {
+        std::unique_lock<std::mutex> l(m_mutex, std::try_to_lock);
+        return l.owns_lock() && m_ready && !m_result.empty();
+    }
+
+    /**
+     * @brief Return the result of the command, first you should check if the
+     * UCI is ready.
+     */
+    std::string UCI::getResult()
+    {
+        if (!isReady())
+            return "";
+        std::lock_guard<std::mutex> l(m_mutex);
+        auto ret = m_result.front();
+        m_result.pop();
+        return ret;
+    }
 }

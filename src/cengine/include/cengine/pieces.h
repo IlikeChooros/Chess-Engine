@@ -104,6 +104,22 @@ namespace chess
             return square_to_str(from) + square_to_str(to);
         }
 
+        static int getPromotionPiece(char piece){
+            switch (piece)
+            {
+                case 'q':
+                    return Queen;
+                case 'r':
+                    return Rook;
+                case 'b':
+                    return Bishop;
+                case 'n':
+                    return Knight;
+                default:
+                    return -1;
+            }
+        }
+
 
         static std::string toStr(int piece){
             std::string str = "";

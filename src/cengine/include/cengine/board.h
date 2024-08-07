@@ -140,6 +140,10 @@ namespace chess{
                    m_bitboards[1][KNIGHT_TYPE] | m_bitboards[1][ROOK_TYPE] | m_bitboards[1][BISHOP_TYPE] | m_bitboards[1][QUEEN_TYPE];
         }
 
+        inline uint64_t pawns() {
+            return m_bitboards[0][PAWN_TYPE] | m_bitboards[1][PAWN_TYPE];
+        }
+
         /**
          * @brief Get the queens bitboard
          */

@@ -267,11 +267,17 @@ namespace chess
             return DRAW;
         }
 
+        // Checkmate / stalemate
         if (ml->size() == 0){
             if (cache->danger & (1 << b->bitboards(b->getSide() == Piece::White)[Piece::King - 1])){
                 return CHECKMATE;
             }
             return STALEMATE;
+        }
+
+        // Insufficient material
+        if ((b->pieces() | b->pawns()) == 0){
+            return DRAW;
         }
 
         if (gh->repetitions(b, gh->back().hash) >= 3){

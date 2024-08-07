@@ -15,7 +15,7 @@ namespace test
             std::string fen;
         } PerftData;
 
-        static const PerftData data[25];
+        static const PerftData data[26];
     };
 
     class Perft
@@ -23,6 +23,7 @@ namespace test
         template <bool>
         uint64_t perft(int depth);
 
+        std::vector<std::string> m_results;
         bool m_print;
         Board *m_board;
     public:
@@ -36,5 +37,16 @@ namespace test
          * @brief Set if the perft test should print the results
          */
         void setPrint(bool print) { m_print = print; }    
+
+        std::vector<std::string> getResults() { return m_results; }
+    };
+
+
+    class TestPerftStockfish
+    {
+        Board *m_board;
+    public:
+        TestPerftStockfish(Board* b) : m_board(b) {}
+        void run(int depth = 6, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", std::string stockfish_result = "");
     };
 }

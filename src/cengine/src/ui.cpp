@@ -133,6 +133,7 @@ namespace ui
         TaskQueue queue;
         std::mutex mutex;
         bool wait_for_engine = false;
+        bool running = true;
         Clock timer;
         RenderWindow window = sf::RenderWindow(sf::VideoMode(1500, 1000), "CEngine");
 
@@ -154,12 +155,18 @@ namespace ui
                 if(state.state == InputState::Promote){
                     promotion.handleInput(event, &window, &state);
                 } else {
-                    handleInput(&manager, event, &window, &state, true);
+                    handleInput(&manager, event, &window, &state, running);
                 }
 
-                if (manager.getSearchResult().status != GameStatus::ONGOING){
+                if (!running){
+                    continue;
+                }
+
+                if (manager.getStatus() != GameStatus::ONGOING){
                     std::cout << "Game over\n";
-                    break;
+                    std::cout << board.getFen() << "\n";
+                    running = false;
+                    continue;
                 }
 
                 if (state.current_color != state.player_color){

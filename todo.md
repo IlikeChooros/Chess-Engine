@@ -16,8 +16,8 @@
       - [x] For captures: MVV/LVA
     - [x] Iterative deepening
     - [x] Time management
-    - [ ] BUG: King sometimes can be captured:
+    - [ ] Engine badly detects treefold repetition (user may force a draw in a winning position for the engine)
+    - [x] BUG: King sometimes can be captured:
       - 6k1/5pp1/1Q2b2p/4P3/7P/8/3r2PK/3q4 w - - 1 34
-      - 
   - [ ] Evaluation
     - [ ] Pawn structure (phalanx) 

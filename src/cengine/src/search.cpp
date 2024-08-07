@@ -100,11 +100,11 @@ namespace chess
         MoveList ml;
         void(::gen_legal_moves(&ml, b, &cache));
         order_moves(&ml, b, &cache, sc);
-        int best = MATE;
+        int best = MATE - depth;
         int last_irreversible = b->irreversibleIndex();
         TTable<TEntry> *ttable = &sc->getTT();
 
-        // Look for draw conditions
+        // Look for draw conditions and check if the game is over
         uint64_t hash = get_hash(b);
         auto status = get_status(b, gh, &ml, &cache);
         if (status != ONGOING){
@@ -186,15 +186,6 @@ namespace chess
         void(::gen_legal_moves(&ml, &board_copy, &cache));
         int side_eval = board_copy.getSide() == Piece::White ? 1 : -1;
 
-        // Look for draw conditions
-        auto status = get_status(&board_copy, gh, &ml, &cache);
-        if (status != ONGOING){
-            if (status == DRAW || status == STALEMATE)
-                return {Move(), 0,  DRAW};
-            if (status == CHECKMATE)
-                return {Move(), MATE, 0, 0, CHECKMATE};
-        }
-
         // Prepare the timer
         using namespace std::chrono;
         high_resolution_clock::time_point t1 = high_resolution_clock::now();
@@ -237,10 +228,9 @@ namespace chess
         }
 
         depth--;
-        eval *= side_eval;
         printf("%s: %.2f (depth=%d time=%lums)\n", 
             Piece::notation(best_move.getFrom(), best_move.getTo()).c_str(), 
-            float(eval) / 100.0f, depth, time_taken
+            float(eval) / 100.0f * side_eval, depth, time_taken
         );
         
         return SearchResult{best_move, eval, depth, time_taken, ONGOING};

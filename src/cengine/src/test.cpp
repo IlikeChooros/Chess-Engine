@@ -16,6 +16,7 @@ namespace test
             {1, 9, "2r5/3pk3/8/2P5/8/2K5/8/8 w - - 5 4"},
             {1, 6, "3k4/8/8/K1Pp3r/8/8/8/8 w - d6 0 2"},
             {1, 24, "rn1qkbnr/ppp1pppp/8/8/4p1b1/5Q2/PPPP1PPP/RNBK1BNR w kq - 2 4"},
+            {1, 6, "6k1/5pp1/1Q2b2p/4P3/7P/8/3r2PK/3q4 w - - 1 34 moves b6b4 d1e2 b4f4 e2e5"},
             {3, 62379, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"},
             {3, 89890, "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"},
             {6, 1134888, "3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1"},
@@ -54,8 +55,12 @@ namespace test
     {       
         m_board->loadFen(fen.c_str());
         uint64_t total = perft<true>(depth);
-        if(m_print)
-            printf("Nodes: %lu\n\n", total);
+        if(m_print) {
+            for(auto line : m_results)
+                std::cout << line << "\n";
+            std::cout<< "Nodes: " << total;
+        }
+            
         return total;
     }
 
@@ -67,9 +72,13 @@ namespace test
         auto ml = manager.move_list;
 
         if(depth == 1){
-            if (root && m_print) 
+            if (root && m_print) {
+                m_results.reserve(moves);
                 for(size_t i = 0; i < moves; i++)
-                    printf("%s: %lu\n", Piece::notation(Move(ml[i]).getFrom(), Move(ml[i]).getTo()).c_str(), 1UL);
+                    m_results.push_back(
+                        Piece::notation(ml[i].getFrom(), ml[i].getTo()) + ": " + std::to_string(1UL)
+                    );
+            }       // printf("%s: %lu\n", Piece::notation(Move(ml[i]).getFrom(), Move(ml[i]).getTo()).c_str(), 1UL);
             return (uint64_t)moves;
         }
 
@@ -81,9 +90,40 @@ namespace test
             nodes += cnodes;
             manager.unmake();
             if (root && m_print)
-                printf("%s: %lu\n", Piece::notation(move.getFrom(), move.getTo()).c_str(), cnodes);
+                m_results.push_back(
+                    Piece::notation(move.getFrom(), move.getTo()) + ": " + std::to_string(cnodes)
+                );
+                // printf("%s: %lu\n", Piece::notation(move.getFrom(), move.getTo()).c_str(), cnodes);
         }
         
         return nodes;
+    }
+
+
+    void TestPerftStockfish::run(int depth, std::string fen, std::string stockfish)
+    {
+        Perft p(m_board);
+        p.run(depth, fen);
+        p.setPrint(true);
+        auto results = p.getResults();
+
+        std::cout << "\n\n";
+
+        for (auto res : results){
+            // Find given move in stockfish results, if not found, print it
+            bool found = false;
+            std::istringstream iss(stockfish);
+            std::string line;
+            while (std::getline(iss, line)){
+                if (line.find(res) != std::string::npos){
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found){
+                std::cout << "Not found " << res << std::endl;
+            }
+        }
     }
 }

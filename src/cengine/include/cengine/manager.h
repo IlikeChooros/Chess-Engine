@@ -64,7 +64,7 @@ namespace chess
         /**
          * @brief Get the current game state
          */
-        inline GameStatus getState() { return m_impl->getStatus(); }
+        inline GameStatus getStatus() { return m_impl->getStatus(); }
 
         /**
          * @brief Get the board

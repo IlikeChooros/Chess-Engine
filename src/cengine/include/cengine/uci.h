@@ -10,29 +10,25 @@
 // Universal Chess Interface
 namespace uci
 {
+    std::string uciReadCommImpl(chess::Manager* manager, std::string input);
 
     class UCI
     {
     public:
         UCI();
+
         void sendCommand(std::string comm);
         bool isReady();
         std::string getResult();
+        void loop();
     private:
         TaskQueue m_queue;
+        chess::Board m_board;
+        chess::Manager m_manager;
         std::mutex m_mutex;
         std::string m_command;
-        std::string m_result;
+        std::queue<std::string> m_result;
         bool m_ready;
     };
-
-
-    /**
-     * @brief Start the UCI loop, will read from input and write to output
-     * 
-     * @param input The input stream
-     * @param output The output stream
-     */
-    void uciLoop(FILE* input, FILE* output);
 }
 

@@ -90,7 +90,7 @@ namespace chess
         {
             int start = b->irreversibleIndex();
             int count = 0;
-            for (size_t i = start; i < history.size(); i+=2){
+            for (size_t i = start; i < history.size(); i++){
                 if (history[i].hash == hash)
                     count++;
             }
