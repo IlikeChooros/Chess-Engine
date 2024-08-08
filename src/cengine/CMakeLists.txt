@@ -16,6 +16,7 @@ target_sources(cengine
         src/magic_bitboards.cpp
         src/ui.cpp
         src/uci.cpp
+        src/settings.cpp
 )
 
 target_include_directories(cengine PUBLIC include)

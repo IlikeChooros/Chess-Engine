@@ -62,7 +62,7 @@ inline int bitScanForward(uint64_t bb){
             50, 31, 19, 15, 30, 14, 13, 12,
         };
 
-        return magictable[((b&-b)*magic) >> 58];
+        return magictable[((bb&-bb)*magic) >> 58];
     #endif
 }
 
@@ -71,7 +71,7 @@ inline int bitScanForward(uint64_t bb){
  */
 inline int pop_lsb1(uint64_t& b)
 {
-    int lsb1 = bitScanForward(b);
+    int lsb1 = b != 0 ? bitScanForward(b) : 0;
     b &= b - 1;
     return lsb1;
 }

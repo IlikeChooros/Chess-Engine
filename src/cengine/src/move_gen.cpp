@@ -169,13 +169,8 @@ uint64_t mailboxPawnMoves(uint64_t occupied, int square, bool is_white)
  */
 uint64_t rookAttacks(uint64_t occupied, int rook)
 {
-    using namespace chess;
-    return mailboxAttacks(Piece::Rook - 1, occupied, rook, true);
-    // auto& rookMagics = MagicBitboards::rookMagics[rook];
-    // occupied &= rookMagics.mask;
-    // occupied *= rookMagics.magic;
-    // occupied >>= rookMagics.shift;
-    // return MagicBitboards::rookAttacks[occupied];
+    auto& rookMagics = MagicBitboards::rookMagics[rook];
+    return MagicBitboards::rookAttacks[rook][((occupied & rookMagics.mask) * rookMagics.magic) >> rookMagics.shift];
 }
 
 /**
@@ -183,13 +178,8 @@ uint64_t rookAttacks(uint64_t occupied, int rook)
  */
 uint64_t bishopAttacks(uint64_t occupied, int bishop)
 {
-    using namespace chess;
-    return mailboxAttacks(Piece::Bishop - 1, occupied, bishop, true);
-    // auto& bishopMagics = MagicBitboards::bishopMagics[bishop];
-    // occupied &= bishopMagics.mask;
-    // occupied *= bishopMagics.magic;
-    // occupied >>= bishopMagics.shift;
-    // return MagicBitboards::bishopAttacks[occupied];
+    auto& bishopMagics = MagicBitboards::bishopMagics[bishop];
+    return MagicBitboards::bishopAttacks[bishop][((occupied & bishopMagics.mask) * bishopMagics.magic) >> bishopMagics.shift];
 }
 
 /**

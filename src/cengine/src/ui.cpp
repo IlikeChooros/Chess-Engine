@@ -112,11 +112,10 @@ namespace ui
         manager.init();
         manager.generateMoves();
 
-        std::filesystem::path binary_path = std::filesystem::path(argv[0]).parent_path();
-        if(!pieces_texture.loadFromFile(binary_path / "img/ChessPiecesArray.png")){
+        if(!pieces_texture.loadFromFile(global_settings.base_path / "img/ChessPiecesArray.png")){
             return;
         }
-        font.loadFromFile(binary_path / "font/Ubuntu-L.ttf");
+        font.loadFromFile(global_settings.base_path / "font/Ubuntu-L.ttf");
         pieces_sprite.setTexture(pieces_texture, true);
         pieces_sprite.setScale(2, 2);
         promotion = PromotionWindow(font, pieces_texture, &manager, 750, 400);

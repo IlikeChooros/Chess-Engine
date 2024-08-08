@@ -1,6 +1,20 @@
 #pragma once
 
 #include <stdio.h>
+#include <filesystem>
+
+struct Settings {
+    // Debug level
+    int debug_level;
+    // Debug performance
+    bool debug_performance;
+    // Absolute path of the executable binary
+    std::filesystem::path base_path;
+};
+
+// Make settings global
+extern Settings global_settings;
+
 
 #define DEBUG_LEVEL_NONE 0
 #define DEBUG_LEVEL_ERR 1

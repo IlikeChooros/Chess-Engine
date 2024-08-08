@@ -21,7 +21,7 @@ namespace chess
                 return MATE;
         }
 
-        return evaluate(b, &cache, &ml);
+        // return evaluate(b, &cache, &ml);
 
         // if (depth == 0)
         //     return evaluate(b);
