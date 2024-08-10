@@ -25,8 +25,7 @@ class ManagerTest : public ::testing::Test
     // Load a fen string into the board and generate moves
     void loadFen(const char* fen)
     {
-        board.loadFen(fen);
-        manager.reload();
+        manager.loadFen(fen);
     }
 
     // Check if a list of moves contains a move

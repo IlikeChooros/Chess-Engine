@@ -248,7 +248,7 @@ namespace chess
         // King square tables
         bool is_endgame = false;
 
-        if (pop_count(board->pieces()) <= 6){
+        if (pop_count(board->pieces()) <= 6 || ((pop_count(board->queens()) == 0) && (pop_count(board->rooks()) == 0))){
             is_endgame = true;
         }
 

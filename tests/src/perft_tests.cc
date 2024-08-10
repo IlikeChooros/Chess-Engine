@@ -10,8 +10,6 @@ namespace
 
         void SetUp() override 
         {
-            init_board();
-            init_magics(false);
             perft = test::Perft(&board);
         }
     };

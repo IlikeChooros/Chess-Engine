@@ -29,6 +29,7 @@ namespace chess
 
         ManagerImpl(Board* board = nullptr);
         ManagerImpl(const ManagerImpl& other) = delete;
+        ~ManagerImpl();
         ManagerImpl& operator=(ManagerImpl&& other);
 
 
@@ -43,7 +44,7 @@ namespace chess
         /**
          * @brief Initializes all engine components
          */
-        inline void init() {
+        static inline void init() {
             init_board();
             init_eval();
             init_hashing();
@@ -65,8 +66,44 @@ namespace chess
          * @return The best move found & its score
          */
         inline SearchResult search() noexcept {
-            return ::chess::search(board, &history, &sc, search_params); 
+            search_result = ::chess::search(board, &history, &sc, &search_params); 
+            return search_result;
         }
+
+        /**
+         * @brief Searches for the best move in the current position in async mode
+         */
+        inline void searchAsync() noexcept {
+            if (search_thread.joinable()){
+                search_thread.join();
+            }
+            search_params.resetStop();
+            search_thread = std::thread([this](){
+                this->search_result = search();
+            });
+        }
+
+        /**
+         * @brief Check if the search is running
+         */
+        inline bool searchRunning() noexcept {          
+            return search_thread.joinable() && !search_params.shouldStop();
+        }
+
+        /**
+         * @brief Stops the search running in another thread if it is running
+         */
+        inline void stopSearchAsync() noexcept {
+            search_params.stopSearch();
+            if (search_thread.joinable()){
+                search_thread.join();
+            }
+        }
+
+        /**
+         * @brief Get the search result, should be called after finished search
+         */
+        inline SearchResult getSearchResult() { return search_result; }
 
         /**
          * @brief Pushes the current move to the history stack, thread safe
@@ -104,13 +141,15 @@ namespace chess
         inline std::mutex& getMutex() { return mutex; }
 
         std::mutex mutex;
+        std::thread search_thread;
+        SearchParams search_params;
+        SearchResult search_result;
+        SearchCache sc;
         CacheMoveGen cache;
         GameHistory history;
         MoveList move_list;
         int n_moves;
         Board* board;
         Move curr_move;
-        SearchParams search_params;
-        SearchCache sc;
     };
 }

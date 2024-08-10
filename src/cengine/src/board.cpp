@@ -107,7 +107,9 @@ namespace chess
         for (int i = 0; i < 64; i++){
             board[i] = other.board[i];
         }
-        updateBitboards();
+        for(int color = 0; color < 2; color++){
+            memcpy(m_bitboards[color], other.m_bitboards[color], 6 * sizeof(uint64_t));
+        }
         return *this;
     }
 
@@ -262,25 +264,6 @@ namespace chess
         m_fullmove_counter = std::stoi(full_move);
 
         m_captured_piece = Piece::Empty;
-
-        // if moves are present, apply them
-        std::string move;
-        if ((ss >> move) && move == "moves"){
-            while(ss >> move){
-                int from = str_to_square(move.substr(0, 2));
-                int to = str_to_square(move.substr(2, 2));
-                if (isalpha(*move.end())){
-                    int promotion = Piece::getPromotionPiece(*move.end());
-                    if (promotion == -1){
-                        return;
-                    }
-                    board[from] = promotion | Piece::getColor(board[from]);
-                }
-                m_side ^= Piece::colorMask;
-                board[to] = board[from];
-                board[from] = Piece::Empty;
-            }
-        }
 
         // Update bitboards
         updateBitboards();

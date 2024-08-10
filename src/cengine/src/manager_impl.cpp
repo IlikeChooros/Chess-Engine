@@ -10,7 +10,7 @@ namespace chess{
         this->n_moves = 0;
         this->board = board;
         this->curr_move = Move();
-        this->search_params = DEFAULT_SEARCH_PARAMS;
+        this->search_params = SearchParams();
 
         if (board == nullptr)
             return;
@@ -26,6 +26,11 @@ namespace chess{
         this->curr_move = other.curr_move;
         this->history = other.history;
         return *this;
+    }
+
+    ManagerImpl::~ManagerImpl()
+    {
+        stopSearchAsync();
     }
 
     /**

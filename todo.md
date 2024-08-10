@@ -10,16 +10,16 @@
     - [x] Game over detection
     - [x] 50 move rule detection
     - [x] Threefold repetition detection
-  - [ ] UCI basic commands
-    - [ ] `uci`
-    - [ ] `isready`
-    - [ ] `ucinewgame`
-    - [ ] `position` (fen, startpos)
-    - [ ] `go` (perft, search)
-    - [ ] `stop`
-    - [ ] `quit`
+  - [x] UCI basic commands
+    - [x] `uci`
+    - [x] `isready`
+    - [x] `ucinewgame`
+    - [x] `position` (fen, startpos)
+    - [x] `go` (perft, search)
+    - [x] `stop`
+    - [x] `quit`
   - [ ] Search
-    - [ ] Quiescence search
+    - [x] Quiescence search
     - [x] Move ordering
       - [x] History heuristic (for quiet moves)
       - [x] For captures: MVV/LVA

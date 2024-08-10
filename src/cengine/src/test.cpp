@@ -40,6 +40,7 @@ namespace test
     {
         m_print = true;
         m_board = board;
+        Manager::init();
     }
 
     Perft& Perft::operator=(Perft&& other)
@@ -53,15 +54,13 @@ namespace test
      * @brief Run the perft test at the specified depth >= 1
      */
     uint64_t Perft::run(int depth, std::string fen)
-    {       
-        m_board->loadFen(fen.c_str());
+    {
+        Manager m(m_board);
+        m.loadFen(fen.c_str());
         uint64_t total = perft<true>(depth);
         if(m_print) {
-            for(auto line : m_results)
-                std::cout << line << "\n";
-            std::cout<< "Nodes: " << total;
-        }
-            
+            std::cout<< "Nodes: " << total << "\n\n";
+        }            
         return total;
     }
 
@@ -75,11 +74,13 @@ namespace test
         if(depth == 1){
             if (root && m_print) {
                 m_results.reserve(moves);
-                for(size_t i = 0; i < moves; i++)
+                for(size_t i = 0; i < moves; i++){
                     m_results.push_back(
                         Piece::notation(ml[i].getFrom(), ml[i].getTo()) + ": " + std::to_string(1UL)
                     );
-            }       // printf("%s: %lu\n", Piece::notation(Move(ml[i]).getFrom(), Move(ml[i]).getTo()).c_str(), 1UL);
+                    std::cout << Piece::notation(ml[i].getFrom(), ml[i].getTo()) << ": " << 1UL << "\n";
+                }
+            }  
             return (uint64_t)moves;
         }
 
@@ -90,11 +91,12 @@ namespace test
             cnodes = perft<false>(depth - 1);
             nodes += cnodes;
             manager.unmake();
-            if (root && m_print)
+            if (root && m_print){
                 m_results.push_back(
                     Piece::notation(move.getFrom(), move.getTo()) + ": " + std::to_string(cnodes)
                 );
-                // printf("%s: %lu\n", Piece::notation(move.getFrom(), move.getTo()).c_str(), cnodes);
+                std::cout << Piece::notation(ml[i].getFrom(), ml[i].getTo()) << ": " << cnodes << "\n";
+            }
         }
         
         return nodes;
@@ -158,10 +160,8 @@ namespace test
     void TestGamePlay::run()
     {
         using namespace std::chrono;
-        {
-            ManagerImpl m;
-            m.init();
-        }
+        ManagerImpl::init();
+        
         for (int i = 0; i < n_games; i++){
             
             high_resolution_clock::time_point t1 = high_resolution_clock::now();

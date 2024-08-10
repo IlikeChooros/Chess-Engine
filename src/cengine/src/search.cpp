@@ -9,19 +9,7 @@ namespace chess
 
     // Quiescence (no quiet) search, runs aplha beta on captures only and evaluates the position
     int quiescence(Board* b, GameHistory* gh, int alpha, int beta, int depth){
-        MoveList ml;
-        CacheMoveGen cache;
-        ::gen_legal_moves(&ml, b, &cache);
-        auto status = get_status(b, gh, &ml, &cache);
-        
-        if (status != ONGOING){
-            if (status == DRAW || status == STALEMATE)
-                return 0;
-            if (status == CHECKMATE)
-                return MATE;
-        }
-
-        // return evaluate(b, &cache, &ml);
+        // return evaluate(b, nullptr, nullptr);
 
         // if (depth == 0)
         //     return evaluate(b);
@@ -67,28 +55,26 @@ namespace chess
         // }
 
         // return best;
-
-        // if (eval >= beta)
-        //     return beta;
-        // alpha = std::max(alpha, eval);
+        int eval = evaluate(b, nullptr, nullptr);
+        if (eval >= beta)
+            return beta;
+        alpha = std::max(alpha, eval);
         
-        // GameHistory gh;
-        // gh.push(b, Move());
-        // MoveList ml;
-        // ::gen_captures(&ml, b);
+        MoveList ml;
+        ::gen_captures(&ml, b);
 
-        // for (size_t i = 0; i < ml.size(); i++){
-        //     Move m(ml[i]);
-        //     ::make(m, b, &gh);
-        //     int score = -quiescence(b, -beta, -alpha);
-        //     ::unmake(m, b, &gh);
+        for (size_t i = 0; i < ml.size(); i++){
+            Move m(ml[i]);
+            ::make(m, b, gh);
+            int score = -quiescence(b, gh, -beta, -alpha, 0);
+            ::unmake(m, b, gh);
 
-        //     if (score >= beta)
-        //         return beta;
-        //     if (score > alpha)
-        //         alpha = score;
-        // }
-        // return alpha;
+            if (score >= beta)
+                return beta;
+            if (score > alpha)
+                alpha = score;
+        }
+        return alpha;
     }
 
     // Negamax with alpha-beta pruning
@@ -171,7 +157,7 @@ namespace chess
      *  - [x] Move ordering
      *  - [ ] SEE
      */
-    SearchResult search(Board* board, GameHistory* gh, SearchCache* sc, SearchParams params)
+    SearchResult search(Board* board, GameHistory* gh, SearchCache* sc, SearchParams* params)
     {
         if (!board || !gh || !sc)
             return {Move(), 0, ONGOING};
@@ -193,7 +179,7 @@ namespace chess
         uint64_t time_taken = 0;
 
         // Iterative deepening
-        while(time_taken < params.time){
+        while(true){
             int alpha = MIN, beta = MAX;
             order_moves(&ml, &board_copy, &cache, sc);
 
@@ -205,33 +191,44 @@ namespace chess
                 ::unmake(m, &board_copy, gh);
                 board_copy.irreversibleIndex() = last_irreversible;
 
+
                 if (score > eval){
                     eval = score;
                     best_move = ml[i];
 
-                    printf("%s: %.2f (depth=%d time=%lums)\n", 
-                        Piece::notation(best_move.getFrom(), best_move.getTo()).c_str(), 
-                        float(eval * side_eval) / 100.0f, depth, time_taken
-                    );
+                    std::cout << Piece::notation(ml[i].getFrom(), ml[i].getTo()) <<
+                        ": " << float(score * side_eval) / 100.0f <<
+                        " (depth=" << depth << " time=" << time_taken << "ms)\n";
                 }
 
+                if (params->shouldStop()){
+                    break;
+                }
+                if (params->infinite){
+                    continue;
+                }
                 // Update the timer, check if time is up
                 time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - t1).count();
-                if (time_taken >= params.time)
+                if (time_taken >= params->movetime){
+                    params->stopSearch();
                     break;
-
-                alpha = std::max(alpha, eval);
-                if (alpha >= beta)
-                    break;
+                }
             }
             depth++;
+
+            if (params->depth != -1 && depth > params->depth){
+                params->stopSearch();
+            }
+            // Check if the search should stop
+            if (params->shouldStop()){
+                break;
+            }   
         }
 
         depth--;
-        printf("%s: %.2f (depth=%d time=%lums)\n", 
-            Piece::notation(best_move.getFrom(), best_move.getTo()).c_str(), 
-            float(eval) / 100.0f * side_eval, depth, time_taken
-        );
+        std::cout<< "bestmove = " << Piece::notation(best_move.getFrom(), best_move.getTo()) <<
+            ": " << std::setprecision(2) << float(eval * side_eval) / 100.0f <<
+            " (depth=" << depth << " time=" << time_taken << "ms)\n\n";
         
         return SearchResult{best_move, eval, depth, time_taken, ONGOING};
     }

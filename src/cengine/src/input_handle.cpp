@@ -36,7 +36,7 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
 
         // Print fen
         if(event.key.code == sf::Keyboard::P){
-            printf("Fen: %s\n", manager->board()->getFen().c_str());
+            std::cout << "fen: " << manager->board()->getFen() << '\n';
         }
     }
 
@@ -70,15 +70,12 @@ void handleInput(Manager* manager, Event& event, RenderWindow* window, BoardWind
                 state->to = to;
                 return;
             }
-
-            dlogf("From: %s to: %s\n", 
-                square_to_str(from).c_str(), 
-                square_to_str(to).c_str()
-            );
             
             if(manager->movePiece(from, to, state->move_flags)){
                 state->current_color ^= Piece::colorMask;
+                *state->board = *manager->board();
             }
+            
             from = -1;
             state->state = InputState::Move;
             state->move_flags = -1;

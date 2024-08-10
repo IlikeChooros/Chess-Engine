@@ -3,8 +3,8 @@
 static sf::Texture pieces_texture;
 static sf::Font font;
 static sf::Sprite pieces_sprite;
-static chess::Manager manager;
-static BoardWindowState state = {InputState::None, -1};
+static chess::Manager *manager;
+static BoardWindowState state = {};
 static ui::PromotionWindow promotion = ui::PromotionWindow();
 
 namespace ui
@@ -82,6 +82,7 @@ namespace ui
                 state->move_flags = vflags[0] & (Move::FLAG_CAPTURE | Move::FLAG_PROMOTION);
                 state->move_flags |= (mouse.x - m_x) / 120;
                 m_manager->movePiece(state->from, state->to, state->move_flags);
+                *state->board = *m_manager->board(); // Update the board
 
                 // Reset the state
                 state->state = InputState::None;
@@ -107,10 +108,11 @@ namespace ui
         constexpr int FPS = 60, FRAME_US = 1000000 / FPS;
 
         // Init resources
+        uci::UCI backend;
         state.current_color = board.getSide();
-        manager = Manager(&board);
-        manager.init();
-        manager.generateMoves();
+        manager = backend.getManager();
+        manager->generateMoves();
+        state.board = &board;
 
         if(!pieces_texture.loadFromFile(global_settings.base_path / "img/ChessPiecesArray.png")){
             return;
@@ -118,7 +120,7 @@ namespace ui
         font.loadFromFile(global_settings.base_path / "font/Ubuntu-L.ttf");
         pieces_sprite.setTexture(pieces_texture, true);
         pieces_sprite.setScale(2, 2);
-        promotion = PromotionWindow(font, pieces_texture, &manager, 750, 400);
+        promotion = PromotionWindow(font, pieces_texture, manager, 750, 400);
         
         std::cout << "Enter side (w/b): ";
         char side;
@@ -129,15 +131,29 @@ namespace ui
         }
         state.player_color = side == 'w' ? Piece::White : Piece::Black;
 
-        
-        TaskQueue queue;
-        std::mutex mutex;
-        bool wait_for_engine = false;
         bool running = true;
+        bool engine_running = false;
         Clock timer;
         RenderWindow window = sf::RenderWindow(sf::VideoMode(1500, 1000), "CEngine");
 
         while(window.isOpen()){
+
+            if (state.player_color != state.current_color){
+                if (!engine_running){
+                    backend.sendCommand("position fen " + state.board->getFen());
+                    backend.sendCommand("go depth 6 movetime 2500");
+                    engine_running = true;
+                }
+                else if(backend.commandsLeft() == 0){ // backend has finished processing all commands
+                    // Engine has finished searching
+                    manager->makeEngineMove();
+                    manager->stopSearch();
+                    *state.board = *manager->board();
+                    state.current_color = state.player_color;
+                    engine_running = false;   
+                }
+            }
+            
             Event event; 
             if(window.pollEvent(event)){
                 if (event.type == Event::Closed){
@@ -145,32 +161,30 @@ namespace ui
                     break;
                 }
 
-                // First lock the mutex
-                std::unique_lock<std::mutex> lock(mutex, std::try_to_lock);
-                if (!lock.owns_lock() || wait_for_engine){ // Search is running we can't handle input (modify the board/state)
-                    handleInput(&manager, event, &window, &state, false);
+                if (manager->searchRunning()){ // Search is running we can't handle input (modify the board/state)
+                    handleInput(manager, event, &window, &state, false);
                     continue;
                 }
 
                 if(state.state == InputState::Promote){
                     promotion.handleInput(event, &window, &state);
                 } else {
-                    handleInput(&manager, event, &window, &state, running);
+                    handleInput(manager, event, &window, &state, running);
                 }
 
                 if (!running){
                     continue;
                 }
 
-                auto status = manager.getStatus();
+                auto status = manager->getStatus();
                 if (status != GameStatus::ONGOING){
                     std::cout << "Game over\n";
-                    std::cout << board.getFen() << "\n";
+                    std::cout << state.board->getFen() << "\n";
                     std::string msg;
                     
                     if (status == GameStatus::CHECKMATE){
                         msg = "Checkmate, ";
-                        msg += (board.getSide() == Piece::White ? "Black" : "White");
+                        msg += (state.board->getSide() == Piece::White ? "Black" : "White");
                         msg += " wins!";
                     } else if (status == GameStatus::STALEMATE){
                         msg = "Stalemate!";
@@ -181,26 +195,16 @@ namespace ui
                     std::cout << msg << "\n";
 
                     running = false;
+                    backend.sendCommand("stop");
                     continue;
                 }
 
-                if (state.current_color != state.player_color){
-                    wait_for_engine = true;
-                    // Search for the best move asynchronously
-                    queue.enqueue([&mutex, &wait_for_engine](){
-                        std::lock_guard<std::mutex> lock(mutex);
-                        manager.search();
-                        manager.makeEngineMove();
-                        wait_for_engine = false;
-                        state.current_color ^= Piece::colorMask;
-                    });
-                }
             }
 
             if (timer.getElapsedTime().asMicroseconds() > FRAME_US){
                 // Clear & redraw the window
                 window.clear();
-                drawBoard(window, board);
+                drawBoard(window, *state.board);
                 window.display();
                 timer.restart();
             }
@@ -331,7 +335,7 @@ namespace ui
 
         // If there is a selected piece by the user, draw it
         if (state.state == InputState::Select){
-            drawSelectedPieceMoves(window, state.from, size, offset_x, &manager);
+            drawSelectedPieceMoves(window, state.from, size, offset_x, manager);
         }
         else if (state.state == InputState::Promote){
             window.draw(promotion);

@@ -21,6 +21,15 @@ namespace uci
         throw std::runtime_error(buffer);
     }
 
+    int readInt(std::istringstream& iss, const char* message)
+    {
+        int n;
+        if (!(iss >> n)){
+            fail(message);
+        }
+        return n;
+    }
+
     /**
      * @brief Run perft test at given depth, board should be already initialized,
      * thread safe
@@ -47,6 +56,10 @@ namespace uci
             if ((iss >> command) && command != "moves"){
                 fail("(position): Invalid command after startpos: %s\n", command.c_str());
             }
+            fen += " moves ";
+            while (iss >> command){ // parse moves
+                fen += command + " ";
+            }
         }
         else if (command == "fen"){
             int n_section = 0;
@@ -60,8 +73,51 @@ namespace uci
         } else {
             fail("(position): Invalid command: %s\n", command.c_str());
         }
-        manager->impl()->board->loadFen(fen.c_str());
-        manager->reload();
+        manager->loadFen(fen.c_str());
+    }
+
+    void go(chess::Manager* manager, std::istringstream& iss)
+    {
+        // Reset search params
+        manager->impl()->search_params = chess::SearchParams();
+        std::string command;
+        while (iss >> command){
+            if (command == "perft"){
+                perft(manager, readInt(iss, "(go): Perft depth not specified or invalid\n"));
+                return;
+            }
+            if (command == "depth"){
+                manager->impl()->search_params.depth = readInt(iss, "(go): Depth not specified or invalid\n");
+            }
+            else if (command == "nodes"){
+                manager->impl()->search_params.nodes = readInt(iss, "(go): Nodes not specified or invalid\n");
+            }
+            else if (command == "movetime"){
+                manager->impl()->search_params.movetime = readInt(iss, "(go): Movetime not specified or invalid\n");
+            }
+            else if (command == "wtime"){
+                manager->impl()->search_params.wtime = readInt(iss, "(go): Wtime not specified or invalid\n");
+            }
+            else if (command == "btime"){
+                manager->impl()->search_params.btime = readInt(iss, "(go): Btime not specified or invalid\n");
+            }
+            else if (command == "winc"){
+                manager->impl()->search_params.winc = readInt(iss, "(go): Winc not specified or invalid\n");
+            }
+            else if (command == "binc"){
+                manager->impl()->search_params.binc = readInt(iss, "(go): Binc not specified or invalid\n");
+            }
+            else if (command == "ponder"){
+                manager->impl()->search_params.ponder = true;
+            }
+            else if (command == "infinite"){
+                manager->impl()->search_params.infinite = true;
+            } else {
+                fail("(go): Invalid command: %s\n", command.c_str());
+            }
+        }
+        // Start the search
+        manager->search();
     }
 
     std::string uciReadCommImpl(chess::Manager* manager, std::string input)
@@ -81,32 +137,15 @@ namespace uci
         else if (command == "position"){
             position(manager, iss);
         }
+        else if (command == "stop"){
+            manager->impl()->stopSearchAsync();
+        }
         else if (command == "go"){
-            // Check if any command follows, else search for the best move
-            if(!(iss >> command)){
-                // Search for the best move
-                command = "search";
-            }
-
-            if (command == "perft"){
-                int depth;
-                if(!(iss >> depth)){
-                    fail("(perft): Depth not specified or invalid\n");
-                }
-                perft(manager, depth);
-            }
-            else if (command == "search"){
-                manager->search();
-                auto result = manager->getSearchResult();
-                output = (result.move.move() != 0 ? 
-                    chess::Piece::notation(result.move.getFrom(), result.move.getTo()) : "0000"
-                ) + "\n";
-            }
+            go(manager, iss);
         }
         else if (command == "getfen"){
             output = manager->impl()->board->getFen() + "\n";
         }
-
         return output;
     }
 
@@ -125,8 +164,17 @@ namespace uci
 
     UCI::UCI(): m_queue(1), m_ready(true)
     {
+        m_board.init();
         m_manager = chess::Manager(&m_board);
         m_manager.init();
+
+        std::ios_base::sync_with_stdio(false);
+        std::cout.setf(std::ios::unitbuf);
+    }
+
+    UCI::~UCI()
+    {
+        m_queue.stop();
     }
 
     void UCI::loop()
@@ -150,39 +198,16 @@ namespace uci
      */
     void UCI::sendCommand(std::string comm)
     {
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            m_command = comm;
-            m_ready = false;
-        }
+        // {
+        //     std::lock_guard<std::mutex> lock(m_mutex);
+        //     m_command = comm;
+        //     m_ready = false;
+        // }
         // Send the command to the queue
-        m_queue.enqueue([this](){
-            std::lock_guard<std::mutex> lock(this->m_mutex);
-            std::cout << uciReadCommand(&this->m_manager, this->m_command);
-            this->m_ready = true;
+        m_queue.enqueue([this, comm](){
+            // std::lock_guard<std::mutex> lock(this->m_mutex);
+            std::cout << uciReadCommand(&this->m_manager, comm);
+            // this->m_ready = true;
         });
-    }
-
-    /**
-     * @brief Wheter given task has ended
-     */
-    bool UCI::isReady()
-    {
-        std::unique_lock<std::mutex> l(m_mutex, std::try_to_lock);
-        return l.owns_lock() && m_ready && !m_result.empty();
-    }
-
-    /**
-     * @brief Return the result of the command, first you should check if the
-     * UCI is ready.
-     */
-    std::string UCI::getResult()
-    {
-        if (!isReady())
-            return "";
-        std::lock_guard<std::mutex> l(m_mutex);
-        auto ret = m_result.front();
-        m_result.pop();
-        return ret;
     }
 }

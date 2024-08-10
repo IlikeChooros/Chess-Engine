@@ -16,35 +16,52 @@ namespace chess
         Manager(const Manager& other) = delete;
         Manager& operator=(Manager&& other);
         
+        void loadFen(const char* fen);
         bool movePiece(uint32_t from, uint32_t to, int flags = -1);
         std::list<PieceMoveInfo> getPieceMoves(uint32_t from);
         std::vector<uint32_t> getFlags(uint32_t from, uint32_t to);
         bool isPromotion(uint32_t from, uint32_t to);
 
+
         /**
          * @brief Initialize the boards, search and evaluation
          */
-        inline void init() { m_impl->init(); }
+        static inline void init() { ManagerImpl::init(); }
 
         /**
          * @brief Search for the best move
          */
-        inline void search() { m_search_result = m_impl->search(); }
+        inline void search() { m_impl->search(); }
+
+        /**
+         * @brief Search for the best move in async mode
+         */
+        inline void asyncSearch() { m_impl->searchAsync(); }
+
+        /**
+         * @brief Check if the search is running
+         */
+        inline bool searchRunning() { return m_impl->searchRunning(); }
+
+        /**
+         * @brief Stop the search running in another thread
+         */
+        inline void stopSearch() { m_impl->stopSearchAsync(); }
 
         /**
          * @brief Make the engine move, search should be called before this
          */
         inline void makeEngineMove() { 
-            if (!m_search_result.move)
+            if (!m_impl->search_result.move)
                 return;
-            m_impl->make(m_search_result.move);
+            m_impl->make(m_impl->search_result.move);
             m_impl->generateMoves();
         }
 
         /**
-         * @brief Get the search result, should be called after makeEngineMove
+         * @brief Get the search result, should be called after search
          */
-        inline SearchResult getSearchResult() { return m_search_result; }
+        inline SearchResult getSearchResult() { return m_impl->search_result; }
 
         /**
          * @brief Reload the manager, should be called after changing the board (for example after loading a FEN string)
@@ -78,7 +95,5 @@ namespace chess
 
     private:
         std::unique_ptr<ManagerImpl> m_impl;
-        SearchResult m_search_result;
-        bool is_searching;
     };
 }

@@ -20,6 +20,7 @@ void TaskQueue::enqueue(taskType task)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_tasks.emplace(task);
+        m_tasks_left++;
     }
     m_cv.notify_one();
 }
@@ -58,5 +59,6 @@ void TaskQueue::worker()
             m_tasks.pop();
         }
         task();
+        m_tasks_left--;
     }
 }

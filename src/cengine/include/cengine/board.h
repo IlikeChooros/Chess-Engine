@@ -150,6 +150,13 @@ namespace chess{
         inline uint64_t queens() {
             return m_bitboards[0][QUEEN_TYPE] | m_bitboards[1][QUEEN_TYPE];
         }
+
+        /**
+         * @brief Get the rooks bitboard
+         */
+        inline uint64_t rooks() {
+            return m_bitboards[0][ROOK_TYPE] | m_bitboards[1][ROOK_TYPE];
+        }
         
         /**
          * @brief Moves given piece from one square to another on the bitboard

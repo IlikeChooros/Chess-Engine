@@ -302,7 +302,7 @@ uint64_t findMagic(int sq, int shift, bool bishop)
 
         // Check if the magic number is valid (has at least 6 bits set in the high bits)
         // It is important to have at least 6 bits set in the high bits to avoid collisions
-        if (pop_count((mask * magic) & 0xFF00000000000000UL) < 6)
+        if (pop_count((mask * magic) & 0xFF00000000000000UL) >= 6)
         {
             // Reset the used array
             memset(used, 0, sizeof(used));

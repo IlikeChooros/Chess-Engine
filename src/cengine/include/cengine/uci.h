@@ -16,11 +16,15 @@ namespace uci
     {
     public:
         UCI();
+        ~UCI();
 
+        /**
+         * @brief Get the number of commands left in the queue
+         */
+        int commandsLeft() { return m_queue.tasksLeft(); }
         void sendCommand(std::string comm);
-        bool isReady();
-        std::string getResult();
         void loop();
+        chess::Manager* getManager() { return &m_manager; }
     private:
         TaskQueue m_queue;
         chess::Board m_board;

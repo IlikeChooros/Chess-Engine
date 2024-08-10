@@ -15,6 +15,45 @@ namespace chess
     }
 
     /**
+     * @brief Load fen string, with 'moves' support
+     */
+    void Manager::loadFen(const char* fen)
+    {
+        std::istringstream iss(fen);
+        std::string base_fen;
+        std::string section;
+        int sections = 0;
+        while(iss >> section){
+            if (section == "moves")
+                break;
+            base_fen += section + " ";
+            sections++;
+        }
+
+        if (sections < 6)
+            return;
+
+        impl()->board->loadFen(base_fen.c_str());
+        reload();
+
+        // Handle moves
+        while(iss >> section){
+            int from = str_to_square(section.substr(0, 2));
+            int to = str_to_square(section.substr(2, 2));
+            int flag = -1;
+            if (isalpha(*section.end())){
+                auto vflags = getFlags(from, to);
+                flag = vflags[0] & (Move::FLAG_PROMOTION | Move::FLAG_CAPTURE);
+                flag |= Move::getPromotionPiece(*section.end());
+            }
+            if(!movePiece(from, to, flag)){
+                break;
+            }
+        }
+    }
+    
+
+    /**
      * @brief Moves a piece from one square to another, if the move is valid
      * it updates the board, calls move generation and changes the side to move
      * @param from The square to move the piece from (as an index)

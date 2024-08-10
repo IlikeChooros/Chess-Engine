@@ -1,7 +1,8 @@
 #pragma once
 
 #include <algorithm>
-#include "manager_impl.h"
+
+#include "manager.h"
 
 namespace test
 {

@@ -15,12 +15,13 @@ enum class InputState
 };
 
 struct BoardWindowState{
-    InputState state;
-    int from;
-    int to;
+    InputState state = InputState::None;
+    int from = -1;
+    int to = -1;
     int move_flags = -1;
     int player_color = chess::Piece::Black;
     int current_color = chess::Piece::White;
+    chess::Board* board = nullptr;
 };
 
 void handleInput(chess::Manager* manager, sf::Event& event, sf::RenderWindow* window, BoardWindowState* state, bool handle_board);
