@@ -20,7 +20,7 @@ namespace chess
         int depth = 8; // In plies, that is max possible depth
         uint64_t nodes = UINT64_MAX;
         int mate = 0;
-        uint64_t movetime = UINT64_MAX; // In milliseconds
+        int64_t movetime = INT64_MAX; // In milliseconds
         uint64_t wtime = 0;
         uint64_t btime = 0;
         uint64_t winc = 0;
@@ -30,6 +30,8 @@ namespace chess
 
         // Asynchronous search
         bool stop = false;
+        uint64_t nodes_searched = 0;
+        std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
         std::mutex mutex = {};
 
         SearchParams() = default;

@@ -76,8 +76,8 @@ namespace chess
         -30,-30,  0,  0,  0,  0,-30,-30,
         -50,-30,-30,-30,-30,-30,-30,-50,}
     };
-    static int ***piece_square_table = nullptr;
-    static int ***king_square_tables = nullptr;
+    static int piece_square_table[2][6][64] = {0};
+    static int king_square_tables[2][2][64] = {0};
     static TTable<int> pawn_table;
 
     /**
@@ -85,28 +85,17 @@ namespace chess
      */
     void init_eval()
     {
-        piece_square_table = new int**[2];
-        piece_square_table[0] = new int*[6];
-        piece_square_table[1] = new int*[6];
-
-        king_square_tables = new int**[2];
-        king_square_tables[0] = new int*[2];
-        king_square_tables[1] = new int*[2];
-
-        // Initialize the black piece square tables
         for(int i = 0; i < 6; i++){
-            piece_square_table[0][i] = new int[64];
-            piece_square_table[1][i] = new int[64];
+            if (i == Piece::King - 1){
+                continue;
+            }
             for(int j = 0; j < 64; j++){
                 piece_square_table[1][i][j] = white_piece_square_table[i][j];
                 piece_square_table[0][i][j] = white_piece_square_table[i][63 - j];
             }
         }
 
-        // Initialize the black king square tables
         for(int i = 0; i < 2; i++){
-            king_square_tables[0][i] = new int[64];
-            king_square_tables[1][i] = new int[64];
             for(int j = 0; j < 64; j++){
                 king_square_tables[1][i][j] = white_king_square_tables[i][j];
                 king_square_tables[0][i][j] = white_king_square_tables[i][63 - j];
@@ -123,7 +112,6 @@ namespace chess
         int eval = 0;
         bool is_white = board->getSide() == Piece::White;
         bool is_enemy = !is_white;
-        int whotomove[2] = {1, 1};
         int king_sq = bitScanForward(board->bitboards(is_white)[Piece::King - 1]);
         int eking_sq = bitScanForward(board->bitboards(is_enemy)[Piece::King - 1]);
 
@@ -255,7 +243,7 @@ namespace chess
         eval += king_square_tables[is_white][is_endgame][king_sq];
         eval -= king_square_tables[is_enemy][is_endgame][eking_sq];
 
-        return eval * whotomove[is_white];
+        return eval;
     }
 
     /**

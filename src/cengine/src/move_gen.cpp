@@ -323,7 +323,7 @@ void make(Move& move, chess::Board* board, chess::GameHistory* ghistory)
     board->updateBitboard(is_white, Piece::getType(iboard[to]) - 1, from, to);
 
     // Now update the side to move
-    board->getSide() = Piece::opposite(board->getSide());
+    board->m_side = Piece::opposite(board->getSide());
     ghistory->push(board, move);
 }
 
