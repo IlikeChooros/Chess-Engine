@@ -66,6 +66,7 @@ namespace chess
          * @return The best move found & its score
          */
         inline SearchResult search() noexcept {
+            search_params.resetStop();
             search_result = ::chess::search(board, &history, &sc, &search_params); 
             return search_result;
         }
@@ -77,9 +78,8 @@ namespace chess
             if (search_thread.joinable()){
                 search_thread.join();
             }
-            search_params.resetStop();
             search_thread = std::thread([this](){
-                this->search_result = search();
+                search();
             });
         }
 

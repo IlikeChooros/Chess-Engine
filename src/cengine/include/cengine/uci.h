@@ -22,9 +22,14 @@ namespace uci
          * @brief Get the number of commands left in the queue
          */
         int commandsLeft() { return m_queue.tasksLeft(); }
+
+        /**
+         * @brief Get the manager
+         */
+        chess::Manager* getManager() { return &m_manager; }
         void sendCommand(std::string comm);
         void loop();
-        chess::Manager* getManager() { return &m_manager; }
+        
     private:
         TaskQueue m_queue;
         chess::Board m_board;

@@ -198,16 +198,9 @@ namespace uci
      */
     void UCI::sendCommand(std::string comm)
     {
-        // {
-        //     std::lock_guard<std::mutex> lock(m_mutex);
-        //     m_command = comm;
-        //     m_ready = false;
-        // }
         // Send the command to the queue
         m_queue.enqueue([this, comm](){
-            // std::lock_guard<std::mutex> lock(this->m_mutex);
             std::cout << uciReadCommand(&this->m_manager, comm);
-            // this->m_ready = true;
         });
     }
 }

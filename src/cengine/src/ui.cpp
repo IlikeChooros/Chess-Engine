@@ -147,7 +147,6 @@ namespace ui
                 else if(backend.commandsLeft() == 0){ // backend has finished processing all commands
                     // Engine has finished searching
                     manager->makeEngineMove();
-                    manager->stopSearch();
                     *state.board = *manager->board();
                     state.current_color = state.player_color;
                     engine_running = false;   

@@ -2,6 +2,7 @@
 
 TaskQueue::TaskQueue(size_t workers) {
     this->m_stop = false;
+    m_tasks_left = 0;
     m_workers.reserve(workers);
     for(size_t i = 0; i < workers; i++){
         m_workers.emplace_back(&TaskQueue::worker, this);

@@ -11,50 +11,6 @@ namespace chess
     int quiescence(Board* b, GameHistory* gh, int alpha, int beta, int depth){
         // return evaluate(b, nullptr, nullptr);
 
-        // if (depth == 0)
-        //     return evaluate(b);
-        
-        // MoveList ml;
-        // GameHistory gh;
-        // gh.push(b, Move());
-        // ::gen_captures(&ml, b);
-
-        // if (ml.size() == 0)
-        //     return evaluate(b);
-        
-        // int best = MIN;
-        // for (size_t i = 0; i < ml.size(); i++){
-        //     Move m(ml[i]);
-        //     ::make(m, b, &gh);
-        //     best = std::max(best, -quiescence(b, -beta, -alpha, depth - 1));
-        //     ::unmake(m, b, &gh);
-
-        //     alpha = std::max(alpha, best);
-        //     if (alpha >= beta){
-        //         return best;
-        //     }
-        // }
-        // return best;
-
-        // GameHistory gh;
-        // gh.push(b, Move());
-        // MoveList ml;
-        // void(::gen_captures(&ml, b));
-        // int best = MIN;
-
-        // for (size_t i = 0; i < ml.size(); i++){
-        //     Move m(ml[i]);
-        //     ::make(m, b, &gh);
-        //     best = std::max(best, -quiescence(b, -beta, -alpha));
-        //     ::unmake(m, b, &gh);
-
-        //     alpha = std::max(alpha, best);
-        //     if (alpha >= beta){
-        //         return best;
-        //     }
-        // }
-
-        // return best;
         int eval = evaluate(b, nullptr, nullptr);
         if (eval >= beta)
             return beta;
