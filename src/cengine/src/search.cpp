@@ -228,11 +228,6 @@ namespace chess
                 if (score > eval){
                     eval = score;
                     best_move = ml[i];
-
-                    time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count();
-                    std::cout << "info currbestmove " << Piece::notation(best_move.getFrom(), best_move.getTo())
-                              << " score " << std::setprecision(2) << float(eval * whotomove) / 100.0f
-                              << " depth " << depth - 1 << " time " << time_taken << "ms nodes " << params->nodes_searched << '\n';
                 }
 
                 if (!keep_searching(params))
@@ -244,6 +239,7 @@ namespace chess
             }
             
             depth++;
+            time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count();
 
             std::cout << "* info bestmove " << Piece::notation(best_move.getFrom(), best_move.getTo()) 
                       << " moves=";
@@ -253,7 +249,10 @@ namespace chess
                 std::cout << ' ' << Piece::notation(it->getFrom(), it->getTo());
             }
 
-            std::cout << " depth " << depth - 1 << " score " << std::setprecision(2) << float(eval * whotomove) / 100.0f << '\n';
+            std::cout << " depth " << depth - 1 
+                      << " score " << std::setprecision(2) << float(eval * whotomove) / 100.0f
+                      << " nodes " << params->nodes_searched 
+                      << " nps " << (int)(params->nodes_searched / (time_taken / 1000.0)) << '\n';
 
             std::unique_lock<std::mutex> lock(result->mutex);
             if (lock.owns_lock()){
