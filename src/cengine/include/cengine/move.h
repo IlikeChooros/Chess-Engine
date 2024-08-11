@@ -12,6 +12,7 @@ class Move
     // Mask for the from and to fields (6 bits)
     static const uint32_t MASK_MOVE = 0b111111;
     static const int bits = 16; // 6 + 6 + 4
+    static const int nullMove = 0;
 
     // Flag structure (4 bits)
     // first bit -> special bit 1 (0b000x)
@@ -95,6 +96,14 @@ class Move
     Move& operator=(const Move& other) {
         m_move = other.m_move;
         return *this;
+    };
+
+    bool operator==(uint32_t other) const {
+        return m_move == other;
+    };
+
+    bool operator!=(uint32_t other) const {
+        return m_move != other;
     };
 
     bool operator==(const Move& other) const {

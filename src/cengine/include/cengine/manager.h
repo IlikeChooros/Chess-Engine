@@ -61,7 +61,7 @@ namespace chess
         /**
          * @brief Get the search result, should be called after search
          */
-        inline SearchResult getSearchResult() { return m_impl->search_result; }
+        inline SearchResult& getSearchResult() { return m_impl->search_result; }
 
         /**
          * @brief Reload the manager, should be called after changing the board (for example after loading a FEN string)

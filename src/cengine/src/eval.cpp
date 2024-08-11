@@ -257,7 +257,7 @@ namespace chess
 
         // Checkmate / stalemate
         if (ml->size() == 0){
-            if (cache->danger & (1 << b->bitboards(b->getSide() == Piece::White)[Piece::King - 1])){
+            if (cache->danger & b->bitboards(b->getSide() == Piece::White)[Piece::King - 1]){
                 return CHECKMATE;
             }
             return STALEMATE;

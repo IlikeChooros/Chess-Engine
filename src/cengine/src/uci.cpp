@@ -172,6 +172,13 @@ namespace uci
         std::cout.setf(std::ios::unitbuf);
     }
 
+    UCI& UCI::operator=(UCI&& other)
+    {
+        m_manager = std::move(other.m_manager);
+        m_board = other.m_board;
+        return *this;
+    }
+
     UCI::~UCI()
     {
         m_queue.stop();

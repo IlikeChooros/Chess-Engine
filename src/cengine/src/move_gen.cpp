@@ -402,10 +402,10 @@ void unmake(Move& move, chess::Board* board, chess::GameHistory* ghistory)
 
 // Generate all possible captures, not optimized yet, 
 // internally uses gen_legal_moves and filters the captures
-void gen_captures(MoveList* ml, chess::Board* board)
+void gen_captures(MoveList* ml, chess::Board* board, chess::CacheMoveGen* cache)
 {
     MoveList all;
-    void(::gen_legal_moves(&all, board));
+    void(::gen_legal_moves(&all, board, cache));
     for(size_t i = 0; i < all.size(); i++){
         if(all[i].isCapture()){
             ml->add(all.moves[i]);

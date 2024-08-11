@@ -17,7 +17,7 @@ namespace chess
     struct SearchParams
     {
         // Basic UCI options
-        int depth = 8; // In plies, that is max possible depth
+        int depth = INT32_MAX; // In plies, that is max possible depth
         uint64_t nodes = UINT64_MAX;
         int mate = 0;
         int64_t movetime = INT64_MAX; // In milliseconds
@@ -78,6 +78,8 @@ namespace chess
     // depth: Depth of the search
     // time: Time taken to search (in milliseconds)
     // status: Game status (ongoing, checkmate, stalemate, draw)
+    // mutex: Mutex to protect the result
+    // pv: Principal variation
     struct SearchResult
     {
         Move move;
@@ -85,7 +87,9 @@ namespace chess
         int depth;
         uint64_t time;
         GameStatus status = ONGOING;
+        std::mutex mutex;
+        std::list<Move> pv;
     };
 
-    SearchResult search(Board* board, GameHistory* gh, SearchCache* sc, SearchParams* params);
+    void search(Board* board, GameHistory* gh, SearchCache* sc, SearchParams* params, SearchResult* sr);
 }

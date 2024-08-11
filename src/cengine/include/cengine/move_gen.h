@@ -18,7 +18,7 @@ uint64_t bishopAttacks(uint64_t occupied, int square);
 uint64_t xRayRookAttacks(uint64_t occupied, uint64_t blockers, int square);
 uint64_t xRayBishopAttacks(uint64_t occupied, uint64_t blockers, int square);
 
-void gen_captures(MoveList* ml, chess::Board* board);
+void gen_captures(MoveList* ml, chess::Board* board, chess::CacheMoveGen* cache);
 size_t gen_legal_moves(MoveList* move_list, chess::Board* board, chess::CacheMoveGen* cache = nullptr);
 
 void make(Move& move, chess::Board* board, chess::GameHistory* ghistory);

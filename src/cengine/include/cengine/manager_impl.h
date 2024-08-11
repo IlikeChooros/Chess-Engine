@@ -65,9 +65,9 @@ namespace chess
          * if history is not read/modifed by another thread, then thread safe
          * @return The best move found & its score
          */
-        inline SearchResult search() noexcept {
+        inline SearchResult& search() noexcept {
             search_params.resetStop();
-            search_result = ::chess::search(board, &history, &sc, &search_params); 
+            ::chess::search(board, &history, &sc, &search_params, &search_result); 
             return search_result;
         }
 
@@ -103,7 +103,7 @@ namespace chess
         /**
          * @brief Get the search result, should be called after finished search
          */
-        inline SearchResult getSearchResult() { return search_result; }
+        inline SearchResult& getSearchResult() { return search_result; }
 
         /**
          * @brief Pushes the current move to the history stack, thread safe

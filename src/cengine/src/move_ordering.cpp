@@ -33,7 +33,7 @@ namespace chess
             return a.isCapture();
         // Sort non-captures by history heuristic
         bool side = board->getSide() == Piece::White;
-        return sc->getHH().get(side, a) > sc->getHH().get(side, b);
+        return sc->getHH().get(side, a) < sc->getHH().get(side, b);
     }
 
     void order_moves(MoveList *ml, Board *board, CacheMoveGen* cache, SearchCache* sc)

@@ -65,8 +65,6 @@ namespace chess
      */
     class SearchCache
     {
-        HistoryHeuristic hh;
-        TTable<TEntry> tt;
     public:
         SearchCache() = default;
         
@@ -79,5 +77,9 @@ namespace chess
          * @brief Get the transposition table object
          */
         inline TTable<TEntry>& getTT() { return tt; }
+
+    private:
+        HistoryHeuristic hh;
+        TTable<TEntry> tt;
     };
 }

@@ -17,6 +17,7 @@ namespace uci
     public:
         UCI();
         ~UCI();
+        UCI& operator=(UCI&&);
 
         /**
          * @brief Get the number of commands left in the queue

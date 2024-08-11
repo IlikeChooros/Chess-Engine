@@ -10,6 +10,186 @@ namespace ui
 {
     using namespace chess;
 
+    IconButton::IconButton(
+        sf::Texture& texture, sf::Vector2f pos, sf::Vector2f size, sf::IntRect texture_rect, sf::Vector2f scale 
+    )
+    {
+        this->m_texture = texture;
+        this->m_rect = sf::RectangleShape(size);
+        this->m_rect.setPosition(pos);
+        this->m_rect.setTexture(&texture);
+        this->m_rect.setTextureRect(texture_rect);
+        this->m_rect.setScale(scale);
+    }
+
+    IconButton::IconButton(const IconButton& other)
+    {
+        *this = other;
+    }
+    
+    IconButton& IconButton::operator=(const IconButton& other)
+    {
+        this->m_texture = other.m_texture;
+        this->m_rect = other.m_rect;
+        return *this;
+    }
+
+    void IconButton::draw(sf::RenderTarget& target, sf::RenderStates states) const
+    {
+        target.draw(m_rect, states);
+    }
+
+    bool IconButton::isClicked(sf::Vector2i pos) const
+    {
+        return m_rect.getGlobalBounds().contains(pos.x, pos.y);
+    }
+
+    void IconButton::setOutline(sf::Color color, float thickness)
+    {
+        m_rect.setOutlineColor(color);
+        m_rect.setOutlineThickness(thickness);
+    }
+
+    TextIconBtn::TextIconBtn(
+        sf::Font& font, sf::Texture& texture, sf::Vector2f pos, sf::Vector2f size, sf::IntRect texture_rect, sf::Vector2f scale
+    )
+    {
+        this->m_font = font;
+        this->m_text = sf::Text("", font, 24);
+        this->m_icon = IconButton(texture, pos, size, texture_rect, scale);
+    }
+
+    TextIconBtn::TextIconBtn(const TextIconBtn& other)
+    {
+        *this = other;
+    }
+
+    TextIconBtn& TextIconBtn::operator=(const TextIconBtn& other)
+    {
+        this->m_font = other.m_font;
+        this->m_text = other.m_text;
+        this->m_icon = other.m_icon;
+        return *this;
+    }
+
+    void TextIconBtn::draw(sf::RenderTarget& target, sf::RenderStates states) const
+    {
+        target.draw(m_icon, states);
+        target.draw(m_text, states);
+    }
+
+    bool TextIconBtn::isClicked(sf::Vector2i pos) const
+    {
+        return m_icon.isClicked(pos);
+    }
+
+    void TextIconBtn::setOutline(sf::Color color, float thickness)
+    {
+        m_icon.setOutline(color, thickness);
+    }
+
+    void TextIconBtn::setText(std::string text)
+    {
+        m_text.setString(text);
+        m_text.setPosition(m_icon.getPosition().x + m_icon.getSize().x / 2 - m_text.getLocalBounds().width / 2, m_icon.getPosition().y + m_icon.getSize().y + 10);
+    }
+
+    EvalBar::EvalBar(sf::Font& font, sf::Vector2f pos, sf::Vector2f size)
+    {
+        this->m_font = font;
+        this->m_rect = sf::RectangleShape({size.x - 8, size.y - 8});
+        this->m_rect.setPosition({pos.x + 4, pos.y + 4});
+        this->m_text = sf::Text("", font, 24);
+        this->m_text.setPosition({pos.x - 30, pos.y + size.y / 2 - 12});
+        this->m_text.setFillColor(sf::Color::White);
+        m_rect.setFillColor(sf::Color(0, 0, 0, 255));
+        m_rect.setOutlineColor(sf::Color(128, 128, 128, 255));
+        m_rect.setOutlineThickness(4);
+        m_white_rect.setFillColor(sf::Color(255, 255, 255, 255));
+        m_black_rect.setFillColor(sf::Color(32, 32, 32, 255));
+        setEval(0);
+    }
+
+    EvalBar& EvalBar::operator=(EvalBar&& other)
+    {
+        this->m_font = other.m_font;
+        this->m_rect = other.m_rect;
+        this->m_text = other.m_text;
+        this->m_white_rect = other.m_white_rect;
+        this->m_black_rect = other.m_black_rect;
+        return *this;
+    }
+
+    void EvalBar::draw(sf::RenderTarget& target, sf::RenderStates states) const
+    {
+        target.draw(m_rect, states);
+        target.draw(m_text, states);
+        target.draw(m_black_rect, states);
+        target.draw(m_white_rect, states);
+    }
+
+    void EvalBar::setEval(int eval)
+    {
+        char eval_s[32];
+        std::snprintf(eval_s, 32, "%.02f", float(eval) / 100.0f);
+        m_text.setString(eval_s);
+        m_text.setPosition(
+            m_rect.getPosition().x - m_text.getLocalBounds().width - 15,
+            m_rect.getPosition().y + m_rect.getSize().y / 2
+        );
+
+        // Normalize the eval to a value between -1 and 1
+        float feval = float(eval) / 100.0f;
+        float eval_f = feval / (1.0f + std::abs(float(feval)));
+        float white_scale = (1.0f + eval_f) * 0.5f,
+              black_scale = (1.0f - eval_f) * 0.5f;
+
+        // Draw black and white rectangles
+        auto maxSize = m_rect.getSize();
+        m_black_rect.setSize({maxSize.x, maxSize.y * black_scale});
+        m_black_rect.setPosition(m_rect.getPosition());
+        
+        m_white_rect.setSize({maxSize.x, maxSize.y * white_scale});
+        m_white_rect.setPosition({m_rect.getPosition().x, m_rect.getPosition().y + m_black_rect.getSize().y});
+    }
+
+    MoveList::MoveList(sf::Font& font, sf::Vector2f pos, sf::Vector2f size)
+    {
+        this->m_font = font;
+        this->m_rect = sf::RectangleShape(size);
+        this->m_rect.setPosition(pos);
+    }
+
+    MoveList& MoveList::operator=(MoveList&& other)
+    {
+        this->m_font = other.m_font;
+        this->m_rect = other.m_rect;
+        return *this;
+    }
+
+    void MoveList::draw(sf::RenderTarget& target, sf::RenderStates states) const
+    {
+        sf::Text text("Engine line:", m_font, 24);
+        text.setPosition(m_rect.getPosition().x + 10, m_rect.getPosition().y + 10);
+        text.setFillColor(sf::Color::White);
+        target.draw(text, states);
+        for(size_t i = 0; i < m_moves.size(); i++){
+            target.draw(m_moves[i], states);
+        }
+    }
+
+    void MoveList::setMoves(std::vector<std::string>& moves)
+    {
+        m_moves.clear();
+        for(size_t i = 0; i < moves.size(); i++){
+            sf::Text text(moves[i], m_font, 24);
+            text.setPosition(m_rect.getPosition().x + 10, m_rect.getPosition().y + 40 + i * 30);
+            text.setFillColor(sf::Color::White);
+            m_moves.push_back(text);
+        }
+    }
+
+
     BaseChessWindow::BaseChessWindow(
         sf::Font& font, sf::Texture& texture,
         Manager* manager, sf::Vector2f pos, sf::Vector2f size
@@ -47,21 +227,21 @@ namespace ui
         this->m_pos.y = pos.y;
         this->m_rect.setFillColor(sf::Color(0, 0, 0, 192));
         this->m_rect.setPosition(m_pos);
+        const int texture_x[] = {180, 240, 120, 0}; // knight, bishop, rook, queen
 
+        m_buttons.reserve(4);
         for(size_t i = 0; i < 4; i++){
-            m_promoRects[i] = sf::RectangleShape({120, 120});
-            m_promoRects[i].setPosition(m_pos.x + (120 + 10) * i + 10, m_pos.y + 40);
-            m_promoRects[i].setOutlineColor(sf::Color(255, 255, 255, 128));
-            m_promoRects[i].setOutlineThickness(2);
-            m_promoRects[i].setFillColor(sf::Color(0, 0, 0, 196));
+            m_buttons.emplace_back(
+                texture, sf::Vector2f{m_pos.x + (120 + 10) * i + 10, m_pos.y + 40}, 
+                sf::Vector2f{120, 120}, sf::IntRect(texture_x[i], 60, 60, 60)
+            );
+            m_buttons.back().setOutline(sf::Color(255, 255, 255, 128), 2);
         }
     }
 
     PromotionWindow& PromotionWindow::operator=(PromotionWindow&& other) {
         BaseChessWindow::operator=(std::move(other));
-        for(size_t i = 0; i < 4; i++){
-            m_promoRects[i] = other.m_promoRects[i];
-        }
+        this->m_buttons = other.m_buttons;
         return *this;
     }
 
@@ -79,17 +259,8 @@ namespace ui
         text.setFillColor(sf::Color::White);
         target.draw(text, states);
 
-        sf::Sprite sprite;
-        sprite.setTexture(m_texture);
-        sprite.setScale(2, 2);
-
-        const int texture_x[] = {180, 240, 120, 0}; // knight, bishop, rook, queen
-
         for(int i = 0; i < 4; i++){
-            target.draw(m_promoRects[i], states);
-            sprite.setTextureRect(sf::IntRect(texture_x[i], 60, 60, 60));
-            sprite.setPosition(m_promoRects[i].getPosition());
-            target.draw(sprite, states);
+            m_buttons[i].draw(target, states);
         }
     }
 
@@ -105,7 +276,7 @@ namespace ui
             auto mouse = sf::Mouse::getPosition(*window);
 
             for(size_t i = 0; i < 4; i++){
-                if (m_promoRects[i].getGlobalBounds().contains(mouse.x, mouse.y)){
+                if (m_buttons[i].isClicked(mouse)){
                     auto vflags = m_manager->getFlags(state->from, state->to);
                     state->move_flags = i | (vflags[0] & (Move::FLAG_CAPTURE | Move::FLAG_PROMOTION));
                     state->state = InputState::None;
@@ -119,9 +290,10 @@ namespace ui
 
     ChessboardDisplay::ChessboardDisplay(
         sf::Font& font, sf::Texture& texture,
-        Manager* m, sf::Vector2f pos, sf::Vector2f size
+        Manager* m, sf::Vector2f pos, sf::Vector2f size,
+        BoardWindowState* state
     ): BaseChessWindow(font, texture, m, pos, size) {
-        this->m_state = nullptr;
+        this->m_state = state;
     }
 
     ChessboardDisplay& ChessboardDisplay::operator=(ChessboardDisplay&& other)
@@ -129,11 +301,6 @@ namespace ui
         BaseChessWindow::operator=(std::move(other));
         this->m_state = other.m_state;
         return *this;
-    }
-
-    void ChessboardDisplay::setState(BoardWindowState* state)
-    {
-        this->m_state = state;
     }
 
     /**
@@ -200,11 +367,11 @@ namespace ui
         target.draw(coords, states);
 
         // If there is a piece in the square, draw it
-        if (Piece::getType((*m_manager->board())[index]) != Piece::Empty){
+        if (Piece::getType((*m_state->board)[index]) != Piece::Empty){
             sf::Sprite sprite;
             sprite.setTexture(m_texture);
             sprite.setScale(2, 2);
-            matchPiece(&sprite, (*m_manager->board())[index]);
+            matchPiece(&sprite, (*m_state->board)[index]);
             sprite.setPosition(position);
             target.draw(sprite, states);
         }
@@ -251,23 +418,25 @@ namespace ui
         }
     }
 
-    int ChessboardDisplay::getSquareIndex(sf::Vector2f pos) const
+    int ChessboardDisplay::getSquareIndex(sf::Vector2i pos) const
     {
-        if (!m_rect.getGlobalBounds().contains(pos)){
+        if (!m_rect.getGlobalBounds().contains(pos.x, pos.y)){
             return -1;
         }
         float size = std::min(m_size.x, m_size.y) / 8;
         int x = (pos.x - m_pos.x) / size;
-        int y = (pos.y - m_pos.y) / size;
+        int y = ((pos.y - m_pos.y) / size);
         return x + y*8;
     }
 
     BoardWindow::BoardWindow(
         sf::Font& font, sf::Texture& texture,
-        Manager* manager, sf::Vector2f pos, sf::Vector2f size
+        Manager* manager, sf::Vector2f pos, sf::Vector2f size,
+        BoardWindowState* state
     ): BaseChessWindow(font, texture, manager, pos, size)
     {
-        this->m_boardDisplay = ChessboardDisplay(font, texture, manager, {250, 0}, {1000, 1000});
+        this->m_state = state;
+        this->m_boardDisplay = ChessboardDisplay(font, texture, manager, {250, 0}, {1000, 1000}, state);
         this->m_promotionWindow = PromotionWindow(font, texture, manager, {750, 500}, {120, 120});
     }
 
@@ -276,6 +445,7 @@ namespace ui
         BaseChessWindow::operator=(std::move(other));
         this->m_boardDisplay = std::move(other.m_boardDisplay);
         this->m_promotionWindow = std::move(other.m_promotionWindow);
+        this->m_state = other.m_state;
         return *this;
     }
 
@@ -289,7 +459,6 @@ namespace ui
 
     void BoardWindow::setBoardState(BoardWindowState* state)
     {
-        m_boardDisplay.setState(state);
         m_state = state;
     }
 
@@ -303,7 +472,332 @@ namespace ui
         return m_promotionWindow;
     }
 
-    void drawBoard(sf::RenderWindow& window, Board& board);
+    ScreenBase::ScreenBase(
+        sf::Font& font, sf::Vector2f pos, sf::Vector2f size
+    )
+    {
+        this->m_font = font;
+        this->m_pos = pos;
+        this->m_size = size;
+        this->m_rect = sf::RectangleShape(size);
+        this->m_rect.setPosition(pos);
+    }
+
+    ScreenBase& ScreenBase::operator=(ScreenBase&& other)
+    {
+        this->m_font = other.m_font;
+        this->m_pos = other.m_pos;
+        this->m_rect = other.m_rect;
+        this->m_size = other.m_size;
+        return *this;
+    }
+
+    void ScreenBase::draw(sf::RenderTarget& target, sf::RenderStates states) const
+    {
+        target.draw(m_rect, states);
+    }
+
+    ChessScreen::ChessScreen(
+        sf::Font& font, sf::Texture& texture,
+        sf::Vector2f pos, sf::Vector2f size,
+        Manager* manager, BoardWindowState* state
+    ): ScreenBase(font, pos, size), m_inputHandler(manager, state)
+    {
+        m_state = state;
+        m_manager = manager;
+        *state->board = *m_manager->board();
+        state->current_color = Piece::White;
+        m_rect.setFillColor(sf::Color(42, 42, 42, 192));
+        m_boardWindow = BoardWindow(font, texture, manager, {250, 0}, {1000, 1000}, state);
+        m_inputHandler.onPromotion([this](int index, BoardWindowState* state, sf::RenderWindow* window, sf::Event& event){
+            m_boardWindow.getPromotionWindow().handleInput(event, window, state);
+        });
+    }
+
+    ChessScreen& ChessScreen::operator=(ChessScreen&& other)
+    {
+        ScreenBase::operator=(std::move(other));
+        this->m_manager = other.m_manager;
+        this->m_boardWindow = std::move(other.m_boardWindow);
+        return *this;
+    }
+
+    void ChessScreen::draw(sf::RenderTarget& target, sf::RenderStates states) const
+    {
+        target.draw(m_rect, states);
+        target.draw(m_boardWindow, states);
+    }
+
+    void ChessScreen::handleInput(sf::Event& event, sf::RenderWindow* window, BoardWindowState* state)
+    {
+        int index = -1;
+        if (event.type == sf::Event::MouseButtonPressed){
+            auto mouse = sf::Mouse::getPosition(*window);
+            index = m_boardWindow.getBoardDisplay().getSquareIndex(mouse);
+        }
+        m_inputHandler.handleInput(event, window, index, true);
+    }
+
+    void ChessScreen::checkGameStatus()
+    {
+        auto status = m_manager->getStatus();
+        if (status != GameStatus::ONGOING){        
+            std::cout << "Game over\n";
+            std::cout << state.board->getFen() << "\n";
+            std::string msg;
+            
+            if (status == GameStatus::CHECKMATE){
+                msg = "Checkmate, ";
+                msg += (state.board->getSide() == Piece::White ? "Black" : "White");
+                msg += " wins!";
+            } else if (status == GameStatus::STALEMATE){
+                msg = "Stalemate!";
+            } else {
+                msg = "Draw!";
+            }
+            std::cout << msg << "\n";
+        }
+    }
+
+    MainMenuWindow::MainMenuWindow(
+        sf::Font& font, sf::Texture& texture,
+        sf::Vector2f pos, sf::Vector2f size
+    ): ScreenBase(font, pos, size)
+    {
+        m_rect.setFillColor(sf::Color(42, 42, 42, 192));
+
+        // Create buttons
+        m_buttons.reserve(3);
+        // Player vs Player
+        m_buttons.emplace_back(
+            font, texture, sf::Vector2f{pos.x + 400, pos.y + 400}, 
+            sf::Vector2f{200, 200}, sf::IntRect(60, 0, 60, 60)
+        );
+        m_buttons.back().setOutline(sf::Color(255, 255, 255, 128), 2);
+        m_buttons.back().setText("Player vs Player");
+
+        // Player vs AI
+        m_buttons.emplace_back(
+            font, texture, sf::Vector2f{pos.x + 400 + (50 + 200), pos.y + 400}, 
+            sf::Vector2f{200, 200}, sf::IntRect(120, 0, 60, 60)
+        );
+        m_buttons.back().setOutline(sf::Color(255, 255, 255, 128), 2);
+        m_buttons.back().setText("Player vs AI");
+
+        // Analysis
+        m_buttons.emplace_back(
+            font, texture, sf::Vector2f{pos.x + 400 + (50 + 200)*2, pos.y + 400}, 
+            sf::Vector2f{200, 200}, sf::IntRect(180, 0, 60, 60)
+        );
+        m_buttons.back().setOutline(sf::Color(255, 255, 255, 128), 2);
+        m_buttons.back().setText("Analysis");
+    }
+
+    MainMenuWindow& MainMenuWindow::operator=(MainMenuWindow&& other)
+    {
+        ScreenBase::operator=(std::move(other));
+        this->m_buttons = other.m_buttons;
+        return *this;
+    }
+
+    void MainMenuWindow::draw(sf::RenderTarget& target, sf::RenderStates states) const
+    {
+        target.draw(m_rect, states);
+
+        sf::Text text("Main Menu", m_font, 24);
+        text.setPosition(m_pos.x + m_size.x / 2 - 50, m_pos.y + 350);
+        text.setFillColor(sf::Color::White);
+        target.draw(text, states);
+
+        for(size_t i = 0; i < 3; i++){
+            m_buttons[i].draw(target, states);
+        }
+    }
+
+    void MainMenuWindow::handleInput(sf::Event& event, sf::RenderWindow* window, BoardWindowState* state)
+    {
+        if(event.type == sf::Event::MouseButtonPressed){
+            auto mouse = sf::Mouse::getPosition(*window);
+            for(size_t i = 0; i < 3; i++){
+                if (m_buttons[i].isClicked(mouse)){
+                    state->screen_state = static_cast<BoardScreenState>(i + 1);
+                    m_exit = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    PlayerVsPlayerWindow::PlayerVsPlayerWindow(
+        sf::Font& font, sf::Texture& texture,
+        sf::Vector2f pos, sf::Vector2f size,
+        Manager* manager, BoardWindowState* state
+    ): ChessScreen(font, texture, pos, size, manager, state) {}
+
+    PlayerVsPlayerWindow& PlayerVsPlayerWindow::operator=(PlayerVsPlayerWindow&& other)
+    {
+        ChessScreen::operator=(std::move(other));
+        return *this;
+    }
+
+    PlayerVsEngineWindow::PlayerVsEngineWindow(
+        sf::Font& font, sf::Texture& texture,
+        sf::Vector2f pos, sf::Vector2f size,
+        Manager* manager, BoardWindowState* state
+    ): ChessScreen(font, texture, pos, size, manager, state) {
+        // Allow only the player to move
+        m_engine_running = false;
+        state->player_color = Piece::White;
+        m_manager = m_backend.getManager();
+        m_boardWindow.setManager(m_manager);
+        m_inputHandler.setManager(m_manager);
+        *m_manager->board() = *manager->board();
+        *state->board = *m_manager->board();
+        m_manager->reload();
+
+        m_inputHandler.onSelected([this](int index, BoardWindowState* state, sf::RenderWindow* window, sf::Event& event){
+            if (state->player_color != state->current_color || Piece::getColor((*state->board)[index]) != state->player_color){
+                return;
+            }
+            state->state = InputState::Select;
+            state->from = index;
+            state->to = -1;
+            state->move_flags = -1;
+        });
+
+        m_evalBar = EvalBar(font, {200, 0}, {50, 1000});
+    }
+
+    PlayerVsEngineWindow& PlayerVsEngineWindow::operator=(PlayerVsEngineWindow&& other)
+    {
+        ChessScreen::operator=(std::move(other));
+        return *this;
+    }
+
+    void PlayerVsEngineWindow::draw(sf::RenderTarget& target, sf::RenderStates states) const
+    {
+        ChessScreen::draw(target, states);
+        m_evalBar.draw(target, states);
+    }
+
+    void PlayerVsEngineWindow::runOffLoop()
+    {
+         // Let the computer play
+        if (m_state->player_color != m_state->current_color){
+            if (!m_engine_running){
+                m_backend.sendCommand("position fen " + m_state->board->getFen());
+                m_backend.sendCommand("go depth 4 movetime 2500");
+                m_engine_running = true;
+            }
+            else if(m_backend.commandsLeft() == 0){ // backend has finished processing all commands
+                // Engine has finished searching
+                m_manager->makeEngineMove();
+                *m_state->board = *m_manager->board();
+                m_state->current_color = m_state->player_color;
+                m_engine_running = false;
+            }
+        }
+
+        // Try to read the engine output
+        auto& results = m_manager->getSearchResult();
+        std::unique_lock<std::mutex> lock(results.mutex, std::try_to_lock);
+        if (lock.owns_lock()){
+            m_evalBar.setEval(results.score);
+        }
+    }
+
+    AnalysisWindow::AnalysisWindow(
+        sf::Font& font, sf::Texture& texture, sf::Vector2f pos, sf::Vector2f size, 
+        chess::Manager* manager, BoardWindowState* state
+    ): ChessScreen(font, texture, pos, size, manager, state)
+    {
+        m_manager = m_backend.getManager();
+        m_boardWindow.setManager(m_manager);
+        m_inputHandler.setManager(m_manager);
+        state->board->loadFen(Board::startFen);
+        *m_manager->board() = *state->board;
+        m_manager->reload();
+        m_reload = true;
+
+        m_inputHandler.onPieceMove([this](int index, BoardWindowState* state, sf::RenderWindow* window, sf::Event& event){
+            if (m_manager->movePiece(state->from, state->to, state->move_flags)){
+                m_reload = true;
+                state->state = InputState::None;
+                state->current_color ^= Piece::colorMask;
+                *state->board = *m_manager->board();
+            }
+        });
+
+        m_inputHandler.onPromotion([this](int index, BoardWindowState* state, sf::RenderWindow* window, sf::Event& event){
+            m_boardWindow.getPromotionWindow().handleInput(event, window, state);
+            if (state->state == InputState::None)
+                m_reload = true;
+        });
+
+        m_evalBar = EvalBar(font, {200, 0}, {50, 1000});
+        m_moveList = MoveList(font, {0, 0}, {200, 1000});
+    }
+
+    AnalysisWindow::~AnalysisWindow()
+    {
+        m_backend.getManager()->stopSearch();
+        m_backend.sendCommand("stop");
+    }
+    
+    AnalysisWindow& AnalysisWindow::operator=(AnalysisWindow&& other)
+    {
+        ChessScreen::operator=(std::move(other));
+        m_backend = std::move(other.m_backend);
+        m_reload = other.m_reload;
+        m_evalBar = std::move(other.m_evalBar);
+        return *this;
+    }
+
+    void AnalysisWindow::draw(sf::RenderTarget& target, sf::RenderStates states) const
+    {
+        ChessScreen::draw(target, states);
+        m_evalBar.draw(target, states);
+        m_moveList.draw(target, states);
+    }
+
+    void AnalysisWindow::runOffLoop()
+    {
+        if (m_reload)
+        {
+            m_backend.getManager()->stopSearch();
+            m_backend.sendCommand("stop");
+            m_backend.sendCommand("position fen " + m_state->board->getFen());
+            m_backend.sendCommand("go infinite");
+            m_reload = false;
+        }
+
+        // Try to read the engine output
+        auto& results = m_manager->getSearchResult();
+        std::unique_lock<std::mutex> lock(results.mutex, std::try_to_lock);
+        if (lock.owns_lock()){
+            m_evalBar.setEval(results.score);
+            std::vector<std::string> moves;
+            for (auto& move : results.pv){
+                moves.push_back(Piece::notation(move.getFrom(), move.getTo()));
+            }
+            m_moveList.setMoves(moves);
+        }
+    }
+
+    ScreenBase* getScreen(BoardScreenState state){
+        switch(state){
+            case BoardScreenState::MAIN_MENU:
+                return new MainMenuWindow(font, pieces_texture, {0, 0}, {1500, 1000});
+            case BoardScreenState::ANALYSIS:
+                return new AnalysisWindow(font, pieces_texture, {0, 0}, {1500, 1000}, manager, &::state);
+            case BoardScreenState::PLAYER_VS_ENGINE:
+                return new PlayerVsEngineWindow(font, pieces_texture, {0, 0}, {1500, 1000}, manager, &::state);
+            case BoardScreenState::PLAYER_VS_PLAYER:
+                return new PlayerVsPlayerWindow(font, pieces_texture, {0, 0}, {1500, 1000}, manager, &::state);
+            default:
+                return new MainMenuWindow(font, pieces_texture, {0, 0}, {1500, 1000});
+        }
+    }
 
 
     /**
@@ -330,94 +824,32 @@ namespace ui
         font.loadFromFile(global_settings.base_path / "font/Ubuntu-L.ttf");
         pieces_sprite.setTexture(pieces_texture, true);
         pieces_sprite.setScale(2, 2);
-        BoardWindow board_window(font, pieces_texture, manager, {0, 0}, {1500, 1000});
-        board_window.setBoardState(&state);
-        
-        std::cout << "Enter side (w/b): ";
-        char side;
-        while(!(std::cin >> side)){
-            std::cin.clear();
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            std::cout << "Invalid input, enter side (w/b): ";
-        }
-        state.player_color = side == 'w' ? Piece::White : Piece::Black;
 
-        bool running = true;
-        bool engine_running = false;
         Clock timer;
         RenderWindow window = sf::RenderWindow(sf::VideoMode(1500, 1000), "CEngine");
+        BoardWindow board_window(font, pieces_texture, manager, {250, 0}, {1000, 1000}, &state);
+        board_window.setBoardState(&state);
 
         while(window.isOpen()){
-
-            if (state.player_color != state.current_color){
-                if (!engine_running){
-                    backend.sendCommand("position fen " + state.board->getFen());
-                    backend.sendCommand("go depth 2 movetime 2500");
-                    engine_running = true;
-                }
-                else if(backend.commandsLeft() == 0){ // backend has finished processing all commands
-                    // Engine has finished searching
-                    manager->makeEngineMove();
-                    *state.board = *manager->board();
-                    state.current_color = state.player_color;
-                    engine_running = false;
-                }
-            }
-            
-            Event event; 
-            if(window.pollEvent(event)){
-                if (event.type == Event::Closed){
-                    window.close();
-                    break;
-                }
-
-                // if (manager->searchRunning()){ // Search is running we can't handle input (modify the board/state)
-                //     handleInput(manager, event, &window, &state, false);
-                //     continue;
-                // }
-
-                if(state.state == InputState::Promote){
-                    board_window.getPromotionWindow().handleInput(event, &window, &state);
-                } else {
-                    handleInput(manager, event, &window, &state, running);
-                }
-
-                if (!running){
-                    continue;
-                }
-
-                auto status = manager->getStatus();
-                if (status != GameStatus::ONGOING){
-                    std::cout << "Game over\n";
-                    std::cout << state.board->getFen() << "\n";
-                    std::string msg;
-                    
-                    if (status == GameStatus::CHECKMATE){
-                        msg = "Checkmate, ";
-                        msg += (state.board->getSide() == Piece::White ? "Black" : "White");
-                        msg += " wins!";
-                    } else if (status == GameStatus::STALEMATE){
-                        msg = "Stalemate!";
-                    } else {
-                        msg = "Draw!";
+            std::unique_ptr<ScreenBase> screen(getScreen(state.screen_state));
+            while(!screen->exit() && window.isOpen()){
+                screen->runOffLoop();
+                Event event;
+                while(window.pollEvent(event)){
+                    if (event.type == Event::Closed){
+                        window.close();
+                        break;
                     }
-
-                    std::cout << msg << "\n";
-
-                    running = false;
-                    backend.sendCommand("stop");
-                    continue;
+                    screen->handleInput(event, &window, &state);
                 }
 
-            }
-
-            if (timer.getElapsedTime().asMicroseconds() > FRAME_US){
-                // Clear & redraw the window
-                window.clear();
-                // drawBoard(window, *state.board);
-                window.draw(board_window);
-                window.display();
-                timer.restart();
+                if (timer.getElapsedTime().asMicroseconds() > FRAME_US){
+                    // Clear & redraw the window
+                    window.clear();
+                    window.draw(*screen);
+                    window.display();
+                    timer.restart();
+                }
             }
         }
     }

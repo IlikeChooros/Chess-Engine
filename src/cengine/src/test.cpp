@@ -173,7 +173,7 @@ namespace test
             // Simulate game
             GameStatus status = GameStatus::ONGOING;
             while(status == ONGOING){
-                auto result = m.search();
+                auto& result = m.search();
                 status = m.getStatus();
                 m.make(result.move);
                 m.generateMoves();
