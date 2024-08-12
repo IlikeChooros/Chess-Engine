@@ -174,10 +174,11 @@ Magic MagicBitboards::rookMagics[64] = {
 // If you want to generate the same magics every time, you can seed the generator
 uint64_t random_uint64()
 {
-    uint64_t u1 = random() & 0xFFFFFFFF;
-    uint64_t u2 = random() & 0xFFFFFFFF;
-    uint64_t u3 = random() & 0xFFFFFFFF;
-    uint64_t u4 = random() & 0xFFFFFFFF;
+    srand(time(NULL));
+    uint64_t u1 = rand() & 0xFFFFFFFF;
+    uint64_t u2 = rand() & 0xFFFFFFFF;
+    uint64_t u3 = rand() & 0xFFFFFFFF;
+    uint64_t u4 = rand() & 0xFFFFFFFF;
 
     return u1 | (u2 << 16) | (u3 << 32) | (u4 << 48);
 }

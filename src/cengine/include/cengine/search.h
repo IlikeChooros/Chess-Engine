@@ -30,6 +30,7 @@ namespace chess
 
         // Asynchronous search
         bool stop = false;
+        bool is_running = false;
         uint64_t nodes_searched = 0;
         std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
         std::mutex mutex = {};

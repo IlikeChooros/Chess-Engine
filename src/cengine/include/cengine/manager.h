@@ -69,6 +69,11 @@ namespace chess
         inline void reload() { m_impl->reload(); }
 
         /**
+         * @brief Reset the manager, clears the move list, history, current move and search cache
+         */
+        inline void reset() { m_impl->reset(); }
+
+        /**
          * @brief Unmake current move
          */
         inline void unmake() { m_impl->unmake(); }

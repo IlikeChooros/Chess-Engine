@@ -130,8 +130,11 @@ namespace ui
         void drawSquare(sf::RenderTarget& target, sf::RenderStates states, sf::Vector2f pos, float sq_size, int index) const;
         void drawSelectedPieceMoves(sf::RenderTarget& target, sf::RenderStates states, float sq_size) const;
         int getSquareIndex(sf::Vector2i pos) const;    
+        void setRotate(bool rotate) { m_rotate = rotate; }
+        bool getRotate() const { return m_rotate; }
     private:
         BoardWindowState* m_state;
+        bool m_rotate = false;
     };
 
     class BoardWindow: public BaseChessWindow
@@ -253,5 +256,7 @@ namespace ui
         bool m_reload;
         EvalBar m_evalBar;
         MoveList m_moveList;
+        std::list<std::string> m_fens;
+        sf::Clock m_clock;
     };
 } // namespace ui

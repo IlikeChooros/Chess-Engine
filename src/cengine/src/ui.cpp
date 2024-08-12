@@ -347,10 +347,15 @@ namespace ui
         x = index % 8;
         y = index / 8;
 
+        if (m_rotate){
+            x = 7 - x;
+            y = 7 - y;
+        }
+
         // Inverted y axis, so we need to invert the y coordinate
         sf::Vector2f position(x*size + pos.x, y*size + pos.y);
         sf::RectangleShape square({size, size});
-        square.setFillColor(y%2 != 0 ? x%2 ? DARK : LIGHT : x%2 ? LIGHT : DARK);        
+        square.setFillColor(y%2 != 0 ? x%2 == 0 ? DARK : LIGHT : x%2 == 0 ? LIGHT : DARK);        
         square.setPosition(position);
         
         // Add coordinates
@@ -381,6 +386,12 @@ namespace ui
         // Draw the selected square
         int x = m_state->from % 8,
             y = m_state->from / 8;
+
+        if (m_rotate){
+            x = 7 - x;
+            y = 7 - y;
+        }
+
         sf::RectangleShape square({size, size});
         square.setFillColor(sf::Color(255, 255, 0, 32));
         square.setOutlineColor(sf::Color::Yellow);
@@ -393,11 +404,15 @@ namespace ui
         square.setOutlineThickness(5);
 
         auto moves = m_manager->getPieceMoves(m_state->from);
-        for(auto& move : moves){
+        for(auto move : moves){
             sf::Color color(0, 255, 0, 128);
             if (move.flags & Move::FLAG_CAPTURE){
                 color = sf::Color(255, 0, 0, 128);
             } 
+            if (m_rotate){
+                move.x = 7 - move.x;
+                move.y = 7 - move.y;
+            }
             square.setOutlineColor(color);
             square.setPosition(float(move.x*size + m_pos.x), float(move.y)*size);
             target.draw(square, states);
@@ -534,6 +549,8 @@ namespace ui
         if (event.type == sf::Event::MouseButtonPressed){
             auto mouse = sf::Mouse::getPosition(*window);
             index = m_boardWindow.getBoardDisplay().getSquareIndex(mouse);
+            if (m_boardWindow.getBoardDisplay().getRotate())
+                index = 63 - index;
         }
         m_inputHandler.handleInput(event, window, index, true);
     }
@@ -665,6 +682,9 @@ namespace ui
             state->move_flags = -1;
         });
 
+        m_boardWindow.getBoardDisplay().setRotate(
+            state->player_color == Piece::Black
+        );
         m_evalBar = EvalBar(font, {200, 0}, {50, 1000});
     }
 
@@ -714,8 +734,7 @@ namespace ui
         m_manager = m_backend.getManager();
         m_boardWindow.setManager(m_manager);
         m_inputHandler.setManager(m_manager);
-        state->board->loadFen(Board::startFen);
-        *m_manager->board() = *state->board;
+        m_fens.push_back(manager->board()->getFen());
         m_manager->reload();
         m_reload = true;
 
@@ -725,13 +744,56 @@ namespace ui
                 state->state = InputState::None;
                 state->current_color ^= Piece::colorMask;
                 *state->board = *m_manager->board();
+                m_fens.push_back(state->board->getFen());
             }
         });
 
         m_inputHandler.onPromotion([this](int index, BoardWindowState* state, sf::RenderWindow* window, sf::Event& event){
             m_boardWindow.getPromotionWindow().handleInput(event, window, state);
-            if (state->state == InputState::None)
+            if (state->state == InputState::None){ // Promotion has been handled
+                m_fens.push_back(state->board->getFen());
                 m_reload = true;
+            }
+        });
+
+        m_inputHandler.customEvent([this](BoardWindowState* state, sf::RenderWindow* window, sf::Event& event){
+            if (event.type == sf::Event::KeyPressed){
+                using std::chrono_literals::operator""ms;
+
+                if (event.key.code == sf::Keyboard::R){
+                    m_backend.sendCommand("stop");
+                    m_backend.sendCommand("position startpos");
+                    m_backend.sendCommand("ucinewgame");
+                    // wait for the engine to stop
+                    while(m_backend.commandsLeft() > 0) {
+                        std::this_thread::sleep_for(10ms);
+                    }
+                    *state->board = *m_manager->board();
+                    state->state = InputState::None;
+                    state->current_color = Piece::White;
+                    m_backend.sendCommand("go movetime 10000");
+                }
+
+                if (event.key.code == sf::Keyboard::Space){
+                    m_reload = true;
+                }
+
+                if (event.key.code == sf::Keyboard::Z){
+                    // Reset the board
+                    if (m_fens.size() < 2){
+                        return;
+                    }
+                    m_fens.pop_back();
+                    state->board->loadFen(m_fens.back().c_str());
+                    state->state = InputState::None;
+                    state->current_color = state->board->getSide();
+                    m_reload = true;
+                }
+
+                if (event.key.code == sf::Keyboard::O){
+                    m_boardWindow.getBoardDisplay().setRotate(!m_boardWindow.getBoardDisplay().getRotate());
+                }
+            }
         });
 
         m_evalBar = EvalBar(font, {200, 0}, {50, 1000});
@@ -740,7 +802,6 @@ namespace ui
 
     AnalysisWindow::~AnalysisWindow()
     {
-        m_backend.getManager()->stopSearch();
         m_backend.sendCommand("stop");
     }
     
@@ -764,11 +825,15 @@ namespace ui
     {
         if (m_reload)
         {
-            m_backend.getManager()->stopSearch();
             m_backend.sendCommand("stop");
             m_backend.sendCommand("position fen " + m_state->board->getFen());
-            m_backend.sendCommand("go infinite");
+            m_backend.sendCommand("go movetime 10000");
             m_reload = false;
+        }
+
+        if (m_clock.getElapsedTime().asSeconds() > 8){
+            m_clock.restart();
+            std::cout << "FEN: " << m_state->board->getFen() << "\n";
         }
 
         // Try to read the engine output
@@ -824,6 +889,18 @@ namespace ui
         font.loadFromFile(global_settings.base_path / "font/Ubuntu-L.ttf");
         pieces_sprite.setTexture(pieces_texture, true);
         pieces_sprite.setScale(2, 2);
+
+        // Print the quick guide
+        std::cout << "Quick guide:\n";
+        std::cout << "- To quit the window, press Esc\n";
+        std::cout << "In analysis mode:\n";
+        std::cout << "- To reset the board to initial position press 'R'\n";
+        std::cout << "- To undo a move press 'Z'\n";
+        std::cout << "- If something goes wrong, press 'Space' to reload the search\n";\
+        std::cout << "- Press 'P' to print current FEN\n";
+        std::cout << "- Press 'O' to rotate the board\n";
+        std::cout << "That's it!\n";
+
 
         Clock timer;
         RenderWindow window = sf::RenderWindow(sf::VideoMode(1500, 1000), "CEngine");

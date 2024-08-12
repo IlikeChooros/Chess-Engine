@@ -38,11 +38,13 @@ class InputHandler
 {
 public:
     typedef std::function<void(int, BoardWindowState*, sf::RenderWindow*, sf::Event&)> callback_type;
+    typedef std::function<void(BoardWindowState*, sf::RenderWindow*, sf::Event&)> custom_callback_type;
 
     InputHandler(chess::Manager* manager, BoardWindowState* state);
     InputHandler(InputHandler&& other) = default;
 
     void handleInput(sf::Event& event, sf::RenderWindow* window, int index, bool handle_board);
+    void customEvent(custom_callback_type callback);
     void onSelected(callback_type callback);
     void onPieceMove(callback_type callback);
     void onPromotion(callback_type callback);
@@ -53,7 +55,5 @@ private:
     callback_type m_on_selected;
     callback_type m_on_piece_move;
     callback_type m_on_promotion;
+    custom_callback_type m_custom_callback;
 };
-
-void handleInput(chess::Manager* manager, sf::Event& event, sf::RenderWindow* window, BoardWindowState* state, bool handle_board);
-void getBoardSize(int& size, int& offset_x, sf::RenderWindow* window);

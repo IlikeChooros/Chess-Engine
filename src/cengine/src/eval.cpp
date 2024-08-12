@@ -126,16 +126,16 @@ namespace chess
             0x8080808080808080ULL
         };
 
-        const uint64_t rank_bitboards[8] = {
-            0x00000000000000FFULL,
-            0x000000000000FF00ULL,
-            0x0000000000FF0000ULL,
-            0x00000000FF000000ULL,
-            0x000000FF00000000ULL,
-            0x0000FF0000000000ULL,
-            0x00FF000000000000ULL,
-            0xFF00000000000000ULL
-        };
+        // const uint64_t rank_bitboards[8] = {
+        //     0x00000000000000FFULL,
+        //     0x000000000000FF00ULL,
+        //     0x0000000000FF0000ULL,
+        //     0x00000000FF000000ULL,
+        //     0x000000FF00000000ULL,
+        //     0x0000FF0000000000ULL,
+        //     0x00FF000000000000ULL,
+        //     0xFF00000000000000ULL
+        // };
 
         // Count the material & piece square tables
         for (int type = 0; type < 6; type++){

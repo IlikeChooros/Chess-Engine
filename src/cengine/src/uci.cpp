@@ -6,6 +6,61 @@
 
 namespace uci
 {
+
+
+    std::unordered_map<std::string, std::string> help_map = {
+        {"perft", 
+            "perft <depth> - Run perft test at given depth, board should be already initialized\n\n"
+        },
+        {"position", 
+            "position [startpos|fen <fen> [moves <move1> ... <moveN>]]\n"
+            " - startpos: Start from the initial position\n"
+            " - fen <fen>: Start from the given FEN\n"
+            " - moves <move1> ... <moveN>: Play the given moves, with format <from><to><promotion>\n"
+            "Where <from> and <to> are the square names, and <promotion> is the promotion piece:\n"
+            " - q: Queen\n"
+            " - r: Rook\n"
+            " - b: Bishop\n"
+            " - n: Knight\n\n"
+            "Example: position startpos moves e2e4 e7e5 g1f3 b8c6 f1c4 g8f6 d2d3\n"
+            "Another one: position fen rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8 moves d7c8q\n\n"
+        },
+        {"go", 
+            "go [depth <depth> | nodes <nodes> | movetime <time> | wtime <time> | btime <time> | winc <time> | binc <time> | ponder | infinite]\n"
+            " - depth <depth>: Search to the given depth\n"
+            "\tExample: go depth 5 (this run search till depth 5 is fully searched)\n"
+            " - nodes <nodes>: Search the given number of nodes (not supported yet)\n"
+            " - movetime <time>: Search for the given time in milliseconds\n"
+            "\tExample: go movetime 1000 (run search for 1 second, depth is unlimited, same as 'go movetime 1000 infinite')\n"
+            " - wtime <time>: White time in milliseconds (not supprted yet)\n"
+            " - btime <time>: Black time in milliseconds (not supprted yet)\n"
+            " - winc <time>: White increment in milliseconds (not supprted yet)\n"
+            " - binc <time>: Black increment in milliseconds (not supprted yet)\n"
+            " - ponder: Ponder the best move (not supported yet)\n"
+            " - infinite: Search indefinitely\n"
+            "\t Example: go infinite (run search indefinitely, until 'stop' command is given)\n\n"
+        },
+        {"uci", "uci - Print the UCI info\n\n"},
+        {"ucinewgame", "ucinewgame - Start a new game, resets the search cache\n\n"},
+        {"isready", "isready - Check if the engine is ready\n\n"},
+        {"stop", "stop - Stop the search\n\n"},
+        {"getfen", "getfen - Get the current FEN (unofficial)\n\n"},
+        {"help", "\nAvaible commands:\n"
+            "uci\n"
+            "ucinewgame\n"
+            "isready\n"
+            "position [startpos|fen <fen> [moves <move1> ... <moveN>]]\n"
+            "go [depth <depth> | nodes <nodes> | movetime <time> | wtime <time> | btime <time> | winc <time> | binc <time> | ponder | infinite]\n"
+            "perft <depth>\n"
+            "stop\n"
+            "getfen\n"
+            "help\n"
+            "quit\n\n"
+            "Try 'help <command>' for more info about a command\n"
+            "For example 'help go' will give you more info about the 'go' command\n\n"        
+        },
+    };
+
     /**
      * @brief Print an error message and throw an exception
      * 
@@ -117,7 +172,7 @@ namespace uci
             }
         }
         // Start the search
-        manager->search();
+        manager->asyncSearch();
     }
 
     std::string uciReadCommImpl(chess::Manager* manager, std::string input)
@@ -130,6 +185,9 @@ namespace uci
             output = "id name CEngine\n";
             output += "id author IlikeChooros\n";
             output += "uciok\n";
+        }
+        else if (command == "ucinewgame"){
+            manager->reset();
         }
         else if (command == "isready"){
             output = "readyok\n";
@@ -145,6 +203,23 @@ namespace uci
         }
         else if (command == "getfen"){
             output = manager->impl()->board->getFen() + "\n";
+        }
+        else if (command == "help"){
+            // Check if there is a command after help
+            std::string help_command;
+            if (iss >> help_command){
+                if (help_map.find(help_command) != help_map.end()){
+                    output = help_map[help_command];
+                } else {
+                    output = "Unknown command: '" + help_command + "', type 'help' for a list of commands\n";
+                }
+                return output;
+            }
+            // Just a help command
+            output = help_map["help"];
+        }
+        else {
+            output = "Unknown command: '" + command + "', type 'help' for a list of commands\n";
         }
         return output;
     }
@@ -186,6 +261,7 @@ namespace uci
 
     void UCI::loop()
     {
+        std::cout << "CEngine UCI\n";
         // Read from standard input commands
         while(1)
         {

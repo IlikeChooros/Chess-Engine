@@ -32,8 +32,17 @@ namespace chess
         ~ManagerImpl();
         ManagerImpl& operator=(ManagerImpl&& other);
 
-
         void reload();
+
+        /**
+         * @brief Resets the manager, clearing all the history, move list and search cache (unlike reload)
+         */
+        inline void reset()
+        {
+            this->search_cache.getHH().clear();
+            this->search_cache.getTT().clear();
+            reload();
+        }
 
         /**
          * @brief Returns the current game status
@@ -66,8 +75,16 @@ namespace chess
          * @return The best move found & its score
          */
         inline SearchResult& search() noexcept {
-            search_params.resetStop();
-            ::chess::search(board, &history, &sc, &search_params, &search_result); 
+            // Copy all the data to the search thread
+            Board board_copy;
+            GameHistory history_copy;
+            {
+                std::lock_guard<std::mutex> l(mutex);
+                board_copy = *board;
+                history_copy = history;
+                search_params.resetStop();
+            }  
+            ::chess::search(&board_copy, &history_copy, &search_cache, &search_params, &search_result); 
             return search_result;
         }
 
@@ -98,17 +115,27 @@ namespace chess
             if (search_thread.joinable()){
                 search_thread.join();
             }
+            using namespace std::chrono_literals;
+            while(1){
+                {
+                    std::unique_lock<std::mutex> l(search_params.mutex);
+                    if (!search_params.is_running){
+                        break;
+                    }
+                }
+                std::this_thread::sleep_for(10ms);
+            }
         }
 
         /**
          * @brief Get the search result, should be called after finished search
          */
-        inline SearchResult& getSearchResult() { return search_result; }
+        inline SearchResult& getSearchResult() noexcept { return search_result; }
 
         /**
          * @brief Pushes the current move to the history stack, thread safe
          */
-        inline void pushHistory() { 
+        inline void pushHistory() noexcept { 
             std::lock_guard<std::mutex> l(mutex);
             history.push(board, curr_move); 
         }
@@ -144,7 +171,7 @@ namespace chess
         std::thread search_thread;
         SearchParams search_params;
         SearchResult search_result;
-        SearchCache sc;
+        SearchCache search_cache;
         CacheMoveGen cache;
         GameHistory history;
         MoveList move_list;

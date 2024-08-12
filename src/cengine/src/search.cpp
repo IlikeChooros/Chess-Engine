@@ -184,19 +184,26 @@ namespace chess
         result->score = 0;
         result->status = ONGOING;
 
+        {
+            // update `is_running` flag
+            std::lock_guard<std::mutex> lock(params->mutex);
+            params->is_running = true;
+        }
+
         // Initialize variables
         int eval = MIN;
         Move best_move;
         MoveList ml;
         CacheMoveGen cache;
-        Board board_copy(*board);
-        int last_irreversible = board_copy.irreversibleIndex();
-        void(::gen_legal_moves(&ml, &board_copy, &cache));
-        int whotomove = board_copy.getSide() == Piece::White ? 1 : -1;
+        int last_irreversible = board->irreversibleIndex();
+        void(::gen_legal_moves(&ml, board, &cache));
+        int whotomove = board->getSide() == Piece::White ? 1 : -1;
         result->status = get_status(board, gh, &ml, &cache);
 
         if (result->status != ONGOING){
             std::cout << "info string Game over\n";
+            std::lock_guard<std::mutex> lock(params->mutex);
+            params->is_running = false;
             return;
         }
 
@@ -210,20 +217,16 @@ namespace chess
         // Iterative deepening
         while(true){
             int alpha = MIN, beta = MAX;
-            order_moves(&ml, &board_copy, &cache, sc);
+            order_moves(&ml, board, &cache, sc);
 
             // Loop through all the moves and evaluate them
             for (size_t i = 0; i < ml.size(); i++){
                 Move m(ml[i]);
-                ::make(m, &board_copy, gh);
+                ::make(m, board, gh);
                 params->nodes_searched++;
-                int score = -negaAlphaBeta(&board_copy, gh, sc, params, alpha, beta, depth);
-                ::unmake(m, &board_copy, gh);
-                board_copy.irreversibleIndex() = last_irreversible;
-
-                std::cout << "info currmove " << Piece::notation(ml[i].getFrom(), ml[i].getTo()) 
-                          << " currmovenumber " << i + 1
-                          << " eval " << score << '\n';
+                int score = -negaAlphaBeta(board, gh, sc, params, alpha, beta, depth);
+                ::unmake(m, board, gh);
+                board->irreversibleIndex() = last_irreversible;
 
                 if (score > eval){
                     eval = score;
@@ -244,7 +247,7 @@ namespace chess
             std::cout << "* info bestmove " << Piece::notation(best_move.getFrom(), best_move.getTo()) 
                       << " moves=";
 
-            auto pv = getPV(&board_copy, sc, gh, best_move);
+            auto pv = getPV(board, sc, gh, best_move);
             for (auto it = pv.begin(); it != pv.end(); it++){
                 std::cout << ' ' << Piece::notation(it->getFrom(), it->getTo());
             }
@@ -278,7 +281,7 @@ namespace chess
             << "*** info bestmove " << Piece::notation(best_move.getFrom(), best_move.getTo())
             << ": " << std::setprecision(2) << float(eval * whotomove) / 100.0f << " moves=";
 
-        auto pv = getPV(&board_copy, sc, gh, best_move);
+        auto pv = getPV(board, sc, gh, best_move);
         for (auto it = pv.begin(); it != pv.end(); it++){
             std::cout << ' ' << Piece::notation(it->getFrom(), it->getTo());
         }
@@ -288,5 +291,9 @@ namespace chess
             << " time=" << time_taken << "ms"
             << " nodes=" << params->nodes_searched
             << " nps=" << (int)(params->nodes_searched / (time_taken / 1000.0)) << '\n';
+
+        // update `is_running` flag
+        std::lock_guard<std::mutex> lock(params->mutex);
+        params->is_running = false;
     }
 }
