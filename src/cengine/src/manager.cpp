@@ -84,10 +84,7 @@ namespace chess
             }
         }
 
-        dlogf("Invalid move: from %s to %s\n",
-                square_to_str(from).c_str(),
-                square_to_str(to).c_str()
-        );
+        std::cout << "Invalid move: " << Piece::notation(from, to) << std::endl;
         return false;
     }
 
@@ -140,5 +137,24 @@ namespace chess
             }
         }
         return flags;
+    }
+
+    /**
+     * @brief Get all the moves that can move to a square
+     */
+    MoveList Manager::canMoveTo(uint32_t to, int type)
+    {
+        int* iboard = this->board()->getBoard();
+        MoveList ml;
+        for(int i = 0; i < m_impl->n_moves; i++){
+            auto move = Move(m_impl->move_list[i]);
+
+            if (type != -1 && Piece::getType(iboard[move.getFrom()]) != type)
+                continue;
+
+            if (move.getTo() == to)
+                ml.add(move);
+        }
+        return ml;
     }
 }

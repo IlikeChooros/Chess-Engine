@@ -85,6 +85,7 @@ namespace chess
      */
     void init_eval()
     {
+        // Initialize the pieces tables
         for(int i = 0; i < 6; i++){
             if (i == Piece::King - 1){
                 continue;
@@ -95,6 +96,7 @@ namespace chess
             }
         }
 
+        // Initialize the king square tables
         for(int i = 0; i < 2; i++){
             for(int j = 0; j < 64; j++){
                 king_square_tables[1][i][j] = white_king_square_tables[i][j];
@@ -106,6 +108,7 @@ namespace chess
     
     /**
      * @brief Evaluation function for the board in centipawns
+     * positive values are good for white, negative values are good for black
      */
     int evaluate(Board* board, CacheMoveGen* c, MoveList* ml)
     {
@@ -125,17 +128,6 @@ namespace chess
             0x4040404040404040ULL,
             0x8080808080808080ULL
         };
-
-        // const uint64_t rank_bitboards[8] = {
-        //     0x00000000000000FFULL,
-        //     0x000000000000FF00ULL,
-        //     0x0000000000FF0000ULL,
-        //     0x00000000FF000000ULL,
-        //     0x000000FF00000000ULL,
-        //     0x0000FF0000000000ULL,
-        //     0x00FF000000000000ULL,
-        //     0xFF00000000000000ULL
-        // };
 
         // Count the material & piece square tables
         for (int type = 0; type < 6; type++){
@@ -273,5 +265,25 @@ namespace chess
         }
 
         return ONGOING;
+    }
+
+    /**
+     * @brief Convert the game status to a string
+     */
+    std::string game_status_to_string(GameStatus status)
+    {
+        switch (status)
+        {
+        case ONGOING:
+            return "Ongoing";
+        case CHECKMATE:
+            return "Checkmate";
+        case STALEMATE:
+            return "Stalemate";
+        case DRAW:
+            return "Draw";
+        default:
+            return "Unknown";
+        }
     }
 }

@@ -33,9 +33,13 @@ struct TEntry
 template <typename T = TEntry>
 class TTable
 {
-    std::unordered_map<uint64_t, T> table;
-
 public:
+    typedef typename std::unordered_map<uint64_t, T> TableType;
+
+    TTable(size_t sizeMB = 1) noexcept {
+        const size_t size = sizeMB * 1000000 / sizeof(T);
+        table.reserve(size);
+    }
 
     inline void clear() noexcept {
         table.clear();
@@ -52,4 +56,11 @@ public:
     inline T& get(uint64_t hash){
         return table[hash];
     }
+
+    inline TableType& getTable() noexcept {
+        return table;
+    }
+
+private:
+    TableType table;
 };

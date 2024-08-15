@@ -27,9 +27,7 @@ namespace chess{
         // Helper bitboards initialized in move_gen.cpp
         static uint64_t in_between[64][64];
         static uint64_t pawnAttacks[2][64];
-        static uint64_t knightAttacks[64];
-        static uint64_t kingAttacks[64];
-        static uint64_t queenAttacks[64];
+        static uint64_t pieceAttacks[6][64];
 
         // Starting position
         static const char startFen[57];
@@ -47,7 +45,7 @@ namespace chess{
         Board& operator=(const Board& other);
         
         Board& init();
-        void loadFen(const char* fen);
+        void loadFen(std::string fen);
         std::string getFen();
         void updateBitboards();
 
@@ -85,6 +83,11 @@ namespace chess{
          * @brief Get the captured piece
          */
         inline int& capturedPiece() {return this->m_captured_piece; };
+
+        /**
+         * @brief Get bool flag wheter the king is in check
+         */
+        inline bool& inCheck() {return this->m_in_check; };
 
         /**
          * @brief Get raw board data
@@ -179,6 +182,7 @@ namespace chess{
         
 
         std::unique_ptr<int[]> board;
+        bool m_in_check;
         int m_side;
         int m_enpassant_target;
         int m_halfmove_clock;

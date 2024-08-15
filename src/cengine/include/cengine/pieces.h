@@ -120,6 +120,38 @@ namespace chess
             }
         }
 
+        static char toChar(int piece, bool uselower = false){
+            if (piece == Empty)
+                return ' ';
+            char piece_char = ' ';
+            switch (piece & pieceMask)
+            {
+                case Pawn:
+                    piece_char = 'P';
+                    break;
+                case Knight:
+                    piece_char = 'N';
+                    break;
+                case King:
+                    piece_char = 'K';
+                    break;
+                case Bishop:
+                    piece_char = 'B';
+                    break;
+                case Rook:
+                    piece_char = 'R';
+                    break;
+                case Queen:
+                    piece_char = 'Q';
+                    break;
+            }
+
+            if (uselower){
+                piece_char = isWhite(piece) ? tolower(piece_char) : piece_char;
+            }
+            return piece_char;
+        }
+
 
         static std::string toStr(int piece){
             std::string str = "";

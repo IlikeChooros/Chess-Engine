@@ -21,6 +21,7 @@ namespace chess
         std::list<PieceMoveInfo> getPieceMoves(uint32_t from);
         std::vector<uint32_t> getFlags(uint32_t from, uint32_t to);
         bool isPromotion(uint32_t from, uint32_t to);
+        MoveList canMoveTo(uint32_t to, int type = -1);
 
 
         /**

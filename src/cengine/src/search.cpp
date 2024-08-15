@@ -25,33 +25,35 @@ namespace chess
 
 
     // Get PV from transposition table
-    std::list<Move> getPV(Board* b, SearchCache* sc, GameHistory* gh, Move best_move){
-        std::list<Move> pv;
-        Board board_copy(*b);
-        GameHistory gh_copy(*gh);
+    MoveList getPV(Board* b, SearchCache* sc, GameHistory* gh, Move best_move){
+        if (!sc || !b || !gh || best_move == Move::nullMove)
+            return {};
 
-        ::make(best_move, &board_copy, &gh_copy);
-        uint64_t hash = get_hash(&board_copy);
+        MoveList pv;
+
+        ::make(best_move, b, gh);
+        uint64_t hash = get_hash(b);
         while (sc->getTT().contains(hash)){
             TEntry entry = sc->getTT().get(hash);
-            pv.push_back(entry.bestMove);
-            ::make(entry.bestMove, &board_copy, &gh_copy);
-            hash = get_hash(&board_copy);
+            if (!entry.bestMove || entry.bestMove == best_move)
+                break;
+            if (pv.size() >= pv.capacity() - 1)
+                break;
+            pv.add(entry.bestMove);
+            ::make(entry.bestMove, b, gh);
+            hash = get_hash(b);
         }
         for (auto it = pv.rbegin(); it != pv.rend(); it++){
-            ::unmake(*it, &board_copy, &gh_copy);
+            ::unmake(Move(*it), b, gh);
         }
-        ::unmake(best_move, &board_copy, &gh_copy);
+        ::unmake(best_move, b, gh);
         return pv;
     }
 
 
     // Quiescence (no quiet) search, runs aplha beta on captures only and evaluates the position
-    int quiescence(Board* b, GameHistory* gh, SearchParams* params, int alpha, int beta, int depth){
+    int quiescence(Board* b, GameHistory* gh, SearchParams* params, int alpha, int beta){
         // return evaluate(b, nullptr, nullptr);
-
-        if (depth == 0)
-            return evaluate(b, nullptr, nullptr);
 
         int eval = evaluate(b, nullptr, nullptr);
         if (eval >= beta)
@@ -66,7 +68,7 @@ namespace chess
             Move m(ml[i]);
             ::make(m, b, gh);
             params->nodes_searched++;
-            int score = -quiescence(b, gh, params, -beta, -alpha, depth - 1);
+            int score = -quiescence(b, gh, params, -beta, -alpha);
             ::unmake(m, b, gh);
 
             if (score >= beta)
@@ -86,7 +88,7 @@ namespace chess
         uint64_t hash = get_hash(b);
         int old_alpha = alpha;
         if (ttable->contains(hash)){
-            TEntry entry = ttable->get(hash);
+            TEntry& entry = ttable->get(hash);
             if (entry.depth >= depth){
                 if (entry.nodeType == TEntry::EXACT)
                     return entry.score;
@@ -101,7 +103,7 @@ namespace chess
         }
 
         if (depth == 0)
-            return quiescence(b, gh, params, alpha, beta, 32);
+            return quiescence(b, gh, params, alpha, beta);
         
         CacheMoveGen cache;
         MoveList ml;
@@ -184,11 +186,7 @@ namespace chess
         result->score = 0;
         result->status = ONGOING;
 
-        {
-            // update `is_running` flag
-            std::lock_guard<std::mutex> lock(params->mutex);
-            params->is_running = true;
-        }
+        params->setSearchRunning(true);
 
         // Initialize variables
         int eval = MIN;
@@ -202,8 +200,7 @@ namespace chess
 
         if (result->status != ONGOING){
             std::cout << "info string Game over\n";
-            std::lock_guard<std::mutex> lock(params->mutex);
-            params->is_running = false;
+            params->setSearchRunning(false);
             return;
         }
 
@@ -244,18 +241,15 @@ namespace chess
             depth++;
             time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count();
 
-            std::cout << "* info bestmove " << Piece::notation(best_move.getFrom(), best_move.getTo()) 
-                      << " moves=";
-
+            // Print the best move and the principal variation
+            glogger.print("* info");
+            glogger.printStats(best_move, depth, eval * whotomove, params->nodes_searched, time_taken);
+            glogger.printBoardInfo(board);
+            glogger.printTTableInfo(&sc->getTT());
+            glogger.printGameHistory(gh);
             auto pv = getPV(board, sc, gh, best_move);
-            for (auto it = pv.begin(); it != pv.end(); it++){
-                std::cout << ' ' << Piece::notation(it->getFrom(), it->getTo());
-            }
-
-            std::cout << " depth " << depth - 1 
-                      << " score " << std::setprecision(2) << float(eval * whotomove) / 100.0f
-                      << " nodes " << params->nodes_searched 
-                      << " nps " << (int)(params->nodes_searched / (time_taken / 1000.0)) << '\n';
+            glogger.printPV(&pv);
+            glogger.print("\n");
 
             std::unique_lock<std::mutex> lock(result->mutex);
             if (lock.owns_lock()){
@@ -263,7 +257,7 @@ namespace chess
                 result->score = eval * whotomove;
                 result->time = time_taken;
                 result->depth = depth;
-                result->pv = pv;
+                result->pv = std::list<Move>(pv.begin(), pv.end());
                 lock.unlock();
             }            
 
@@ -277,23 +271,19 @@ namespace chess
         depth--;
         time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count();
         time_taken = std::max(time_taken, 1UL);
-        std::cout
-            << "*** info bestmove " << Piece::notation(best_move.getFrom(), best_move.getTo())
-            << ": " << std::setprecision(2) << float(eval * whotomove) / 100.0f << " moves=";
+
+
+        glogger.print("*** info bestmove %s eval %.2f \n", 
+            Piece::notation(best_move.getFrom(), best_move.getTo()).c_str(),
+            float(eval * whotomove) / 100.0f
+        );
 
         auto pv = getPV(board, sc, gh, best_move);
-        for (auto it = pv.begin(); it != pv.end(); it++){
-            std::cout << ' ' << Piece::notation(it->getFrom(), it->getTo());
-        }
-
-        std::cout
-            << " depth=" << depth 
-            << " time=" << time_taken << "ms"
-            << " nodes=" << params->nodes_searched
-            << " nps=" << (int)(params->nodes_searched / (time_taken / 1000.0)) << '\n';
+        glogger.printPV(&pv);
+        glogger.printStats(best_move, depth, eval * whotomove, params->nodes_searched, time_taken);
+        glogger.print("\n");
 
         // update `is_running` flag
-        std::lock_guard<std::mutex> lock(params->mutex);
-        params->is_running = false;
+        params->setSearchRunning(false);
     }
 }

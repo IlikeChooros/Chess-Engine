@@ -12,7 +12,7 @@ class Move
     // Mask for the from and to fields (6 bits)
     static const uint32_t MASK_MOVE = 0b111111;
     static const int bits = 16; // 6 + 6 + 4
-    static const int nullMove = 0;
+    static const uint32_t nullMove = 0;
 
     // Flag structure (4 bits)
     // first bit -> special bit 1 (0b000x)
@@ -124,6 +124,77 @@ class MoveList
     public:
     typedef uint32_t move_t;
 
+    // Iterator for the move list
+    class MoveListIterator {
+    public:
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type = std::ptrdiff_t;
+        using value_type = move_t;
+        using pointer = move_t*;
+        using reference = move_t&;
+
+        MoveListIterator(move_t* ptr): m_ptr(ptr) {}
+
+        reference operator*() const {return *m_ptr;}
+        pointer operator->() {return m_ptr;}
+
+        MoveListIterator& operator++() {
+            m_ptr++;
+            return *this;
+        }
+
+        MoveListIterator operator++(int) {
+            MoveListIterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+        MoveListIterator& operator--() {
+            m_ptr--;
+            return *this;
+        }
+
+        MoveListIterator operator--(int) {
+            MoveListIterator tmp = *this;
+            --(*this);
+            return tmp;
+        }
+
+        ptrdiff_t operator-(const MoveListIterator& other) {
+            return m_ptr - other.m_ptr;
+        }
+
+        MoveListIterator operator-(int n) {
+            return MoveListIterator(m_ptr - n);
+        }
+
+        MoveListIterator operator+(ptrdiff_t n) {
+            return MoveListIterator(m_ptr + n);
+        }
+
+        friend bool operator<(const MoveListIterator& lhs, const MoveListIterator& rhs) {
+            return lhs.m_ptr < rhs.m_ptr;
+        }
+
+        friend bool operator>(const MoveListIterator& lhs, const MoveListIterator& rhs) {
+            return lhs.m_ptr > rhs.m_ptr;
+        }
+
+        friend bool operator== (const MoveListIterator& a, const MoveListIterator& b) {
+            return a.m_ptr == b.m_ptr;
+        }
+
+        friend bool operator!= (const MoveListIterator& a, const MoveListIterator& b) {
+            return a.m_ptr != b.m_ptr;
+        }
+    private:
+        pointer m_ptr;
+    };
+
+    typedef MoveListIterator iterator;
+    typedef std::reverse_iterator<iterator> reverse_iterator;
+
+
     MoveList(): n_moves(0) {}
     MoveList(const MoveList& other){
         *this = other;
@@ -135,11 +206,15 @@ class MoveList
     }
 
     inline size_t size() const {return n_moves;}
+    inline static constexpr size_t capacity() {return 256;}
     inline void add(move_t move) {moves[n_moves++] = move;}
+    inline void add(const Move& move) {moves[n_moves++] = move.move();}
     inline void clear() {n_moves = 0;}
     inline Move operator[](size_t i) {return Move(moves[i]);}
-    inline move_t* begin() {return moves;}
-    inline move_t* end() {return moves + n_moves;}
+    inline iterator begin() {return iterator(moves);}
+    inline iterator end() {return iterator(moves + n_moves);}
+    inline reverse_iterator rbegin() {return reverse_iterator(end());}
+    inline reverse_iterator rend() {return reverse_iterator(begin());}
     inline const uint32_t* data() const {return moves;}
 
     uint32_t moves[256];

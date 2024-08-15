@@ -11,6 +11,7 @@ enum class BoardScreenState
     MAIN_MENU,
     PLAYER_VS_PLAYER,
     PLAYER_VS_ENGINE,
+    TEST_ENGINE,
     ANALYSIS
 };
 

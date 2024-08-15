@@ -66,7 +66,7 @@ namespace chess
     class SearchCache
     {
     public:
-        SearchCache() = default;
+        SearchCache(): tt(64) {}
         
         /**
          * @brief Get the history heuristic object

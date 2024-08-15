@@ -11,7 +11,7 @@ namespace chess
     // Initialize the hashing tables
     void init_hashing()
     {
-        const int seed = 0x12345678;
+        constexpr int seed = 0x12345678;
 
         std::mt19937 gen(seed);
         std::uniform_int_distribution<int> dist(0, std::numeric_limits<int>().max());

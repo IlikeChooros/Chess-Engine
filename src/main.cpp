@@ -7,7 +7,6 @@ int main(int argc, char** argv)
     using namespace chess;
     Board board;
     board.init();
-    // board.loadFen();
 
     ui::runWindow(board, argc, argv);
     return 0;

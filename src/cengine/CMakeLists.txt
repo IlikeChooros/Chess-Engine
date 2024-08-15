@@ -16,6 +16,8 @@ target_sources(cengine
         src/magic_bitboards.cpp
         src/ui.cpp
         src/uci.cpp
+        src/log.cpp
+        src/pgn.cpp
         src/settings.cpp
 )
 

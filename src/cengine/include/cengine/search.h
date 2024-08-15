@@ -4,6 +4,7 @@
 #include <mutex>
 
 
+#include "log.h"
 #include "eval.h"
 #include "move_gen.h"
 #include "hash.h"
@@ -54,10 +55,21 @@ namespace chess
             return *this;
         }
 
-        void stopSearch()
+        void setSearchRunning(bool running)
         {
             std::lock_guard<std::mutex> lock(mutex);
-            stop = true;
+            is_running = running;
+        }
+
+        void setSearchStop(bool stop)
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            this->stop = stop;
+        }
+
+        void stopSearch()
+        {
+            setSearchStop(true);
         }
 
         bool shouldStop()
@@ -68,8 +80,7 @@ namespace chess
 
         void resetStop()
         {
-            std::lock_guard<std::mutex> lock(mutex);
-            stop = false;
+            setSearchStop(false);
         }
     };
 

@@ -67,9 +67,9 @@ namespace test
     template <bool root>
     uint64_t Perft::perft(int depth)
     {
-        ManagerImpl manager(m_board);
-        size_t moves = manager.generateMoves();
-        auto ml = manager.move_list;
+        GameHistory gh(m_board);
+        MoveList ml;
+        size_t moves = ::gen_legal_moves(&ml, m_board);
 
         if(depth == 1){
             if (root && m_print) {
@@ -87,10 +87,10 @@ namespace test
         uint64_t nodes = 0, cnodes = 0;
         for(size_t i = 0; i < moves; i++){
             auto move = Move(ml[i]);
-            manager.make(move);
+            ::make(move, m_board, &gh);
             cnodes = perft<false>(depth - 1);
             nodes += cnodes;
-            manager.unmake();
+            ::unmake(move, m_board, &gh);
             if (root && m_print){
                 m_results.push_back(
                     Piece::notation(move.getFrom(), move.getTo()) + ": " + std::to_string(cnodes)
@@ -130,8 +130,7 @@ namespace test
         }
     }
 
-
-    const std::string openings[] = {
+    const char* GamePlayLogger::openings[] = {
         "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2", // e4 e5
         "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2", // e4 d5
         "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2", // e4 c5
@@ -154,62 +153,80 @@ namespace test
         "rnbqkbnr/pp2pppp/2p5/3p4/2PP4/8/PP2PPPP/RNBQKBNR w KQkq - 0 3",
     };
 
+    GamePlayLogger::GamePlayLogger(std::string filename)
+    {
+        m_opening_index = 0;
+        m_filename = filename;
+        m_file.open(m_filename);
+    }
 
-    TestGamePlay::GameData TestGamePlay::data[TestGamePlay::n_games] = {};
+    GamePlayLogger::~GamePlayLogger()
+    {
+        m_file.close();
+    }
 
-    void TestGamePlay::run()
+    std::string GamePlayLogger::log(GamePlayData &data, chess::GameHistory* gh)
+    {
+        PGNFields fields;
+        fields.Event = "CEngine";
+        fields.Site = "CEngine";
+        fields.Black = "Version 1.0";
+        fields.White = "Version 1.0";
+        fields.FEN = data.start_pos;
+        fields.Result.status = data.result;
+        fields.Result.colorWin = data.colorWin;
+        std::string pgn = PGN::pgn(gh, fields);
+
+        m_file << pgn << "\n";
+        return pgn;
+    }
+
+    void GamePlayLogger::run(Manager* manager)
     {
         using namespace std::chrono;
-        ManagerImpl::init();
-        
-        for (int i = 0; i < n_games; i++){
-            
-            high_resolution_clock::time_point t1 = high_resolution_clock::now();
-            Board b;
-            b.loadFen(openings[i % (sizeof(openings) / sizeof(openings[0]))].c_str());
-            ManagerImpl m(&b);
-            m.generateMoves();
+        const char* opening = openings[m_opening_index];
+        m_opening_index = (m_opening_index + 1) % (sizeof(openings) / sizeof(openings[0]));
 
-            // Simulate game
-            GameStatus status = GameStatus::ONGOING;
-            while(status == ONGOING){
-                auto& result = m.search();
-                status = m.getStatus();
-                m.make(result.move);
-                m.generateMoves();
+        GamePlayData data;
+        data.start = high_resolution_clock::now();
+        data.start_pos = opening;
+        data.end_pos = "";
+        data.result = GameStatus::ONGOING;
+        data.time = 0;
+        data.moves = 0;
+        data.colorWin = 0;
+
+        m_data.push_back(data);
+        manager->loadFen(opening);
+        manager->reset();
+
+        SearchParams params;
+        params.movetime = 100;
+        manager->impl()->setSearchParams(params);
+        manager->asyncSearch();
+    }
+
+    void GamePlayLogger::check(Manager* manager)
+    {
+        auto status = manager->getStatus();
+        if (status != ONGOING)
+        {
+            using namespace std::chrono;
+            auto data = m_data.back();
+            data.end_pos = manager->board()->getFen();
+            data.result = status;
+            data.time = duration_cast<seconds>(high_resolution_clock::now() - data.start).count();
+            data.moves = manager->board()->fullmoveCounter();
+            data.colorWin = manager->board()->getSide() ^ Piece::colorMask;
+            m_data.back() = data;
+
+            std::cout << GamePlayLogger::log(m_data.back(), &manager->impl()->history);
+            run(manager);
+        } else {
+            if (!manager->searchRunning()){
+                manager->makeEngineMove();
+                manager->asyncSearch();
             }
-            
-            // Save game data
-            data[i] = {
-                openings[i % (sizeof(openings) / sizeof(openings[0]))],
-                b.getFen(),
-                m.getStatus(),
-                duration_cast<seconds>(high_resolution_clock::now() - t1).count(),
-                b.fullmoveCounter(),
-                status == CHECKMATE ? b.getSide() == Piece::White ? -1 : 1 : 0
-            };
-
-            // Print game data
-            std::cout << "\nGame " << i + 1 << "\n";
-            print(data[i]);
-        }
-    }
-
-    void TestGamePlay::print(GameData &data)
-    {
-        std::cout << "Start: " << data.start_pos << "\n";
-        std::cout << "End: " << data.end_pos << "\n";
-        std::cout << "Result: " << data.result << "\n";
-        std::cout << "Time: " << data.time << "\n";
-        std::cout << "Moves: " << data.moves << "\n";
-        std::cout << "Color win: " << data.colorWin << "\n";
-    }
-
-    void TestGamePlay::printResults()
-    {
-        for (int i = 0; i < n_games; i++){
-            std::cout << "\nGame " << i + 1 << "\n";
-            print(data[i]);
         }
     }
 }

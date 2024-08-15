@@ -4,6 +4,9 @@
 #include <bitset>
 #include <string>
 #include <chrono>
+#include <vector>
+#include <set>
+#include <queue>
 #include "settings.h"
 
 /**

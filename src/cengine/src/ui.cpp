@@ -520,8 +520,7 @@ namespace ui
     {
         m_state = state;
         m_manager = manager;
-        *state->board = *m_manager->board();
-        state->current_color = Piece::White;
+
         m_rect.setFillColor(sf::Color(42, 42, 42, 192));
         m_boardWindow = BoardWindow(font, texture, manager, {250, 0}, {1000, 1000}, state);
         m_inputHandler.onPromotion([this](int index, BoardWindowState* state, sf::RenderWindow* window, sf::Event& event){
@@ -849,6 +848,52 @@ namespace ui
         }
     }
 
+    EngineTesterWindow::EngineTesterWindow(
+        sf::Font& font, sf::Texture& texture,
+        sf::Vector2f pos, sf::Vector2f size,
+        Manager* manager, BoardWindowState* state
+    ): ChessScreen(font, texture, pos, size, manager, state), m_logger("gameplay.txt")
+    {
+        m_evalBar = EvalBar(font, {200, 0}, {50, 1000});
+        m_moveList = MoveList(font, {0, 0}, {200, 1000});
+
+        m_logger.run(manager);
+    }
+
+    EngineTesterWindow& EngineTesterWindow::operator=(EngineTesterWindow&& other)
+    {
+        ChessScreen::operator=(std::move(other));
+        return *this;
+    }
+
+    void EngineTesterWindow::runOffLoop()
+    {
+        if (m_clock.getElapsedTime().asMilliseconds() > 5){
+            m_logger.check(manager);
+            *state.board = *m_manager->board(); // update the board in UI
+            m_clock.restart();
+        }
+
+        // Try to read the engine output
+        auto& results = m_manager->getSearchResult();
+        std::unique_lock<std::mutex> lock(results.mutex, std::try_to_lock);
+        if (lock.owns_lock()){
+            m_evalBar.setEval(results.score);
+            std::vector<std::string> moves;
+            for (auto& move : results.pv){
+                moves.push_back(Piece::notation(move.getFrom(), move.getTo()));
+            }
+            m_moveList.setMoves(moves);
+        }
+    }
+
+    void EngineTesterWindow::draw(sf::RenderTarget& target, sf::RenderStates states) const
+    {
+        ChessScreen::draw(target, states);
+        m_evalBar.draw(target, states);
+        m_moveList.draw(target, states);
+    }
+
     ScreenBase* getScreen(BoardScreenState state){
         switch(state){
             case BoardScreenState::MAIN_MENU:
@@ -859,6 +904,8 @@ namespace ui
                 return new PlayerVsEngineWindow(font, pieces_texture, {0, 0}, {1500, 1000}, manager, &::state);
             case BoardScreenState::PLAYER_VS_PLAYER:
                 return new PlayerVsPlayerWindow(font, pieces_texture, {0, 0}, {1500, 1000}, manager, &::state);
+            case BoardScreenState::TEST_ENGINE:
+                return new EngineTesterWindow(font, pieces_texture, {0, 0}, {1500, 1000}, manager, &::state);
             default:
                 return new MainMenuWindow(font, pieces_texture, {0, 0}, {1500, 1000});
         }
@@ -876,12 +923,15 @@ namespace ui
         constexpr int FPS = 60, FRAME_US = 1000000 / FPS;
 
         // Init resources
-        uci::UCI backend;
+        Board copy(board);
+        Manager m(&board);
+        m.init();
+        m.generateMoves();
         state.current_color = board.getSide();
-        manager = backend.getManager();
-        manager->board()->loadFen(board.getFen().c_str());
-        manager->reload();
-        state.board = &board;
+        state.board = &copy;
+        manager = &m;
+
+        state.screen_state = BoardScreenState::TEST_ENGINE;
 
         if(!pieces_texture.loadFromFile(global_settings.base_path / "img/ChessPiecesArray.png")){
             return;
@@ -892,7 +942,7 @@ namespace ui
 
         // Print the quick guide
         std::cout << "Quick guide:\n";
-        std::cout << "- To quit the window, press Esc\n";
+        std::cout << "- Tso quit the window, press Ec\n";
         std::cout << "In analysis mode:\n";
         std::cout << "- To reset the board to initial position press 'R'\n";
         std::cout << "- To undo a move press 'Z'\n";
@@ -901,11 +951,8 @@ namespace ui
         std::cout << "- Press 'O' to rotate the board\n";
         std::cout << "That's it!\n";
 
-
         Clock timer;
         RenderWindow window = sf::RenderWindow(sf::VideoMode(1500, 1000), "CEngine");
-        BoardWindow board_window(font, pieces_texture, manager, {250, 0}, {1000, 1000}, &state);
-        board_window.setBoardState(&state);
 
         while(window.isOpen()){
             std::unique_ptr<ScreenBase> screen(getScreen(state.screen_state));
@@ -913,7 +960,7 @@ namespace ui
                 screen->runOffLoop();
                 Event event;
                 while(window.pollEvent(event)){
-                    if (event.type == Event::Closed){
+                    if (event.type == Event::Closed || (event.type == Event::KeyPressed && event.key.code == Keyboard::Escape)){
                         window.close();
                         break;
                     }

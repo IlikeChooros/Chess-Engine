@@ -67,11 +67,9 @@ namespace chess
 
 
     // Helper bitboards
-    uint64_t Board::in_between[64][64] = {0};
-    uint64_t Board::pawnAttacks[2][64] = {0};
-    uint64_t Board::knightAttacks[64]  = {0};
-    uint64_t Board::kingAttacks[64]    = {0};
-    uint64_t Board::queenAttacks[64]   = {0};
+    uint64_t Board::in_between[64][64]  = {0};
+    uint64_t Board::pawnAttacks[2][64]  = {0};
+    uint64_t Board::pieceAttacks[6][64] = {0};
 
 
     const char Board::startFen[57] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -86,6 +84,7 @@ namespace chess
         m_castling_rights = CastlingRights::ALL;
         m_captured_piece = Piece::Empty;
         m_irreversible_index = 0;
+        m_in_check = false;
     }
 
     Board::Board(const Board& other)
@@ -175,7 +174,7 @@ namespace chess
      * 
      * @param fen The fen string to load
      */
-    void Board::loadFen(const char* fen){
+    void Board::loadFen(std::string fen){
         board = std::make_unique<int[]>(64);
 
         std::stringstream ss(fen);

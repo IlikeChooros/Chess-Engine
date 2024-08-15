@@ -26,6 +26,7 @@ namespace chess
     class ManagerImpl
     {
     public:
+        static SearchCache search_cache;
 
         ManagerImpl(Board* board = nullptr);
         ManagerImpl(const ManagerImpl& other) = delete;
@@ -104,7 +105,8 @@ namespace chess
          * @brief Check if the search is running
          */
         inline bool searchRunning() noexcept {          
-            return search_thread.joinable() && !search_params.shouldStop();
+            std::unique_lock<std::mutex> l(search_params.mutex);
+            return search_params.is_running;
         }
 
         /**
@@ -158,6 +160,7 @@ namespace chess
         inline void unmake() noexcept { 
             std::lock_guard<std::mutex> l(mutex); 
             ::unmake(curr_move, board, &history); 
+            curr_move = history.back().move;
         }
 
         /**
@@ -169,9 +172,8 @@ namespace chess
 
         std::mutex mutex;
         std::thread search_thread;
-        SearchParams search_params;
         SearchResult search_result;
-        SearchCache search_cache;
+        SearchParams search_params;
         CacheMoveGen cache;
         GameHistory history;
         MoveList move_list;

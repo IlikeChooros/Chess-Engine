@@ -4,6 +4,7 @@
 namespace chess{
 
     // C'tor
+    SearchCache ManagerImpl::search_cache = SearchCache();
 
     ManagerImpl::ManagerImpl(Board* board)
     {

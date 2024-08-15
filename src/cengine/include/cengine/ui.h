@@ -259,4 +259,23 @@ namespace ui
         std::list<std::string> m_fens;
         sf::Clock m_clock;
     };
+
+
+    class EngineTesterWindow: public ChessScreen
+    {
+    public:
+        EngineTesterWindow() = default;
+        EngineTesterWindow(
+                sf::Font& font, sf::Texture& texture, sf::Vector2f pos, sf::Vector2f size, 
+                chess::Manager* manager, BoardWindowState* state);
+        EngineTesterWindow& operator=(EngineTesterWindow&& other);
+
+        void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
+        void runOffLoop() override;
+    private:
+        EvalBar m_evalBar;
+        MoveList m_moveList;
+        sf::Clock m_clock;
+        test::GamePlayLogger m_logger;
+    };
 } // namespace ui

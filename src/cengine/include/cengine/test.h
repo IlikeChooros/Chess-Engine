@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "manager.h"
+#include "pgn.h"
 
 namespace test
 {
@@ -50,25 +51,37 @@ namespace test
         TestPerftStockfish(Board* b) : m_board(b) {}
         void run(int depth = 6, std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", std::string stockfish_result = "");
     };
-
-    class TestGamePlay
+    
+    struct GamePlayData
     {
+        std::string start_pos;
+        std::string end_pos;
+        GameStatus result;
+        std::chrono::high_resolution_clock::time_point start;
+        int64_t time;
+        int moves;
+        int colorWin;
+    };
+
+    class GamePlayLogger
+    {
+        std::string m_filename;
+        std::ofstream m_file;
+        std::vector<GamePlayData> m_data;
+        chess::GameHistory* m_gh;
+        int m_opening_index;
+
+        std::string log(GamePlayData &data, chess::GameHistory* gh);
     public:
-        typedef struct{
-            std::string start_pos;
-            std::string end_pos;
-            GameStatus result;
-            int64_t time;
-            int moves;
-            int colorWin;
-        } GameData;
+        static const char* openings[];
 
-        static constexpr int n_games = 5;
+        GamePlayLogger(
+            std::string filename = "gameplay.txt"
+        );
 
-        static void run();
-        static void print(GameData &data);
-        static void printResults();
+        ~GamePlayLogger();
 
-        static GameData data[n_games];
+        void run(Manager* manager);
+        void check(Manager* manager);
     };
 }
