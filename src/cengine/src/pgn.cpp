@@ -30,8 +30,8 @@ std::string PGN::get_move_notation(chess::Manager* m, chess::GameHistory *gh, Mo
                 if (m.getFrom() == move.getFrom())
                     continue;
 
-                sameFile |= (m.getFrom() % 8) == (move.getFrom() % 8);
-                sameRank |= (m.getFrom() / 8) == (move.getFrom() / 8);
+                sameFile |= (m.getFrom() / 8) == (move.getFrom() / 8);
+                sameRank |= (m.getFrom() % 8) == (move.getFrom() % 8);
             }
 
             if (sameFile)
