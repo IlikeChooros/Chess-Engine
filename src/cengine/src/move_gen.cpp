@@ -169,19 +169,29 @@ uint64_t mailboxPawnMoves(uint64_t occupied, int square, bool is_white)
 /**
  * @brief Get the rook attacks for a given square, attacks are both squares attacked and pieces
  */
-inline uint64_t rookAttacks(uint64_t occupied, int rook)
+inline uint64_t rookAttacks(uint64_t occupied, int sq)
 {
-    auto& rookMagics = MagicBitboards::rookMagics[rook];
-    return MagicBitboards::rookAttacks[rook][((occupied & rookMagics.mask) * rookMagics.magic) >> rookMagics.shift];
+    auto& rookMagics = MagicBitboards::rookMagics[sq];
+    return MagicBitboards::rookAttacks[sq][((occupied & rookMagics.mask) * rookMagics.magic) >> rookMagics.shift];
 }
 
 /**
  * @brief Get the bishop attacks for a given square
  */
-inline uint64_t bishopAttacks(uint64_t occupied, int bishop)
+inline uint64_t bishopAttacks(uint64_t occupied, int sq)
 {
-    auto& bishopMagics = MagicBitboards::bishopMagics[bishop];
-    return MagicBitboards::bishopAttacks[bishop][((occupied & bishopMagics.mask) * bishopMagics.magic) >> bishopMagics.shift];
+    auto& bishopMagics = MagicBitboards::bishopMagics[sq];
+    return MagicBitboards::bishopAttacks[sq][((occupied & bishopMagics.mask) * bishopMagics.magic) >> bishopMagics.shift];
+}
+
+inline uint64_t queenAttacks(uint64_t occupied, int sq)
+{
+    return rookAttacks(occupied, sq) | bishopAttacks(occupied, sq);
+}
+
+inline uint64_t knightAttacks(uint64_t occupied, int sq)
+{
+    return chess::Board::pieceAttacks[chess::Board::KNIGHT_TYPE][sq];
 }
 
 /**
@@ -216,7 +226,7 @@ void make(Move& move, chess::Board* board, chess::GameHistory* ghistory)
 {
     using namespace chess;
 
-    int* iboard = board->board.get();
+    int* iboard = board->board;
     int to = move.getTo();
     int from = move.getFrom();
     bool is_white = Piece::isWhite(iboard[from]);
@@ -236,7 +246,7 @@ void make(Move& move, chess::Board* board, chess::GameHistory* ghistory)
     board->capturedPiece() = Piece::Empty; // Set as empty, it may change if the move is a capture
     // If that's a capture, remove the captured piece
     if (move.isCapture()){
-        board->m_irreversible_index = ghistory->ply();
+        board->irreversibleIndex() = ghistory->ply();
         board->m_halfmove_clock = 0;
         int offset = 0;
 
@@ -256,7 +266,7 @@ void make(Move& move, chess::Board* board, chess::GameHistory* ghistory)
     // If the move is a castle, move the rook
     if(move.isCastle()){
         bool is_king_castle = move.isKingCastle();
-        board->m_irreversible_index = ghistory->ply();
+        board->irreversibleIndex() = ghistory->ply();
 
         const int castling_pos[2][2] = {
             {0, 56}, // queen castle 
@@ -286,7 +296,7 @@ void make(Move& move, chess::Board* board, chess::GameHistory* ghistory)
     if (move.isDoubleMove()){
         const int dir[2] = {-8, 8};
         board->enpassantTarget() = to + dir[is_white];
-        board->m_irreversible_index = ghistory->ply();
+        board->irreversibleIndex() = ghistory->ply();
     }
 
     // If that's a promotion, update the piece
@@ -295,7 +305,7 @@ void make(Move& move, chess::Board* board, chess::GameHistory* ghistory)
         iboard[from] = promotion_piece[move.getPromotionPiece()] | (board->getSide()); // set the piece with the correct color
         board->bitboards(is_white)[Piece::Pawn - 1] ^= 1ULL << from; // remove the pawn
         board->bitboards(is_white)[Piece::getType(iboard[from]) - 1] |= 1ULL << from; // add the promoted piece (not moved yet)
-        board->m_irreversible_index = ghistory->ply();
+        board->irreversibleIndex() = ghistory->ply();
     }
 
     // Update castling rights & king position
@@ -401,19 +411,6 @@ void unmake(Move move, chess::Board* board, chess::GameHistory* ghistory)
     board->capturedPiece() = history.captured_piece;
 }
 
-// Generate all possible captures, not optimized yet, 
-// internally uses gen_legal_moves and filters the captures
-void gen_captures(MoveList* ml, chess::Board* board, chess::CacheMoveGen* cache)
-{
-    MoveList all;
-    void(::gen_legal_moves(&all, board, cache));
-    for(size_t i = 0; i < all.size(); i++){
-        if(all[i].isCapture()){
-            ml->add(all.moves[i]);
-        }
-    }
-}
-
 /**
  * @brief Get the pinner for a given square
  */
@@ -431,10 +428,84 @@ inline int get_pinner(uint64_t pinners, int sq, int king)
     return pinner_sq;
 }
 
+typedef uint64_t(*attacks_func_t)(uint64_t, int);
+
+/**
+ * @brief Generate sliding moves for a given piece type when king isn't in check
+ */
+void _gen_sliding_moves_no_check(
+    MoveList* moves, chess::Board* board, chess::CacheMoveGen* cache, 
+    uint64_t occupied, uint64_t enemy_king, uint64_t enemy_pieces, 
+    uint64_t pinned, uint64_t pinners, int king, bool is_white,
+    attacks_func_t attackFunc, int piece_type
+)
+{
+    uint64_t bitboard = board->bitboards(is_white)[piece_type];
+    uint64_t bmoves, captures;
+    while(bitboard){
+        int sq = pop_lsb1(bitboard);
+        bmoves = attackFunc(occupied, sq);
+        captures = bmoves & enemy_pieces; 
+        bmoves &= ~occupied;
+
+        // If the piece is pinned, restrict the moves
+        if (pinned & (1ULL << sq)){
+            // Get the pinning piece
+            int pinner_sq = get_pinner(pinners, sq, king);
+            bmoves &= chess::Board::in_between[pinner_sq][king];
+            captures &= (1ULL << pinner_sq);
+        }
+
+        while(bmoves) moves->add(Move(sq, pop_lsb1(bmoves), Move::FLAG_NONE).move());
+        while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
+    }
+}
+
+/**
+ * @brief Generate moves for pieces (without pawn & king), when king is in check
+ */
+void _gen_pieces_moves_in_check(
+    MoveList* moves, chess::Board* board, chess::CacheMoveGen* cache, 
+    uint64_t occupied, uint64_t attackers, uint64_t not_pinned, 
+    uint64_t block_path, uint64_t enemy_king, int attackers_sq, bool is_white,
+    attacks_func_t attackFunc, int piece_type
+)
+{
+    uint64_t block_moves;
+    uint64_t bitboard = board->bitboards(is_white)[piece_type] & not_pinned;
+    while(bitboard){
+        int sq = pop_lsb1(bitboard);
+        block_moves = attackFunc(occupied, sq);
+        cache->attacks_from[sq] = block_moves;
+        uint64_t captures = block_moves & attackers;
+        block_moves &= ~occupied & block_path;
+        // If that's a capture, add the move
+        if (captures){
+            moves->add(Move(sq, attackers_sq, Move::FLAG_CAPTURE).move());
+        }
+
+        while(block_moves){
+            moves->add(Move(sq, pop_lsb1(block_moves), Move::FLAG_NONE).move());
+        }
+    }
+}
+
+
+// Generate all possible captures, not optimized yet, 
+// internally uses gen_legal_moves and filters the captures
+void gen_captures(MoveList* ml, chess::Board* board, chess::CacheMoveGen* cache)
+{
+    MoveList all;
+    void(::gen_legal_moves(&all, board, cache));
+    for(size_t i = 0; i < all.size(); i++){
+        if(all[i].isCapture()){
+            ml->add(all.moves[i]);
+        }
+    }
+}
+
 // Generate all possible moves for the current board state, board should be initialized,
 // Perfmormance: ~ 11M NPS on perft(6) (AMD Ryzer 9 6900HX) + GCC 11.4.0
-// How to improve:
-// - use magic bitboards for sliding pieces
 size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen* cache)
 {
     using namespace chess;
@@ -450,6 +521,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
     uint64_t occupied_noking = occupied ^ board->bitboards(is_white)[Piece::King - 1];
     uint64_t enemy_pieces = board->occupied(!is_white);
     uint64_t allied_pieces = occupied ^ enemy_pieces;
+    uint64_t enemy_king = board->bitboards(is_enemy)[Piece::King - 1];
     int king = bitScanForward(board->bitboards(is_white)[Piece::King - 1]);
     moves->clear();
 
@@ -482,8 +554,8 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
     bitboard = board->bitboards(is_enemy)[Piece::Knight - 1];
     while (bitboard) {
         int sq = pop_lsb1(bitboard);
-        danger |= Board::Board::pieceAttacks[Board::KNIGHT_TYPE][sq];
-        cache->attacks_from[sq] = Board::Board::pieceAttacks[Board::KNIGHT_TYPE][sq];
+        danger |= Board::pieceAttacks[Board::KNIGHT_TYPE][sq];
+        cache->attacks_from[sq] = Board::pieceAttacks[Board::KNIGHT_TYPE][sq];
     }
     
 
@@ -533,7 +605,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
         uint64_t attackers = 0;
         attackers |= bishopAttacks(occupied, king) & board->oppBishopsQueens(is_white);
         attackers |= rookAttacks(occupied, king) & board->oppRooksQueens(is_white);
-        attackers |= Board::Board::pieceAttacks[Board::KNIGHT_TYPE][king] & board->bitboards(is_enemy)[Piece::Knight - 1];
+        attackers |= Board::pieceAttacks[Board::KNIGHT_TYPE][king] & board->bitboards(is_enemy)[Piece::Knight - 1];
         attackers |= Board::pawnAttacks[is_white][king] & board->bitboards(is_enemy)[Piece::Pawn - 1];
 
         // If there are more than one attackers, the king is in double check, only king moves are allowed
@@ -558,83 +630,41 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
         // - King may only move to evade the check
         int attackers_sq = bitScanForward(attackers);
         uint64_t block_path = Board::in_between[attackers_sq][king]; // squares in-between the attacker
-        uint64_t block_moves = 0;
 
         // Generate moves for not pinned pieces
         uint64_t not_pinned = ~pinned & allied_pieces;
-        
+
         // Generate moves for bishops
-        bitboard = board->bitboards(is_white)[Piece::Bishop - 1] & not_pinned;
-        while(bitboard){
-            int sq = pop_lsb1(bitboard);
-            block_moves = bishopAttacks(occupied, sq);
-            cache->attacks_from[sq] = block_moves;
-            uint64_t captures = block_moves & attackers;
-            block_moves &= ~occupied & block_path;
-            // If that's a capture, add the move
-            if (captures){
-                moves->add(Move(sq, attackers_sq, Move::FLAG_CAPTURE).move());
-            }
-
-            while(block_moves){
-                moves->add(Move(sq, pop_lsb1(block_moves), Move::FLAG_NONE).move());
-            }
-        }
-
+        _gen_pieces_moves_in_check(
+            moves, board, cache, occupied,
+            attackers, not_pinned, block_path,
+            enemy_king, attackers_sq, is_white,
+            bishopAttacks, Piece::Bishop - 1
+        );
+        
         // Generate moves for rooks
-        bitboard = board->bitboards(is_white)[Piece::Rook - 1] & not_pinned;
-        while(bitboard){
-            int sq = pop_lsb1(bitboard);
-            block_moves = rookAttacks(occupied, sq);
-            cache->attacks_from[sq] = block_moves;
-            uint64_t captures = block_moves & attackers;
-            block_moves &= ~occupied & block_path;
-
-            // If that's a capture, add the move
-            if (captures){
-                moves->add(Move(sq, attackers_sq, Move::FLAG_CAPTURE).move());
-            }
-
-            while(block_moves){
-                moves->add(Move(sq, pop_lsb1(block_moves), Move::FLAG_NONE).move());
-            }
-        }
+        _gen_pieces_moves_in_check(
+            moves, board, cache, occupied,
+            attackers, not_pinned, block_path,
+            enemy_king, attackers_sq, is_white,
+            rookAttacks, Piece::Rook - 1
+        );
 
         // Generate moves for queens
-        bitboard = board->bitboards(is_white)[Piece::Queen - 1] & not_pinned;
-        while(bitboard){
-            int sq = pop_lsb1(bitboard);
-            block_moves = (rookAttacks(occupied, sq) | bishopAttacks(occupied, sq));
-            cache->attacks_from[sq] = block_moves;
-            uint64_t captures = block_moves & attackers;
-            block_moves &= ~occupied & block_path;
-            // If that's a capture, add the move
-            if (captures){
-                moves->add(Move(sq, attackers_sq, Move::FLAG_CAPTURE).move());
-            }
-
-            while(block_moves){
-                moves->add(Move(sq, pop_lsb1(block_moves), Move::FLAG_NONE).move());
-            }
-        }
+        _gen_pieces_moves_in_check(
+            moves, board, cache, occupied,
+            attackers, not_pinned, block_path, 
+            enemy_king, attackers_sq, is_white,
+            queenAttacks, Piece::Queen - 1
+        );
 
         // Generate moves for knights
-        bitboard = board->bitboards(is_white)[Piece::Knight - 1] & not_pinned;
-        while(bitboard){
-            int sq = pop_lsb1(bitboard);
-            block_moves = Board::Board::pieceAttacks[Board::KNIGHT_TYPE][sq];
-            cache->attacks_from[sq] = block_moves;
-            uint64_t captures = block_moves & attackers;
-            block_moves &= ~occupied & block_path;
-            // If that's a capture, add the move
-            if (captures){
-                moves->add(Move(sq, attackers_sq, Move::FLAG_CAPTURE).move());
-            }
-
-            while(block_moves){
-                moves->add(Move(sq, pop_lsb1(block_moves), Move::FLAG_NONE).move());
-            }
-        }
+        _gen_pieces_moves_in_check(
+            moves, board, cache, occupied,
+            attackers, not_pinned, block_path, 
+            enemy_king, attackers_sq, is_white,
+            knightAttacks, Piece::Knight - 1
+        );
 
         // Generate moves for pawns
         // Enpassant is possible when the king is in check (only if the attacker is a pawn)
@@ -717,65 +747,29 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
 
     uint64_t bmoves, captures;
 
-    // Generate moves for bishops
-    bitboard = board->bitboards(is_white)[Piece::Bishop - 1];
-    while(bitboard){
-        int sq = pop_lsb1(bitboard);
-        bmoves = bishopAttacks(occupied, sq);
-        captures = bmoves & enemy_pieces; 
-        bmoves &= ~occupied;
-
-        // If the piece is pinned, restrict the moves
-        if (pinned & (1ULL << sq)){
-            // Get the pinning piece
-            int pinner_sq = get_pinner(pinners, sq, king);
-            bmoves &= Board::in_between[pinner_sq][king];
-            captures &= (1ULL << pinner_sq);
-        }
-
-        while(bmoves) moves->add(Move(sq, pop_lsb1(bmoves), Move::FLAG_NONE).move());
-        while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
-    }
+    // Generate moves for bhisops
+    _gen_sliding_moves_no_check(
+        moves, board, cache, 
+        occupied, enemy_king, enemy_pieces,
+        pinned, pinners, king, is_white, 
+        bishopAttacks, Piece::Bishop - 1
+    );
 
     // Generate moves for rooks
-    bitboard = board->bitboards(is_white)[Piece::Rook - 1];
-    while(bitboard){
-        int sq = pop_lsb1(bitboard);
-        bmoves = rookAttacks(occupied, sq);
-        captures = bmoves & enemy_pieces;
-        bmoves &= ~occupied;
-
-        // If the piece is pinned, restrict the moves
-        if (pinned & (1ULL << sq)){
-            // Get the pinning piece
-            int pinner_sq = get_pinner(pinners, sq, king);
-            bmoves &= Board::in_between[pinner_sq][king];
-            captures &= (1ULL << pinner_sq);
-        }
-
-        while(bmoves) moves->add(Move(sq, pop_lsb1(bmoves), Move::FLAG_NONE).move());
-        while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
-    }
+    _gen_sliding_moves_no_check(
+        moves, board, cache, 
+        occupied, enemy_king, enemy_pieces,
+        pinned, pinners, king, is_white, 
+        rookAttacks, Piece::Rook - 1
+    );
 
     // Generate moves for queens
-    bitboard = board->bitboards(is_white)[Piece::Queen - 1];
-    while(bitboard){
-        int sq = pop_lsb1(bitboard);
-        bmoves = (rookAttacks(occupied, sq) | bishopAttacks(occupied, sq));
-        captures = bmoves & enemy_pieces;
-        bmoves &= ~occupied;
-
-        // If the piece is pinned, restrict the moves
-        if (pinned & (1ULL << sq)){
-            // Get the pinning piece
-            int pinner_sq = get_pinner(pinners, sq, king);
-            bmoves &= Board::in_between[pinner_sq][king];
-            captures &= (1ULL << pinner_sq);
-        }
-
-        while(bmoves) moves->add(Move(sq, pop_lsb1(bmoves), Move::FLAG_NONE).move());
-        while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
-    }
+    _gen_sliding_moves_no_check(
+        moves, board, cache, 
+        occupied, enemy_king, enemy_pieces,
+        pinned, pinners, king, is_white, 
+        queenAttacks, Piece::Queen - 1
+    );
 
     // Generate moves for knights
     bitboard = board->bitboards(is_white)[Piece::Knight - 1];

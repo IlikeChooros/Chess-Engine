@@ -3,8 +3,7 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 
-#include "manager.h"
-#include "utils.h"
+#include <cengine/cengine.h>
 
 enum class BoardScreenState
 {

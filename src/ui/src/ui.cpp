@@ -1,4 +1,4 @@
-#include <cengine/ui.h>
+#include <ui/ui.h>
 
 static sf::Texture pieces_texture;
 static sf::Font font;
@@ -281,7 +281,7 @@ namespace ui
                     state->move_flags = i | (vflags[0] & (Move::FLAG_CAPTURE | Move::FLAG_PROMOTION));
                     state->state = InputState::None;
                     state->current_color ^= Piece::colorMask;
-                    m_manager->movePiece(state->from, state->to, state->move_flags);
+                    m_manager->makeMove(state->from, state->to, state->move_flags);
                     *state->board = *m_manager->board();
                 }
             }
@@ -738,7 +738,7 @@ namespace ui
         m_reload = true;
 
         m_inputHandler.onPieceMove([this](int index, BoardWindowState* state, sf::RenderWindow* window, sf::Event& event){
-            if (m_manager->movePiece(state->from, state->to, state->move_flags)){
+            if (m_manager->makeMove(state->from, state->to, state->move_flags)){
                 m_reload = true;
                 state->state = InputState::None;
                 state->current_color ^= Piece::colorMask;
@@ -852,7 +852,7 @@ namespace ui
         sf::Font& font, sf::Texture& texture,
         sf::Vector2f pos, sf::Vector2f size,
         Manager* manager, BoardWindowState* state
-    ): ChessScreen(font, texture, pos, size, manager, state), m_logger("gameplay.txt")
+    ): ChessScreen(font, texture, pos, size, manager, state)
     {
         m_evalBar = EvalBar(font, {200, 0}, {50, 1000});
         m_moveList = MoveList(font, {0, 0}, {200, 1000});

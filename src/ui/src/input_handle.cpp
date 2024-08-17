@@ -1,4 +1,4 @@
-#include <cengine/input_handle.h>
+#include <ui/input_handle.h>
 
 using namespace chess;
 using namespace sf;
@@ -19,7 +19,7 @@ InputHandler::InputHandler(Manager* manager, BoardWindowState* state)
         }
     };
     m_on_piece_move = [this](int index, BoardWindowState* state, sf::RenderWindow* window, sf::Event& event){
-        if (this->m_manager->movePiece(state->from, index, state->move_flags)){
+        if (this->m_manager->makeMove(state->from, index, state->move_flags)){
             state->current_color ^= Piece::colorMask;
             *state->board = *this->m_manager->board();
         }

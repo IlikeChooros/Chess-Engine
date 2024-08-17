@@ -157,7 +157,12 @@ namespace test
     {
         m_opening_index = 0;
         m_filename = filename;
-        m_file.open(m_filename);
+        m_file.open(m_filename, std::ios::app | std::ios::out);
+        m_openings_file.open((global_settings.base_path / "utils" / "openings.txt").string());
+
+        if (!m_openings_file.is_open()){
+            std::cerr << "Could not open openings file, using default openings\n";
+        }
     }
 
     GamePlayLogger::~GamePlayLogger()
@@ -184,8 +189,13 @@ namespace test
     void GamePlayLogger::run(Manager* manager)
     {
         using namespace std::chrono;
-        const char* opening = openings[m_opening_index];
-        m_opening_index = (m_opening_index + 1) % (sizeof(openings) / sizeof(openings[0]));
+        std::string opening;
+        if (m_openings_file.is_open()){
+            std::getline(m_openings_file, opening);
+        } else {
+            opening = openings[m_opening_index];
+            m_opening_index = (m_opening_index + 1) % (sizeof(openings) / sizeof(openings[0]));
+        }
 
         GamePlayData data;
         data.start = high_resolution_clock::now();
@@ -220,6 +230,7 @@ namespace test
             data.colorWin = manager->board()->getSide() ^ Piece::colorMask;
             m_data.back() = data;
 
+            std::cout << "\nGame #" << m_data.size() << '\n';
             std::cout << GamePlayLogger::log(m_data.back(), &manager->impl()->history);
             run(manager);
         } else {

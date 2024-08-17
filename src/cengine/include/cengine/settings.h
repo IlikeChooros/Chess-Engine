@@ -10,6 +10,8 @@ struct Settings {
     bool debug_performance;
     // Absolute path of the executable binary
     std::filesystem::path base_path;
+    // Version
+    std::string version;
 };
 
 // Make settings global

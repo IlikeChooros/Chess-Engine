@@ -17,7 +17,7 @@ namespace chess
     /**
      * @brief Load fen string, with 'moves' support
      */
-    void Manager::loadFen(const char* fen)
+    void Manager::loadFen(std::string fen)
     {
         std::istringstream iss(fen);
         std::string base_fen;
@@ -46,7 +46,7 @@ namespace chess
                 flag = vflags[0] & (Move::FLAG_PROMOTION | Move::FLAG_CAPTURE);
                 flag |= Move::getPromotionPiece(*section.end());
             }
-            if(!movePiece(from, to, flag)){
+            if(!makeMove(from, to, flag)){
                 break;
             }
         }
@@ -61,9 +61,9 @@ namespace chess
      * @param flags The flags for the move, default is 0
      * @return True if the move was successful, false otherwise
      */
-    bool Manager::movePiece(uint32_t from, uint32_t to, int flags)
+    bool Manager::makeMove(uint32_t from, uint32_t to, int flags)
     {
-        int* iboard = this->board()->board.get();
+        int* iboard = this->board()->getBoard();
         if(iboard[from] == Piece::Empty || from == to || Piece::getColor(iboard[from]) != this->board()->getSide())
             return false;
         
@@ -86,6 +86,37 @@ namespace chess
 
         std::cout << "Invalid move: " << Piece::notation(from, to) << std::endl;
         return false;
+    }
+
+    /**
+     * @brief Make a move from a string, using format: square_from (ex. e4) + square_to (ex. f6) + promotion_piece ('n', 'b', 'r', 'q')
+     * for example: e2e4, e7e8q
+     */
+    bool Manager::makeMove(std::string move)
+    {
+        if (move.size() < 4)
+            return false;
+        
+        int from = str_to_square(move.substr(0, 2));
+        int to = str_to_square(move.substr(2, 2));
+        int flags = -1;
+        auto vflags = getFlags(from, to);
+
+        if (from == -1 || to == -1 || vflags.empty())
+            return false;
+        
+        flags = vflags[0];
+        if (move.size() == 5){
+            int promotion = Move::getPromotionPiece(move[4]);
+
+            if (promotion == -1)
+                return false;
+            
+            flags &= (Move::FLAG_PROMOTION | Move::FLAG_CAPTURE);
+            flags |= promotion;
+        }
+
+        return makeMove(from, to, flags);
     }
 
     /**

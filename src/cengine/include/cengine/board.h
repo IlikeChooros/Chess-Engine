@@ -92,7 +92,7 @@ namespace chess{
         /**
          * @brief Get raw board data
          */
-        inline int* getBoard() {return this->board.get(); };
+        inline int* getBoard() {return this->board; };
 
         /**
          * @brief Get the bitboards for a given color
@@ -181,7 +181,7 @@ namespace chess{
         std::vector<int> findAll(int piece);
         
 
-        std::unique_ptr<int[]> board;
+        int board[64];
         bool m_in_check;
         int m_side;
         int m_enpassant_target;

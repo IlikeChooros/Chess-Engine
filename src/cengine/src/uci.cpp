@@ -45,7 +45,8 @@ namespace uci
         {"isready", "isready - Check if the engine is ready\n\n"},
         {"stop", "stop - Stop the search\n\n"},
         {"getfen", "getfen - Get the current FEN (unofficial)\n\n"},
-        {"help", "\nAvaible commands:\n"
+        {"help", 
+            "\nAvaible commands:\n"
             "uci\n"
             "ucinewgame\n"
             "isready\n"
@@ -204,6 +205,15 @@ namespace uci
         else if (command == "getfen"){
             output = manager->impl()->board->getFen() + "\n";
         }
+        else if (command == "bestmove"){
+            std::string move;
+            if (!(iss >> move)){
+                fail("(bestmove): Move not specified\n");
+            }
+            if (!manager->makeMove(move)){
+                fail("(bestmove): Invalid move: %s\n", move.c_str());
+            }
+        }
         else if (command == "help"){
             // Check if there is a command after help
             std::string help_command;
@@ -261,7 +271,7 @@ namespace uci
 
     void UCI::loop()
     {
-        std::cout << "CEngine UCI\n";
+        std::cout << "CEngine UCI ver " << global_settings.version << "\n";
         // Read from standard input commands
         while(1)
         {

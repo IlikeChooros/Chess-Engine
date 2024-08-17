@@ -1,14 +1,12 @@
 #pragma once
 
 #include <iostream>
-#include <SFML/Graphics.hpp>
 #include <filesystem>
 
-#include "manager.h"
-#include "input_handle.h"
-#include "threads.h"
-#include "uci.h"
+#include <SFML/Graphics.hpp>
+#include <cengine/cengine.h>
 
+#include "input_handle.h"
 
 namespace ui
 {

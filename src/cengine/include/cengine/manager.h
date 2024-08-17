@@ -16,8 +16,9 @@ namespace chess
         Manager(const Manager& other) = delete;
         Manager& operator=(Manager&& other);
         
-        void loadFen(const char* fen);
-        bool movePiece(uint32_t from, uint32_t to, int flags = -1);
+        void loadFen(std::string fen);
+        bool makeMove(uint32_t from, uint32_t to, int flags = -1);
+        bool makeMove(std::string move);
         std::list<PieceMoveInfo> getPieceMoves(uint32_t from);
         std::vector<uint32_t> getFlags(uint32_t from, uint32_t to);
         bool isPromotion(uint32_t from, uint32_t to);

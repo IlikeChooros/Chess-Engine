@@ -20,7 +20,7 @@ TEST(PGN, get_move_notation)
     manager.init();
     manager.generateMoves();
 
-    manager.movePiece(str_to_square("e1"), str_to_square("c2"));
+    manager.makeMove(str_to_square("e1"), str_to_square("c2"));
     GameHistory gh = manager.impl()->history;
     manager.unmake();
     manager.generateMoves();

@@ -62,16 +62,16 @@ class ManagerTest : public ::testing::Test
     // Move a piece from one square to another
     void move(std::string from, std::string to)
     {
-        manager.movePiece(str_to_square(from), str_to_square(to));
+        manager.makeMove(str_to_square(from), str_to_square(to));
     }
 };
 
 
 // Manager tests
 
-TEST_F(ManagerTest, movePiece)
+TEST_F(ManagerTest, makeMove)
 {
-    manager.movePiece(str_to_square("e2"), str_to_square("e4"));
+    manager.makeMove(str_to_square("e2"), str_to_square("e4"));
 
     EXPECT_EQ(board[str_to_square("e4")], Piece::createPiece(Piece::Pawn, Piece::White));
     EXPECT_EQ(board[str_to_square("e2")], 0);
@@ -114,11 +114,11 @@ TEST_F(ManagerTest, checkCastlingRightsAfterMove)
 {
     loadFen("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
 
-    manager.movePiece(str_to_square("e1"), str_to_square("e2"));
-    manager.movePiece(str_to_square("e8"), str_to_square("e7"));
+    manager.makeMove(str_to_square("e1"), str_to_square("e2"));
+    manager.makeMove(str_to_square("e8"), str_to_square("e7"));
 
-    manager.movePiece(str_to_square("e2"), str_to_square("e1"));
-    manager.movePiece(str_to_square("e7"), str_to_square("e8"));
+    manager.makeMove(str_to_square("e2"), str_to_square("e1"));
+    manager.makeMove(str_to_square("e7"), str_to_square("e8"));
 
     manager.generateMoves();
 
@@ -126,7 +126,7 @@ TEST_F(ManagerTest, checkCastlingRightsAfterMove)
     containsMove("e1", "g1", false);
     containsMove("e1", "c1", false);
 
-    manager.movePiece(str_to_square("e1"), str_to_square("e2"));
+    manager.makeMove(str_to_square("e1"), str_to_square("e2"));
 
     containsMove("e8", "g8", false);
     containsMove("e8", "c8", false);

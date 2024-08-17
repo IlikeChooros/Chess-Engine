@@ -241,22 +241,13 @@ namespace chess
             depth++;
             time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count();
 
-            // Print the best move and the principal variation
-            glogger.print("* info");
-            glogger.printStats(best_move, depth, eval * whotomove, params->nodes_searched, time_taken);
-            glogger.printBoardInfo(board);
-            glogger.printTTableInfo(&sc->getTT());
-            glogger.printGameHistory(gh);
-            auto pv = getPV(board, sc, gh, best_move);
-            glogger.printPV(&pv);
-            glogger.print("\n");
-
             std::unique_lock<std::mutex> lock(result->mutex);
             if (lock.owns_lock()){
                 result->move = best_move;
                 result->score = eval * whotomove;
                 result->time = time_taken;
                 result->depth = depth;
+                auto pv = getPV(board, sc, gh, best_move);
                 result->pv = std::list<Move>(pv.begin(), pv.end());
                 lock.unlock();
             }            
@@ -277,7 +268,6 @@ namespace chess
             Piece::notation(best_move.getFrom(), best_move.getTo()).c_str(),
             float(eval * whotomove) / 100.0f
         );
-
         auto pv = getPV(board, sc, gh, best_move);
         glogger.printPV(&pv);
         glogger.printStats(best_move, depth, eval * whotomove, params->nodes_searched, time_taken);

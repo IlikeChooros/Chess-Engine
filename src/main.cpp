@@ -1,4 +1,5 @@
 #include <cengine/cengine.h>
+#include <ui/ui.h>
 
 int main(int argc, char** argv)
 {

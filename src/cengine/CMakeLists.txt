@@ -3,7 +3,6 @@ add_library(cengine)
 target_sources(cengine
     PRIVATE
         src/board.cpp
-        src/input_handle.cpp
         src/manager.cpp
         src/manager_impl.cpp
         src/test.cpp
@@ -14,7 +13,6 @@ target_sources(cengine
         src/threads.cpp
         src/move_ordering.cpp
         src/magic_bitboards.cpp
-        src/ui.cpp
         src/uci.cpp
         src/log.cpp
         src/pgn.cpp

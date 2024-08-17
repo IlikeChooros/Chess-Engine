@@ -52,7 +52,7 @@ std::string PGN::get_move_notation(chess::Manager* m, chess::GameHistory *gh, Mo
         notation += "x";
     }
     
-    m->movePiece(move.getFrom(), move.getTo(), move.getFlags());
+    m->makeMove(move.getFrom(), move.getTo(), move.getFlags());
 
     // Check if the move is a check
     auto status = m->getStatus();
@@ -84,7 +84,7 @@ std::string PGN::pgn(chess::GameHistory* gh, PGNFields& fields)
 {
     std::string pgn = "";
 
-    pgn += "[Event \"" + fields.Event + "\"]\n";
+    pgn += "\n[Event \"" + fields.Event + "\"]\n";
     pgn += "[Site \"" + fields.Site + "\"]\n";
     time_t t = std::chrono::system_clock::to_time_t(fields.Date);
     char date[80];
@@ -93,7 +93,7 @@ std::string PGN::pgn(chess::GameHistory* gh, PGNFields& fields)
     pgn += "[Round \"" + std::to_string(fields.Round) + "\"]\n";
     pgn += "[White \"" + fields.White + "\"]\n";
     pgn += "[Black \"" + fields.Black + "\"]\n";
-    pgn += "[Result \"" + pgn_game_status(fields.Result.status, fields.Result.colorWin) + "\"]\n";
+    pgn += "[Result \"" + pgn_game_status(fields.Result.status, fields.Result.colorWin == chess::Piece::White) + "\"]\n";
 
     if (fields.FEN != ""){
         pgn += "[FEN \"" + fields.FEN + "\"]\n";

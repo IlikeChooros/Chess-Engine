@@ -88,9 +88,8 @@ namespace chess
 
         int repetitions(Board* b, uint64_t hash)
         {
-            int start = b->irreversibleIndex();
             int count = 0;
-            for (size_t i = start; i < history.size(); i++){
+            for (size_t i = b->irreversibleIndex(); i < history.size(); i++){
                 if (history[i].hash == hash)
                     count++;
             }

@@ -76,7 +76,6 @@ namespace chess
 
     Board::Board()
     {
-        board = std::make_unique<int[]>(64);
         m_side = Piece::White;
         m_halfmove_clock = 0;
         m_fullmove_counter = 1;  
@@ -102,7 +101,6 @@ namespace chess
         m_captured_piece = other.m_captured_piece;
         m_irreversible_index = other.m_irreversible_index;
 
-        board = std::make_unique<int[]>(64);
         for (int i = 0; i < 64; i++){
             board[i] = other.board[i];
         }
@@ -175,7 +173,6 @@ namespace chess
      * @param fen The fen string to load
      */
     void Board::loadFen(std::string fen){
-        board = std::make_unique<int[]>(64);
 
         std::stringstream ss(fen);
         

@@ -73,7 +73,7 @@ class Move
     /**
      * @brief Get the promotion piece, if the move is a promotion
      * @param c The character representing the piece
-     * @return 0 - Knight, 1 - Bishop, 2 - Rook, 3 - Queen (default)
+     * @return 0 - Knight, 1 - Bishop, 2 - Rook, 3 - Queen, -1 - Invalid
      */
     static int getPromotionPiece(char c) {
         switch(c){
@@ -86,7 +86,7 @@ class Move
             case 'q':
                 return 3;
             default:
-                return 3;
+                return -1;
         }
     };
 

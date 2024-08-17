@@ -67,6 +67,7 @@ namespace test
     {
         std::string m_filename;
         std::ofstream m_file;
+        std::ifstream m_openings_file;
         std::vector<GamePlayData> m_data;
         chess::GameHistory* m_gh;
         int m_opening_index;
@@ -76,7 +77,7 @@ namespace test
         static const char* openings[];
 
         GamePlayLogger(
-            std::string filename = "gameplay.txt"
+            std::string filename = "gameplay.pgn"
         );
 
         ~GamePlayLogger();
