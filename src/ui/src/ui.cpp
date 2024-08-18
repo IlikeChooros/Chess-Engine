@@ -144,15 +144,18 @@ namespace ui
             m_rect.getPosition().x - m_text.getLocalBounds().width - 15,
             m_rect.getPosition().y + m_rect.getSize().y / 2
         );
-
-        // Normalize the eval to a value between -1 and 1
-        float feval = float(eval) / 100.0f;
-        float eval_f = feval / (1.0f + std::abs(float(feval)));
-        float white_scale = (1.0f + eval_f) * 0.5f,
-              black_scale = (1.0f - eval_f) * 0.5f;
-
-        if (!cp){
-            white_scale = eval > 0 ? 0.0f : 1.0f;
+        
+        float white_scale, black_scale;
+        if (cp) {
+            // Normalize the eval to a value between -1 and 1
+            float feval = float(eval) / 100.0f;
+            float eval_f = feval / (1.0f + std::abs(float(feval)));
+            white_scale = (1.0f + eval_f) * 0.5f;
+            black_scale = 1.0f - white_scale;
+        }
+        else {
+            // Mate score, if eval is positive, white is winning
+            white_scale = eval > 0 ? 1.0f : 0.0f;
             black_scale = 1.0f - white_scale;
         }
 
@@ -842,11 +845,6 @@ namespace ui
             m_reload = false;
         }
 
-        if (m_clock.getElapsedTime().asSeconds() > 8){
-            m_clock.restart();
-            std::cout << "FEN: " << m_state->board->getFen() << "\n";
-        }
-
         // Try to read the engine output
         auto& results = m_manager->getSearchResult();
         std::unique_lock<std::mutex> lock(results.mutex, std::try_to_lock);
@@ -943,7 +941,7 @@ namespace ui
         state.board = &copy;
         manager = &m;
 
-        state.screen_state = BoardScreenState::TEST_ENGINE;
+        // state.screen_state = BoardScreenState::TEST_ENGINE;
 
         if(!pieces_texture.loadFromFile(global_settings.base_path / "img/ChessPiecesArray.png")){
             return;

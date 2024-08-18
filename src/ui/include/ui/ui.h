@@ -255,7 +255,6 @@ namespace ui
         EvalBar m_evalBar;
         MoveList m_moveList;
         std::list<std::string> m_fens;
-        sf::Clock m_clock;
     };
 
 
