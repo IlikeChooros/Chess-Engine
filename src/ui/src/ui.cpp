@@ -135,7 +135,9 @@ namespace ui
             std::snprintf(eval_s, 32, "%.02f", float(eval) / 100.0f);
             m_text.setString(eval_s);
         } else {
-            m_text.setString(eval > 0 ? "M" : "-M" + std::to_string(abs(eval)));
+            std::string eval_str = eval > 0 ? "M" : "-M";
+            eval_str += std::to_string(std::abs(eval));
+            m_text.setString(eval_str);
         }
         
         m_text.setPosition(

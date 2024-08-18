@@ -203,7 +203,6 @@ namespace chess
         result->status = get_status(board, gh, &ml, &cache);
 
         if (result->status != ONGOING){
-            std::cout << "info string Game over\n";
             params->setSearchRunning(false);
             return;
         }
@@ -245,8 +244,8 @@ namespace chess
             depth++;
             time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count();
             pv = getPV(board, sc, gh, best_move, depth);
-            
             score.value = best_eval * whotomove;
+
             // Update the score
             if (abs(best_eval) >= MATE_THRESHOLD){
                 int mate_in = abs(best_eval) - MATE_THRESHOLD;
