@@ -100,10 +100,6 @@ namespace chess
             return color ^ colorMask;
         }
 
-        static std::string notation(int from, int to){
-            return square_to_str(from) + square_to_str(to);
-        }
-
         static int getPromotionPiece(char piece){
             switch (piece)
             {
@@ -150,41 +146,6 @@ namespace chess
                 piece_char = isWhite(piece) ? tolower(piece_char) : piece_char;
             }
             return piece_char;
-        }
-
-
-        static std::string toStr(int piece){
-            std::string str = "";
-            if (piece == Empty)
-                return "Empty";
-            if (piece & White){
-                str += "White ";
-            } else {
-                str += "Black ";
-            }
-
-            switch (piece & pieceMask)
-            {
-                case Pawn:
-                    str += "Pawn";
-                    break;
-                case Knight:
-                    str += "Knight";
-                    break;
-                case King:
-                    str += "King";
-                    break;
-                case Bishop:
-                    str += "Bishop";
-                    break;
-                case Rook:
-                    str += "Rook";
-                    break;
-                case Queen:
-                    str += "Queen";
-                    break;
-            }
-            return str;
         }
     };
 }

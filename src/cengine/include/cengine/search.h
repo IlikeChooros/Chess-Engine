@@ -89,8 +89,8 @@ namespace chess
     struct Score{
         enum Type{
             cp, mate
-        } type;
-        int value;
+        } type = cp;
+        int value = 0;
     };
 
     // Search result
@@ -103,13 +103,13 @@ namespace chess
     // pv: Principal variation
     struct SearchResult
     {
-        Move move; // bestmove found
-        Score score; // score of the position
-        int depth; // depth of the search
-        uint64_t time; // time in milliseconds
+        Move move = Move(Move::nullMove);
+        Score score = {Score::cp, 0};
+        int depth = 0;
+        uint64_t time = 0;
         GameStatus status = ONGOING;
-        std::mutex mutex;
-        std::list<Move> pv;
+        std::mutex mutex = {};
+        std::list<Move> pv = {};
     };
 
     void search(Board* board, GameHistory* gh, SearchCache* sc, SearchParams* params, SearchResult* sr);

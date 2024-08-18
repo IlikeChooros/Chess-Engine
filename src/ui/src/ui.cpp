@@ -144,14 +144,17 @@ namespace ui
             m_rect.getPosition().x - m_text.getLocalBounds().width - 15,
             m_rect.getPosition().y + m_rect.getSize().y / 2
         );
-
-        // Normalize the eval to a value between -1 and 1
-        float feval = float(eval) / 100.0f;
-        float eval_f = feval / (1.0f + std::abs(float(feval)));
-        float white_scale = (1.0f + eval_f) * 0.5f,
-              black_scale = 1.0f - white_scale;
-
-        if (!cp){
+        
+        float white_scale, black_scale;
+        if (cp) {
+            // Normalize the eval to a value between -1 and 1
+            float feval = float(eval) / 100.0f;
+            float eval_f = feval / (1.0f + std::abs(float(feval)));
+            white_scale = (1.0f + eval_f) * 0.5f;
+            black_scale = 1.0f - white_scale;
+        }
+        else {
+            // Mate score, if eval is positive, white is winning
             white_scale = eval > 0 ? 1.0f : 0.0f;
             black_scale = 1.0f - white_scale;
         }
@@ -849,7 +852,7 @@ namespace ui
             m_evalBar.setEval(results.score.value, results.score.type == Score::cp);
             std::vector<std::string> moves;
             for (auto& move : results.pv){
-                moves.push_back(Piece::notation(move.getFrom(), move.getTo()));
+                moves.push_back(move.notation());
             }
             m_moveList.setMoves(moves);
         }
@@ -888,7 +891,7 @@ namespace ui
             m_evalBar.setEval(results.score.value, results.score.type == Score::cp);
             std::vector<std::string> moves;
             for (auto& move : results.pv){
-                moves.push_back(Piece::notation(move.getFrom(), move.getTo()));
+                moves.push_back(Move::notation(move.getFrom(), move.getTo()));
             }
             m_moveList.setMoves(moves);
         }

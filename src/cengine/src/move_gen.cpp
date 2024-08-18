@@ -456,8 +456,8 @@ void _gen_sliding_moves_no_check(
             captures &= (1ULL << pinner_sq);
         }
 
-        while(bmoves) moves->add(Move(sq, pop_lsb1(bmoves), Move::FLAG_NONE).move());
-        while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
+        while(bmoves) moves->add(Move(sq, pop_lsb1(bmoves), Move::FLAG_NONE).get());
+        while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).get());
     }
 }
 
@@ -476,16 +476,15 @@ void _gen_pieces_moves_in_check(
     while(bitboard){
         int sq = pop_lsb1(bitboard);
         block_moves = attackFunc(occupied, sq);
-        cache->attacks_from[sq] = block_moves;
         uint64_t captures = block_moves & attackers;
         block_moves &= ~occupied & block_path;
         // If that's a capture, add the move
         if (captures){
-            moves->add(Move(sq, attackers_sq, Move::FLAG_CAPTURE).move());
+            moves->add(Move(sq, attackers_sq, Move::FLAG_CAPTURE).get());
         }
 
         while(block_moves){
-            moves->add(Move(sq, pop_lsb1(block_moves), Move::FLAG_NONE).move());
+            moves->add(Move(sq, pop_lsb1(block_moves), Move::FLAG_NONE).get());
         }
     }
 }
@@ -493,10 +492,10 @@ void _gen_pieces_moves_in_check(
 
 // Generate all possible captures, not optimized yet, 
 // internally uses gen_legal_moves and filters the captures
-void gen_captures(MoveList* ml, chess::Board* board, chess::CacheMoveGen* cache)
+void gen_captures(MoveList* ml, chess::Board* board)
 {
     MoveList all;
-    void(::gen_legal_moves(&all, board, cache));
+    void(::gen_legal_moves(&all, board));
     for(size_t i = 0; i < all.size(); i++){
         if(all[i].isCapture()){
             ml->add(all.moves[i]);
@@ -528,54 +527,29 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
     // Bitboard for the enemy attacks
     uint64_t bitboard;
     uint64_t danger = 0;
-    uint64_t attcks;
 
     // Generate attacks for enemy bishops
     bitboard = board->bitboards(is_enemy)[Piece::Bishop - 1];
-    while(bitboard) {
-        int sq = pop_lsb1(bitboard);
-        attcks = bishopAttacks(occupied_noking, sq);
-        danger |= attcks;
-        cache->attacks_from[sq] = attcks;
-    }
+    while(bitboard) danger |= bishopAttacks(occupied_noking, pop_lsb1(bitboard));
     
-
     // Generate attacks for enemy rooks
     bitboard = board->bitboards(is_enemy)[Piece::Rook - 1];
-    while (bitboard) {
-        int sq = pop_lsb1(bitboard);
-        attcks = rookAttacks(occupied_noking, sq);
-        danger |= attcks;
-        cache->attacks_from[sq] = attcks;
-    }
+    while (bitboard) danger |= rookAttacks(occupied_noking, pop_lsb1(bitboard));
     
-
     // Generate attacks for enemy knights
     bitboard = board->bitboards(is_enemy)[Piece::Knight - 1];
-    while (bitboard) {
-        int sq = pop_lsb1(bitboard);
-        danger |= Board::pieceAttacks[Board::KNIGHT_TYPE][sq];
-        cache->attacks_from[sq] = Board::pieceAttacks[Board::KNIGHT_TYPE][sq];
-    }
-    
+    while (bitboard) danger |= Board::pieceAttacks[Board::KNIGHT_TYPE][pop_lsb1(bitboard)];
 
     // Generate attacks for enemy queen(s)
     bitboard = board->bitboards(is_enemy)[Piece::Queen - 1];
     while(bitboard){
         int sq = pop_lsb1(bitboard);
-        attcks = rookAttacks(occupied_noking, sq) | bishopAttacks(occupied_noking, sq);
-        danger |= attcks;
-        cache->attacks_from[sq] = attcks;
+        danger |= rookAttacks(occupied_noking, sq) | bishopAttacks(occupied_noking, sq);
     }
 
     // Generate attacks for enemy pawns
     bitboard = board->bitboards(is_enemy)[Piece::Pawn - 1];
-    while(bitboard) {
-        int sq = pop_lsb1(bitboard);
-        attcks = Board::pawnAttacks[is_enemy][sq];
-        danger |= attcks;
-        cache->attacks_from[sq] = attcks;
-    }
+    while(bitboard) danger |= Board::pawnAttacks[is_enemy][pop_lsb1(bitboard)];
     
     // Generate attacks for enemy king
     danger |= Board::pieceAttacks[Board::KING_TYPE][bitScanForward(board->bitboards(is_enemy)[Piece::King - 1])];
@@ -595,7 +569,6 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
 
     while(pinner) pinned |= Board::in_between[pop_lsb1(pinner)][king] & allied_pieces;
 
-    cache->pinned = pinned;
     board->inCheck() = false;
 
     // See if the king is in check
@@ -615,8 +588,8 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
             uint64_t kmoves = Board::pieceAttacks[Board::KING_TYPE][king] & ~occupied & ~danger;
             uint64_t captures = Board::pieceAttacks[Board::KING_TYPE][king] & enemy_pieces & ~danger;
 
-            while(kmoves) moves->add(Move(king, pop_lsb1(kmoves), Move::FLAG_NONE).move());
-            while(captures) moves->add(Move(king, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
+            while(kmoves) moves->add(Move(king, pop_lsb1(kmoves), Move::FLAG_NONE).get());
+            while(captures) moves->add(Move(king, pop_lsb1(captures), Move::FLAG_CAPTURE).get());
             
             return moves->size();
         }
@@ -676,22 +649,21 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
             uint64_t captures = Board::pawnAttacks[is_white][sq] & attackers;
             uint64_t enpassant = board->enpassantTarget() ? Board::pawnAttacks[is_white][sq] & (1ULL << (board->enpassantTarget())) : 0;
             int rank = sq >> 3;
-            cache->attacks_from[sq] = Board::pawnAttacks[is_white][sq];
 
             // If the enpassant is possible and the attacker is on a valid capture square, then add the move
             if (enpassant && attackers & (1ULL << (board->enpassantTarget() + offset[is_white]))){
-                moves->add(Move(sq, board->enpassantTarget(), Move::FLAG_ENPASSANT_CAPTURE).move());
+                moves->add(Move(sq, board->enpassantTarget(), Move::FLAG_ENPASSANT_CAPTURE).get());
             }
             // If that's a capture, add the move
             if (captures){
                 // Generate captures promoting moves (the pawn is on the either 2nd or 7th rank)
                 if (rank == ranks[is_enemy]){
-                    moves->add(Move(sq, attackers_sq, Move::FLAG_ROOK_PROMOTION_CAPTURE).move());
-                    moves->add(Move(sq, attackers_sq, Move::FLAG_BISHOP_PROMOTION_CAPTURE).move());
-                    moves->add(Move(sq, attackers_sq, Move::FLAG_KNIGHT_PROMOTION_CAPTURE).move());
-                    moves->add(Move(sq, attackers_sq, Move::FLAG_QUEEN_PROMOTION_CAPTURE).move());
+                    moves->add(Move(sq, attackers_sq, Move::FLAG_ROOK_PROMOTION_CAPTURE).get());
+                    moves->add(Move(sq, attackers_sq, Move::FLAG_BISHOP_PROMOTION_CAPTURE).get());
+                    moves->add(Move(sq, attackers_sq, Move::FLAG_KNIGHT_PROMOTION_CAPTURE).get());
+                    moves->add(Move(sq, attackers_sq, Move::FLAG_QUEEN_PROMOTION_CAPTURE).get());
                 } else {
-                    moves->add(Move(sq, attackers_sq, Move::FLAG_CAPTURE).move());
+                    moves->add(Move(sq, attackers_sq, Move::FLAG_CAPTURE).get());
                 }
             }
 
@@ -707,20 +679,20 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
                 // If the pawn is on the 2nd (black) or 7th rank (white), generate promotion moves
                 if (rank == ranks[!is_white]){
                     int to = bitScanForward(pmoves);
-                    moves->add(Move(sq, to, Move::FLAG_ROOK_PROMOTION).move());
-                    moves->add(Move(sq, to, Move::FLAG_BISHOP_PROMOTION).move());
-                    moves->add(Move(sq, to, Move::FLAG_KNIGHT_PROMOTION).move());
-                    moves->add(Move(sq, to, Move::FLAG_QUEEN_PROMOTION).move());
+                    moves->add(Move(sq, to, Move::FLAG_ROOK_PROMOTION).get());
+                    moves->add(Move(sq, to, Move::FLAG_BISHOP_PROMOTION).get());
+                    moves->add(Move(sq, to, Move::FLAG_KNIGHT_PROMOTION).get());
+                    moves->add(Move(sq, to, Move::FLAG_QUEEN_PROMOTION).get());
                     continue;
                 }      
-                moves->add(Move(sq, n, Move::FLAG_NONE).move());
+                moves->add(Move(sq, n, Move::FLAG_NONE).get());
             }
 
             // If the pawn is on the 2nd (white) or 7th rank (black), generate double pawn push
             if (rank == ranks[is_white]){
                 n = Board::mailbox[Board::mailbox64[sq] + Board::pawn_move_offsets[is_white][1]];
                 if ((1ULL << n) & ~occupied & block_path){
-                    moves->add(Move(sq, n, Move::FLAG_DOUBLE_PAWN).move());
+                    moves->add(Move(sq, n, Move::FLAG_DOUBLE_PAWN).get());
                 }
             }
         }
@@ -729,8 +701,8 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
         uint64_t kmoves = Board::pieceAttacks[Board::KING_TYPE][king] & ~occupied & ~danger;
         uint64_t captures = Board::pieceAttacks[Board::KING_TYPE][king] & enemy_pieces & ~danger;
 
-        while(kmoves) moves->add(Move(king, pop_lsb1(kmoves), Move::FLAG_NONE).move());
-        while(captures) moves->add(Move(king, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
+        while(kmoves) moves->add(Move(king, pop_lsb1(kmoves), Move::FLAG_NONE).get());
+        while(captures) moves->add(Move(king, pop_lsb1(captures), Move::FLAG_CAPTURE).get());
         
         return moves->size();
     }
@@ -784,8 +756,8 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
 
         captures = bmoves & enemy_pieces;
         bmoves &= ~occupied;
-        while(bmoves) moves->add(Move(sq, pop_lsb1(bmoves), Move::FLAG_NONE).move());
-        while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
+        while(bmoves) moves->add(Move(sq, pop_lsb1(bmoves), Move::FLAG_NONE).get());
+        while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).get());
     }
 
     // Generate moves for pawns
@@ -812,13 +784,13 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
         if (rank == ranks[is_enemy]){
             while(captures) {
                 int cap_sq = pop_lsb1(captures);
-                moves->add(Move(sq, cap_sq, Move::FLAG_ROOK_PROMOTION_CAPTURE).move());
-                moves->add(Move(sq, cap_sq, Move::FLAG_BISHOP_PROMOTION_CAPTURE).move());
-                moves->add(Move(sq, cap_sq, Move::FLAG_KNIGHT_PROMOTION_CAPTURE).move());
-                moves->add(Move(sq, cap_sq, Move::FLAG_QUEEN_PROMOTION_CAPTURE).move());
+                moves->add(Move(sq, cap_sq, Move::FLAG_ROOK_PROMOTION_CAPTURE).get());
+                moves->add(Move(sq, cap_sq, Move::FLAG_BISHOP_PROMOTION_CAPTURE).get());
+                moves->add(Move(sq, cap_sq, Move::FLAG_KNIGHT_PROMOTION_CAPTURE).get());
+                moves->add(Move(sq, cap_sq, Move::FLAG_QUEEN_PROMOTION_CAPTURE).get());
             }
         } else {
-            while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
+            while(captures) moves->add(Move(sq, pop_lsb1(captures), Move::FLAG_CAPTURE).get());
         }
 
         // Enpassant is possible only if the last move was a double pawn move
@@ -852,7 +824,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
 
             // If the pawn is not pinned or it can move along the pin line, add the move
             if (enpassant_target){
-                moves->add(Move(sq, board->enpassantTarget(), Move::FLAG_ENPASSANT_CAPTURE).move());
+                moves->add(Move(sq, board->enpassantTarget(), Move::FLAG_ENPASSANT_CAPTURE).get());
             }
         }
 
@@ -874,13 +846,13 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
             // If the pawn is on the 2nd (black) or 7th rank (white), generate promotion moves
             if (rank == ranks[!is_white]){
                 int to = bitScanForward(bmoves);
-                moves->add(Move(sq, to, Move::FLAG_ROOK_PROMOTION).move());
-                moves->add(Move(sq, to, Move::FLAG_BISHOP_PROMOTION).move());
-                moves->add(Move(sq, to, Move::FLAG_KNIGHT_PROMOTION).move());
-                moves->add(Move(sq, to, Move::FLAG_QUEEN_PROMOTION).move());
+                moves->add(Move(sq, to, Move::FLAG_ROOK_PROMOTION).get());
+                moves->add(Move(sq, to, Move::FLAG_BISHOP_PROMOTION).get());
+                moves->add(Move(sq, to, Move::FLAG_KNIGHT_PROMOTION).get());
+                moves->add(Move(sq, to, Move::FLAG_QUEEN_PROMOTION).get());
                 continue;
             }
-            moves->add(Move(sq, n, Move::FLAG_NONE).move());
+            moves->add(Move(sq, n, Move::FLAG_NONE).get());
         }
 
         // If the pawn is on the 2nd (white) or 7th rank (black), generate double pawn push
@@ -895,7 +867,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
 
             // this move might not be possible (because of pin)
             if (bmoves){
-                moves->add(Move(sq, n, Move::FLAG_DOUBLE_PAWN).move());
+                moves->add(Move(sq, n, Move::FLAG_DOUBLE_PAWN).get());
             }
         }
     }
@@ -904,8 +876,8 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
     bmoves = Board::pieceAttacks[Board::KING_TYPE][king] & ~occupied & ~danger;
     captures = Board::pieceAttacks[Board::KING_TYPE][king] & enemy_pieces & ~danger;
 
-    while(bmoves) moves->add(Move(king, pop_lsb1(bmoves), Move::FLAG_NONE).move());
-    while(captures) moves->add(Move(king, pop_lsb1(captures), Move::FLAG_CAPTURE).move());
+    while(bmoves) moves->add(Move(king, pop_lsb1(bmoves), Move::FLAG_NONE).get());
+    while(captures) moves->add(Move(king, pop_lsb1(captures), Move::FLAG_CAPTURE).get());
 
     // Generate castling moves, I assume that castling rights are correct
     // Hence I always verify the castling rights
@@ -926,12 +898,12 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board, chess::CacheMoveGen
         // King can castle safely only if the square between target position and starting position
         // aren't occupied and aren't attacked
         if (king_side && (king_path & (~occupied) & (~danger)) == king_path){
-            moves->add(Move(king, king + 2, Move::FLAG_KING_CASTLE).move());
+            moves->add(Move(king, king + 2, Move::FLAG_KING_CASTLE).get());
         }
 
         // Additionally space between rook and king should be empty (in king's side case `king_path` = `king_path_no_occ`)
         if (queen_side && (queen_path & (~occupied) & (~danger)) == queen_path && (queen_path_no_occ & (~occupied)) == queen_path_no_occ){
-            moves->add(Move(king, king - 2, Move::FLAG_QUEEN_CASTLE).move());
+            moves->add(Move(king, king - 2, Move::FLAG_QUEEN_CASTLE).get());
         }
     }
 

@@ -10,20 +10,11 @@ namespace chess
 {
     struct CacheMoveGen
     {
-        uint64_t attacks_from[64] = {0};
-        uint64_t attacks_to[64] = {0};
-
         // Attacks by enemy pieces
         uint64_t danger;
 
         // Attacks by friendly pieces
         uint64_t activity;
-
-        // Pinned pieces
-        uint64_t pinned;
-
-        // Possible captures by friendly pieces
-        uint64_t possible_captures;
     };
 
     class HistoryHeuristic

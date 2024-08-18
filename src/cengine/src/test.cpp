@@ -76,9 +76,9 @@ namespace test
                 m_results.reserve(moves);
                 for(size_t i = 0; i < moves; i++){
                     m_results.push_back(
-                        Piece::notation(ml[i].getFrom(), ml[i].getTo()) + ": " + std::to_string(1UL)
+                        ml[i].notation() + ": " + std::to_string(1UL)
                     );
-                    std::cout << Piece::notation(ml[i].getFrom(), ml[i].getTo()) << ": " << 1UL << "\n";
+                    std::cout << m_results.back() << "\n";
                 }
             }  
             return (uint64_t)moves;
@@ -93,9 +93,9 @@ namespace test
             ::unmake(move, m_board, &gh);
             if (root && m_print){
                 m_results.push_back(
-                    Piece::notation(move.getFrom(), move.getTo()) + ": " + std::to_string(cnodes)
+                    move.notation() + ": " + std::to_string(cnodes)
                 );
-                std::cout << Piece::notation(ml[i].getFrom(), ml[i].getTo()) << ": " << cnodes << "\n";
+                std::cout << m_results.back() << "\n";
             }
         }
         

@@ -9,5 +9,5 @@
 
 namespace chess
 {
-    void order_moves(MoveList *ml, MoveList *pv, Board *b, CacheMoveGen* cache, SearchCache* sc);
+    void order_moves(MoveList *ml, MoveList *pv, Board *b, SearchCache* sc);
 }

@@ -25,12 +25,13 @@ namespace chess
 
 
     // Get PV from transposition table
-    MoveList getPV(Board* b, SearchCache* sc, GameHistory* gh, Move best_move, int depth){
+    MoveList getPV(Board* b, SearchCache* sc, GameHistory* gh, Move best_move, int max_depth = 10){
         if (!sc || !b || !gh || best_move == Move::nullMove)
             return {};
 
         int pv_depth = 0;
         MoveList pv;
+        int i = 0;
 
         pv.add(best_move);
         ::make(best_move, b, gh);
@@ -39,7 +40,7 @@ namespace chess
             TEntry entry = sc->getTT().get(hash);
             if (!entry.bestMove || entry.bestMove == best_move)
                 break;
-            if (pv.size() >= pv.capacity() - 1 || pv_depth > depth)
+            if (pv.size() >= pv.capacity() - 1 || i++ > max_depth)
                 break;
             pv.add(entry.bestMove);
             ::make(entry.bestMove, b, gh);
@@ -49,7 +50,6 @@ namespace chess
         for (auto it = pv.rbegin(); it != pv.rend(); it++){
             ::unmake(Move(*it), b, gh);
         }
-        ::unmake(best_move, b, gh);
         return pv;
     }
 
@@ -64,8 +64,7 @@ namespace chess
         alpha = std::max(alpha, eval);
         
         MoveList ml;
-        CacheMoveGen cache;
-        ::gen_captures(&ml, b, &cache);
+        ::gen_captures(&ml, b);
 
         for (size_t i = 0; i < ml.size(); i++){
             Move m(ml[i]);
@@ -107,23 +106,22 @@ namespace chess
 
         if (depth == 0)
             return quiescence(b, gh, params, alpha, beta);
-        
-        CacheMoveGen cache;
+
         MoveList ml;
-        void(::gen_legal_moves(&ml, b, &cache));
-        int best = MATE - depth; // depth is decreasing from the root, so if the mate is found, engine will prefer a closer one
+        void(::gen_legal_moves(&ml, b));
+        int best = MATE - depth;
         int last_irreversible = b->irreversibleIndex();
         Move best_move;
 
         // Look for draw conditions and check if the game is over
-        auto status = get_status(b, gh, &ml, &cache);
+        auto status = get_status(b, gh, &ml);
         if (status != ONGOING){
             if (status == DRAW || status == STALEMATE)
                 best = 0;
             return best;
         }
 
-        order_moves(&ml, nullptr, b, &cache, sc);
+        order_moves(&ml, nullptr, b, sc);
         for (size_t i = 0; i < ml.size(); i++){
             Move m(ml[i]);
             ::make(m, b, gh);
@@ -184,23 +182,25 @@ namespace chess
         if (!board || !gh || !sc || !result)
             return;
 
-        result->move = Move(0);
-        result->depth = 0;
-        result->status = ONGOING;
-        Score score = {Score::cp, 0};
+        {
+            std::lock_guard<std::mutex> lock(result->mutex);
+            result->move = Move(0);
+            result->depth = 0;      
+            result->status = ONGOING;       
+        }
 
         params->setSearchRunning(true);
 
         // Initialize variables
-        int best_eval = MIN;
+        int eval = MIN;
+        Score nscore;
         Move best_move;
         MoveList pv;
         MoveList ml;
-        CacheMoveGen cache;
         int last_irreversible = board->irreversibleIndex();
-        void(::gen_legal_moves(&ml, board, &cache));
+        void(::gen_legal_moves(&ml, board));
         int whotomove = board->getSide() == Piece::White ? 1 : -1;
-        result->status = get_status(board, gh, &ml, &cache);
+        result->status = get_status(board, gh, &ml);
 
         if (result->status != ONGOING){
             params->setSearchRunning(false);
@@ -217,7 +217,7 @@ namespace chess
         // Iterative deepening
         while(true){
             int alpha = MIN, beta = MAX;
-            order_moves(&ml, &pv, board, &cache, sc);
+            order_moves(&ml, &pv, board, sc);
 
             // Loop through all the moves and evaluate them
             for (size_t i = 0; i < ml.size(); i++){
@@ -244,25 +244,33 @@ namespace chess
             depth++;
             time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count();
             pv = getPV(board, sc, gh, best_move, depth);
-            score.value = best_eval * whotomove;
 
-            // Update the score
-            if (abs(best_eval) >= MATE_THRESHOLD){
-                int mate_in = std::max(1UL, (pv.size() + 1) / 2);
-                score.type = Score::mate;
-                score.value = best_eval * whotomove > 0 ? mate_in : -mate_in;
+            // Update score
+            nscore.value = eval * whotomove;
+            if (abs(eval) >= MATE_THRESHOLD){
+                nscore.value = (pv.size() + 1) / 2;
+                nscore.value = std::max(nscore.value, 1);
+                nscore.value *= eval > 0 ? 1 : -1;
+                nscore.value *= whotomove;
+                nscore.type = Score::mate;
             }
 
+            // Update the search result 
             std::unique_lock<std::mutex> lock(result->mutex);
             if (lock.owns_lock()){
                 result->move = best_move;
+                result->score = nscore;
                 result->time = time_taken;
                 result->depth = depth;
                 result->score = score;
                 result->pv = std::list<Move>(pv.begin(), pv.end());
                 lock.unlock();
-            }            
+            }
+            
+            // Log the search info
+            glogger.printInfo(depth, nscore.value, nscore.type == Score::cp, params->nodes_searched, time_taken, &pv);
 
+            // Break if the search should stop
             if (params->depth != -1 && depth > params->depth){
                 params->stopSearch();
             }
@@ -270,17 +278,9 @@ namespace chess
                 break;
         }
 
-        depth--;
-        time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count();
-        time_taken = std::max(time_taken, 1UL);
-
-        glogger.printInfo(
-            best_move, depth, score.value, score.type == Score::cp, 
-            params->nodes_searched, time_taken, &pv
-        );
-        glogger.printf("bestmove %s\n", Piece::notation(best_move.getFrom(), best_move.getTo()).c_str());
+        glogger.printf("bestmove %s\n", best_move.notation().c_str());
+        glogger.logBoardInfo(board);
         glogger.logTTableInfo(&sc->getTT());
-        glogger.logGameHistory(gh);
 
         // update `is_running` flag
         params->setSearchRunning(false);
