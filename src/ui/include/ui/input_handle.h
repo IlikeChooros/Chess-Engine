@@ -10,8 +10,8 @@ enum class BoardScreenState
     MAIN_MENU,
     PLAYER_VS_PLAYER,
     PLAYER_VS_ENGINE,
+    ANALYSIS,
     TEST_ENGINE,
-    ANALYSIS
 };
 
 enum class InputState

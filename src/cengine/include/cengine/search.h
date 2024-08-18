@@ -84,9 +84,18 @@ namespace chess
         }
     };
 
+
+    // Score struct
+    struct Score{
+        enum Type{
+            cp, mate
+        } type;
+        int value;
+    };
+
     // Search result
     // move: Best move found
-    // score: Score of the position
+    // score: Score of the position (type, value)
     // depth: Depth of the search
     // time: Time taken to search (in milliseconds)
     // status: Game status (ongoing, checkmate, stalemate, draw)
@@ -94,10 +103,10 @@ namespace chess
     // pv: Principal variation
     struct SearchResult
     {
-        Move move;
-        int score;
-        int depth;
-        uint64_t time;
+        Move move; // bestmove found
+        Score score; // score of the position
+        int depth; // depth of the search
+        uint64_t time; // time in milliseconds
         GameStatus status = ONGOING;
         std::mutex mutex;
         std::list<Move> pv;

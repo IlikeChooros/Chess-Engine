@@ -107,7 +107,7 @@ namespace ui
         m_rect.setOutlineThickness(4);
         m_white_rect.setFillColor(sf::Color(255, 255, 255, 255));
         m_black_rect.setFillColor(sf::Color(32, 32, 32, 255));
-        setEval(0);
+        setEval(0, true);
     }
 
     EvalBar& EvalBar::operator=(EvalBar&& other)
@@ -128,11 +128,16 @@ namespace ui
         target.draw(m_white_rect, states);
     }
 
-    void EvalBar::setEval(int eval)
+    void EvalBar::setEval(int eval, bool cp)
     {
-        char eval_s[32];
-        std::snprintf(eval_s, 32, "%.02f", float(eval) / 100.0f);
-        m_text.setString(eval_s);
+        if (cp){
+            char eval_s[32];
+            std::snprintf(eval_s, 32, "%.02f", float(eval) / 100.0f);
+            m_text.setString(eval_s);
+        } else {
+            m_text.setString(eval > 0 ? "M" : "-M" + std::to_string(abs(eval)));
+        }
+        
         m_text.setPosition(
             m_rect.getPosition().x - m_text.getLocalBounds().width - 15,
             m_rect.getPosition().y + m_rect.getSize().y / 2
@@ -142,7 +147,12 @@ namespace ui
         float feval = float(eval) / 100.0f;
         float eval_f = feval / (1.0f + std::abs(float(feval)));
         float white_scale = (1.0f + eval_f) * 0.5f,
-              black_scale = (1.0f - eval_f) * 0.5f;
+              black_scale = 1.0f - white_scale;
+
+        if (!cp){
+            white_scale = eval > 0 ? 1.0f : 0.0f;
+            black_scale = 1.0f - white_scale;
+        }
 
         // Draw black and white rectangles
         auto maxSize = m_rect.getSize();
@@ -721,7 +731,7 @@ namespace ui
         auto& results = m_manager->getSearchResult();
         std::unique_lock<std::mutex> lock(results.mutex, std::try_to_lock);
         if (lock.owns_lock()){
-            m_evalBar.setEval(results.score);
+            m_evalBar.setEval(results.score.value, results.score.type == Score::cp);
         }
     }
 
@@ -830,16 +840,11 @@ namespace ui
             m_reload = false;
         }
 
-        if (m_clock.getElapsedTime().asSeconds() > 8){
-            m_clock.restart();
-            std::cout << "FEN: " << m_state->board->getFen() << "\n";
-        }
-
         // Try to read the engine output
         auto& results = m_manager->getSearchResult();
         std::unique_lock<std::mutex> lock(results.mutex, std::try_to_lock);
         if (lock.owns_lock()){
-            m_evalBar.setEval(results.score);
+            m_evalBar.setEval(results.score.value, results.score.type == Score::cp);
             std::vector<std::string> moves;
             for (auto& move : results.pv){
                 moves.push_back(Piece::notation(move.getFrom(), move.getTo()));
@@ -878,7 +883,7 @@ namespace ui
         auto& results = m_manager->getSearchResult();
         std::unique_lock<std::mutex> lock(results.mutex, std::try_to_lock);
         if (lock.owns_lock()){
-            m_evalBar.setEval(results.score);
+            m_evalBar.setEval(results.score.value, results.score.type == Score::cp);
             std::vector<std::string> moves;
             for (auto& move : results.pv){
                 moves.push_back(Piece::notation(move.getFrom(), move.getTo()));
@@ -931,7 +936,7 @@ namespace ui
         state.board = &copy;
         manager = &m;
 
-        state.screen_state = BoardScreenState::TEST_ENGINE;
+        state.screen_state = BoardScreenState::ANALYSIS;
 
         if(!pieces_texture.loadFromFile(global_settings.base_path / "img/ChessPiecesArray.png")){
             return;
