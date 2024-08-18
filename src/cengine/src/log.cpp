@@ -13,80 +13,106 @@ Log::~Log()
     m_log_stream.close();
 }
 
-void Log::printToFile(std::string& str)
+void Log::log(std::string& str)
 {
     m_log_stream << str;
     m_log_stream.flush();
 }
 
-void Log::print(const char* format, ...)
+std::string Log::logf(const char* format, ...)
 {
     va_list args;
     char buffer[1024];
     va_start(args, format);
     vsnprintf(buffer, 1024, format, args);
     va_end(args);
-    
-    // ::printf("%s", buffer);
 
     std::string str(buffer);
-    printToFile(str);
+    log(str);
+    return str;
 }
 
-void Log::printTTableInfo(TTable<TEntry>* ttable)
+void Log::logTTableInfo(TTable<TEntry>* ttable)
 {
-    print("Transposition Table Info: ");
-    print("Size: %lu, ", ttable->getTable().size());
-    print("Max size: %lu, ", ttable->getTable().max_size());
-    print("Used size: %.5f%, ", float(ttable->getTable().size()) / ttable->getTable().max_size() * 100.0f);
-    print("Load factor: %f, ", ttable->getTable().load_factor());
-    print("Max load factor: %f, ", ttable->getTable().max_load_factor());
-    print("Bucket count: %lu, ", ttable->getTable().bucket_count());
-    print("Max bucket count: %lu\n", ttable->getTable().max_bucket_count());
+    (void)logf("Transposition Table Info: ");
+    (void)logf("Size: %lu, ", ttable->getTable().size());
+    (void)logf("Max size: %lu, ", ttable->getTable().max_size());
+    (void)logf("Used size: %.5f%, ", float(ttable->getTable().size()) / ttable->getTable().max_size() * 100.0f);
+    (void)logf("Load factor: %f, ", ttable->getTable().load_factor());
+    (void)logf("Max load factor: %f, ", ttable->getTable().max_load_factor());
+    (void)logf("Bucket count: %lu, ", ttable->getTable().bucket_count());
+    (void)logf("Max bucket count: %lu\n", ttable->getTable().max_bucket_count());
 }
 
-void Log::printBoardInfo(chess::Board* board)
+void Log::logBoardInfo(chess::Board* board)
 {
-    print("Board Info: ");
-    print("FEN: %s\n", board->getFen().c_str());
-    print("Side to move: %s, ", board->getSide() == chess::Piece::White ? "White" : "Black");
-    print("Fullmoves: %d, ", board->fullmoveCounter());
-    print("Halfmoves: %d, ", board->halfmoveClock());
-    print("En passant: %s\n", square_to_str(board->enpassantTarget()).c_str());
+    (void)logf("Board Info: ");
+    (void)logf("FEN: %s\n", board->getFen().c_str());
+    (void)logf("Side to move: %s, ", board->getSide() == chess::Piece::White ? "White" : "Black");
+    (void)logf("Fullmoves: %d, ", board->fullmoveCounter());
+    (void)logf("Halfmoves: %d, ", board->halfmoveClock());
+    (void)logf("En passant: %s\n", square_to_str(board->enpassantTarget()).c_str());
 }
 
-void Log::printPV(MoveList* pv)
+void Log::logPV(MoveList* pv)
 {
-    print("PV: ");
+    (void)logf("PV: ");
     for (auto& move : *pv)
     {
-        print("%s ", chess::Piece::notation(Move(move).getFrom(), Move(move).getTo()).c_str());
+        (void)logf("%s ", chess::Piece::notation(Move(move).getFrom(), Move(move).getTo()).c_str());
     }
-    print("\n");
+    (void)logf("\n");
 }
 
-void Log::printGameHistory(chess::GameHistory* gh)
+void Log::logGameHistory(chess::GameHistory* gh)
 {
-    print("Game History: ");
+    (void)logf("Game History: ");
     for (auto& hist : gh->history)
     {
-        print("%s%c ", 
+        (void)logf("%s%c ", 
             chess::Piece::notation(Move(hist.move).getFrom(), Move(hist.move).getTo()).c_str(), 
             hist.side_to_move == chess::Piece::White ? 'W' : 'B'
         );
     }
-    print("\n");
+    (void)logf("\n");
 }
 
-void Log::printStats(Move bestmove, int depth, int score, uint64_t nodes, uint64_t time)
+void Log::printInfo(Move bestmove, int depth, int score, bool cp, uint64_t nodes, uint64_t time, MoveList *pv)
 {
-    print("Stats: ");
-    print("bestmove %s, ", chess::Piece::notation(bestmove.getFrom(), bestmove.getTo()).c_str());
-    print("depth %d, ", depth);
-    print("eval %d, ", score);
-    print("nodes %lu, ", nodes);
-    print("time %lu\n", time);
-    time = std::max(time, (uint64_t)1);
-    print("nps %lu\n", (nodes * 1000) / time);
+    time = std::max<decltype(time)>(time, 1UL);
+    auto output = logf("info currmove %s depth %d score %s %d nodes %lu time %lu nps %lu", 
+        chess::Piece::notation(bestmove.getFrom(), bestmove.getTo()).c_str(), 
+        depth, 
+        cp ? "cp" : "mate", 
+        score, 
+        nodes, 
+        time,
+        nodes * 1000 / time
+    );
+
+    if (pv && pv->size() > 0)
+    {
+        output += logf(" pv ");
+        for (auto& move : *pv)
+        {
+            output += logf("%s ", chess::Piece::notation(Move(move).getFrom(), Move(move).getTo()).c_str());
+        }
+    }
+    output += logf("\n");
+    
+    std::cout << output;
 }
 
+void Log::printf(const char* format, ...)
+{
+    va_list args;
+    char buffer[1024];
+    va_start(args, format);
+    vsnprintf(buffer, 1024, format, args);
+    va_end(args);
+
+    std::string str(buffer);
+    log(str);
+
+    std::cout << str;
+}

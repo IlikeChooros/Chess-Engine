@@ -17,17 +17,18 @@ class Log
     std::string m_log_file;
     std::ofstream m_log_stream;
 
-    void printToFile(std::string& str);
+    void log(std::string& str);
 public:
     Log(std::string logfile = "log.txt");
     ~Log();
 
-    void print(const char* format, ...);
-    void printTTableInfo(TTable<TEntry>* ttable);
-    void printBoardInfo(chess::Board* board);
-    void printPV(MoveList* pv);
-    void printGameHistory(chess::GameHistory* gh);
-    void printStats(Move bestmove, int depth, int score, uint64_t nodes, uint64_t time);
+    std::string logf(const char* format, ...);
+    void logTTableInfo(TTable<TEntry>* ttable);
+    void logBoardInfo(chess::Board* board);
+    void logPV(MoveList* pv);
+    void logGameHistory(chess::GameHistory* gh);
+    void printInfo(Move bestmove, int depth, int score, bool cp, uint64_t nodes, uint64_t time, MoveList *pv = nullptr);
+    void printf(const char* format, ...);
 };
 
 extern Log glogger;

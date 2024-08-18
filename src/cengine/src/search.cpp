@@ -248,10 +248,9 @@ namespace chess
 
             // Update the score
             if (abs(best_eval) >= MATE_THRESHOLD){
-                int mate_in = abs(best_eval) - MATE_THRESHOLD;
-                mate_in = std::max(1, mate_in / 2);
+                int mate_in = std::max(1UL, (pv.size() + 1) / 2);
                 score.type = Score::mate;
-                score.value = mate_in * whotomove;
+                score.value = best_eval * whotomove > 0 ? mate_in : -mate_in;
             }
 
             std::unique_lock<std::mutex> lock(result->mutex);
@@ -275,14 +274,13 @@ namespace chess
         time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count();
         time_taken = std::max(time_taken, 1UL);
 
-
-        glogger.print("*** info bestmove %s eval %.2f \n", 
-            Piece::notation(best_move.getFrom(), best_move.getTo()).c_str(),
-            float(score.value) / 100.0f
+        glogger.printInfo(
+            best_move, depth, score.value, score.type == Score::cp, 
+            params->nodes_searched, time_taken, &pv
         );
-        glogger.printPV(&pv);
-        glogger.printStats(best_move, depth, score.value, params->nodes_searched, time_taken);
-        glogger.print("\n");
+        glogger.printf("bestmove %s\n", Piece::notation(best_move.getFrom(), best_move.getTo()).c_str());
+        glogger.logTTableInfo(&sc->getTT());
+        glogger.logGameHistory(gh);
 
         // update `is_running` flag
         params->setSearchRunning(false);
