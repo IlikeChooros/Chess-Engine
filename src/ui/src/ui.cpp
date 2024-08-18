@@ -926,7 +926,7 @@ namespace ui
      * @brief Main ui window loop, runs the window and handles the input
      * @param board The board to run the window with
      */
-    void runWindow(Board& board, int argc, char** argv){
+    void runWindow(Board& board){
         using namespace sf;
 
         // Constants

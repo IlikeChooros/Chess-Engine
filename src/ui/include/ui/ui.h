@@ -10,7 +10,7 @@
 
 namespace ui
 {
-    void runWindow(chess::Board& board, int argc, char** argv);
+    void runWindow(chess::Board& board);
 
 
     class IconButton: public sf::Drawable, public sf::Transformable
