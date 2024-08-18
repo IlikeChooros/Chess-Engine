@@ -192,7 +192,7 @@ namespace chess
         params->setSearchRunning(true);
 
         // Initialize variables
-        int eval = MIN;
+        int best_eval = MIN;
         Score nscore;
         Move best_move;
         MoveList pv;
@@ -246,11 +246,11 @@ namespace chess
             pv = getPV(board, sc, gh, best_move, depth);
 
             // Update score
-            nscore.value = eval * whotomove;
-            if (abs(eval) >= MATE_THRESHOLD){
+            nscore.value = best_eval * whotomove;
+            if (abs(best_eval) >= MATE_THRESHOLD){
                 nscore.value = (pv.size() + 1) / 2;
                 nscore.value = std::max(nscore.value, 1);
-                nscore.value *= eval > 0 ? 1 : -1;
+                nscore.value *= best_eval > 0 ? 1 : -1;
                 nscore.value *= whotomove;
                 nscore.type = Score::mate;
             }
@@ -262,7 +262,6 @@ namespace chess
                 result->score = nscore;
                 result->time = time_taken;
                 result->depth = depth;
-                result->score = score;
                 result->pv = std::list<Move>(pv.begin(), pv.end());
                 lock.unlock();
             }

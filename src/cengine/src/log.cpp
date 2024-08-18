@@ -124,17 +124,3 @@ void Log::printf(const char* str, ...)
     std::cout << s;
     log(s);
 }
-
-void Log::printf(const char* format, ...)
-{
-    va_list args;
-    char buffer[1024];
-    va_start(args, format);
-    vsnprintf(buffer, 1024, format, args);
-    va_end(args);
-
-    std::string str(buffer);
-    log(str);
-
-    std::cout << str;
-}

@@ -941,7 +941,7 @@ namespace ui
         state.board = &copy;
         manager = &m;
 
-        state.screen_state = BoardScreenState::ANALYSIS;
+        state.screen_state = BoardScreenState::TEST_ENGINE;
 
         if(!pieces_texture.loadFromFile(global_settings.base_path / "img/ChessPiecesArray.png")){
             return;
