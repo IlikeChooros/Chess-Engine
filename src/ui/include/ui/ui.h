@@ -57,7 +57,7 @@ namespace ui
         EvalBar& operator=(EvalBar&& other);
 
         void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
-        void setEval(int eval);
+        void setEval(int eval, bool cp);
     private:
         sf::Font m_font;
         sf::RectangleShape m_rect;

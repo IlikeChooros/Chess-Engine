@@ -76,7 +76,7 @@ namespace chess
         {
             CHistory h;
             h.hash = get_hash(board);
-            h.move = move.move();
+            h.move = move.get();
             h.side_to_move = board->getSide();
             h.captured_piece = board->capturedPiece();
             h.enpassant_target = board->enpassantTarget();

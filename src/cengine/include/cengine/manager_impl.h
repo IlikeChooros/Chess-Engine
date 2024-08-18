@@ -49,7 +49,7 @@ namespace chess
          * @brief Returns the current game status
          * @return The current game status
          */
-        inline GameStatus getStatus() { return get_status(board, &history, &move_list, &cache); }
+        inline GameStatus getStatus() { return get_status(board, &history, &move_list); }
 
         /**
          * @brief Initializes all engine components

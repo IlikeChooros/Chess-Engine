@@ -107,7 +107,7 @@ namespace ui
         m_rect.setOutlineThickness(4);
         m_white_rect.setFillColor(sf::Color(255, 255, 255, 255));
         m_black_rect.setFillColor(sf::Color(32, 32, 32, 255));
-        setEval(0);
+        setEval(0, true);
     }
 
     EvalBar& EvalBar::operator=(EvalBar&& other)
@@ -128,11 +128,18 @@ namespace ui
         target.draw(m_white_rect, states);
     }
 
-    void EvalBar::setEval(int eval)
+    void EvalBar::setEval(int eval, bool cp)
     {
-        char eval_s[32];
-        std::snprintf(eval_s, 32, "%.02f", float(eval) / 100.0f);
-        m_text.setString(eval_s);
+        if (cp){
+            char eval_s[32];
+            std::snprintf(eval_s, 32, "%.02f", float(eval) / 100.0f);
+            m_text.setString(eval_s);
+        } else {
+            std::string str = eval > 0 ? "M" : "-M";
+            str += std::to_string(std::abs(eval));
+            m_text.setString(str);
+        }
+
         m_text.setPosition(
             m_rect.getPosition().x - m_text.getLocalBounds().width - 15,
             m_rect.getPosition().y + m_rect.getSize().y / 2
@@ -143,6 +150,11 @@ namespace ui
         float eval_f = feval / (1.0f + std::abs(float(feval)));
         float white_scale = (1.0f + eval_f) * 0.5f,
               black_scale = (1.0f - eval_f) * 0.5f;
+
+        if (!cp){
+            white_scale = eval > 0 ? 0.0f : 1.0f;
+            black_scale = 1.0f - white_scale;
+        }
 
         // Draw black and white rectangles
         auto maxSize = m_rect.getSize();
@@ -721,7 +733,7 @@ namespace ui
         auto& results = m_manager->getSearchResult();
         std::unique_lock<std::mutex> lock(results.mutex, std::try_to_lock);
         if (lock.owns_lock()){
-            m_evalBar.setEval(results.score.value);
+            m_evalBar.setEval(results.score.value, results.score.type == Score::cp);
         }
     }
 
@@ -839,7 +851,7 @@ namespace ui
         auto& results = m_manager->getSearchResult();
         std::unique_lock<std::mutex> lock(results.mutex, std::try_to_lock);
         if (lock.owns_lock()){
-            m_evalBar.setEval(results.score.value);
+            m_evalBar.setEval(results.score.value, results.score.type == Score::cp);
             std::vector<std::string> moves;
             for (auto& move : results.pv){
                 moves.push_back(Piece::notation(move.getFrom(), move.getTo()));
@@ -878,7 +890,7 @@ namespace ui
         auto& results = m_manager->getSearchResult();
         std::unique_lock<std::mutex> lock(results.mutex, std::try_to_lock);
         if (lock.owns_lock()){
-            m_evalBar.setEval(results.score.value);
+            m_evalBar.setEval(results.score.value, results.score.type == Score::cp);
             std::vector<std::string> moves;
             for (auto& move : results.pv){
                 moves.push_back(Piece::notation(move.getFrom(), move.getTo()));

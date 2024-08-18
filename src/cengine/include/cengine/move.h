@@ -53,7 +53,7 @@ class Move
     uint32_t getFrom() const {return (m_move >> 6) & MASK_MOVE;};
     uint32_t getTo() const {return m_move & MASK_MOVE;};
     uint32_t getFlags() const {return m_move >> 12;};
-    uint32_t move() const {return m_move;};
+    uint32_t get() const {return m_move;};
 
     bool isCapture() const {return getFlags() & FLAG_CAPTURE;};
     bool isPromotion() const {return getFlags() & FLAG_PROMOTION;};
@@ -208,7 +208,7 @@ class MoveList
     inline size_t size() const {return n_moves;}
     inline static constexpr size_t capacity() {return 256;}
     inline void add(move_t move) {moves[n_moves++] = move;}
-    inline void add(const Move& move) {moves[n_moves++] = move.move();}
+    inline void add(const Move& move) {add(move.get());}
     inline void clear() {n_moves = 0;}
     inline Move operator[](size_t i) {return Move(moves[i]);}
     inline iterator begin() {return iterator(moves);}

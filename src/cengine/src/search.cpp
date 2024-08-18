@@ -62,8 +62,7 @@ namespace chess
         alpha = std::max(alpha, eval);
         
         MoveList ml;
-        CacheMoveGen cache;
-        ::gen_captures(&ml, b, &cache);
+        ::gen_captures(&ml, b);
 
         for (size_t i = 0; i < ml.size(); i++){
             Move m(ml[i]);
@@ -105,23 +104,22 @@ namespace chess
 
         if (depth == 0)
             return quiescence(b, gh, params, alpha, beta);
-        
-        CacheMoveGen cache;
+
         MoveList ml;
-        void(::gen_legal_moves(&ml, b, &cache));
+        void(::gen_legal_moves(&ml, b));
         int best = MATE - depth;
         int last_irreversible = b->irreversibleIndex();
         Move best_move;
 
         // Look for draw conditions and check if the game is over
-        auto status = get_status(b, gh, &ml, &cache);
+        auto status = get_status(b, gh, &ml);
         if (status != ONGOING){
             if (status == DRAW || status == STALEMATE)
                 best = 0;
             return best;
         }
 
-        order_moves(&ml, nullptr, b, &cache, sc);
+        order_moves(&ml, nullptr, b, sc);
         for (size_t i = 0; i < ml.size(); i++){
             Move m(ml[i]);
             ::make(m, b, gh);
@@ -197,14 +195,12 @@ namespace chess
         Move best_move;
         MoveList pv;
         MoveList ml;
-        CacheMoveGen cache;
         int last_irreversible = board->irreversibleIndex();
-        void(::gen_legal_moves(&ml, board, &cache));
+        void(::gen_legal_moves(&ml, board));
         int whotomove = board->getSide() == Piece::White ? 1 : -1;
-        result->status = get_status(board, gh, &ml, &cache);
+        result->status = get_status(board, gh, &ml);
 
         if (result->status != ONGOING){
-            std::cout << "info string Game over\n";
             params->setSearchRunning(false);
             return;
         }
@@ -219,7 +215,7 @@ namespace chess
         // Iterative deepening
         while(true){
             int alpha = MIN, beta = MAX;
-            order_moves(&ml, &pv, board, &cache, sc);
+            order_moves(&ml, &pv, board, sc);
 
             // Loop through all the moves and evaluate them
             for (size_t i = 0; i < ml.size(); i++){
@@ -253,6 +249,7 @@ namespace chess
                 nscore.value = (pv.size() + 1) / 2;
                 nscore.value = std::max(nscore.value, 1);
                 nscore.value *= eval > 0 ? 1 : -1;
+                nscore.value *= whotomove;
                 nscore.type = Score::mate;
             }
 
@@ -265,8 +262,9 @@ namespace chess
                 result->depth = depth;
                 result->pv = std::list<Move>(pv.begin(), pv.end());
                 lock.unlock();
-            }            
+            }
 
+            // Break if the search should stop
             if (params->depth != -1 && depth > params->depth){
                 params->stopSearch();
             }
@@ -278,14 +276,9 @@ namespace chess
         time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count();
         time_taken = std::max(time_taken, 1UL);
 
-
-        glogger.print("*** info bestmove %s eval %.2f \n", 
-            Piece::notation(best_move.getFrom(), best_move.getTo()).c_str(),
-            float(eval * whotomove) / 100.0f
-        );
-        glogger.printPV(&pv);
-        glogger.printStats(best_move, depth, eval * whotomove, params->nodes_searched, time_taken);
-        glogger.print("\n");
+        glogger.printInfo(depth, nscore.value, nscore.type == Score::cp, params->nodes_searched, time_taken, &pv);
+        glogger.logBoardInfo(board);
+        glogger.logTTableInfo(&sc->getTT());
 
         // update `is_running` flag
         params->setSearchRunning(false);

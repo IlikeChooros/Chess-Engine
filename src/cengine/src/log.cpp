@@ -13,80 +13,101 @@ Log::~Log()
     m_log_stream.close();
 }
 
-void Log::printToFile(std::string& str)
+void Log::log(std::string& str)
 {
     m_log_stream << str;
     m_log_stream.flush();
 }
 
-void Log::print(const char* format, ...)
+void Log::logf(const char* format, ...)
 {
     va_list args;
     char buffer[1024];
     va_start(args, format);
     vsnprintf(buffer, 1024, format, args);
     va_end(args);
-    
-    // ::printf("%s", buffer);
 
     std::string str(buffer);
-    printToFile(str);
+    log(str);
 }
 
-void Log::printTTableInfo(TTable<TEntry>* ttable)
+void Log::logTTableInfo(TTable<TEntry>* ttable)
 {
-    print("Transposition Table Info: ");
-    print("Size: %lu, ", ttable->getTable().size());
-    print("Max size: %lu, ", ttable->getTable().max_size());
-    print("Used size: %.5f%, ", float(ttable->getTable().size()) / ttable->getTable().max_size() * 100.0f);
-    print("Load factor: %f, ", ttable->getTable().load_factor());
-    print("Max load factor: %f, ", ttable->getTable().max_load_factor());
-    print("Bucket count: %lu, ", ttable->getTable().bucket_count());
-    print("Max bucket count: %lu\n", ttable->getTable().max_bucket_count());
+    logf("Transposition Table Info: "
+        "Size: %lu, "
+        "Load factor: %f, "
+        "Max load factor: %f, "
+        "Bucket count: %lu, "
+        "Max bucket count: %lu\n",
+        ttable->getTable().size(),
+        ttable->getTable().load_factor(),
+        ttable->getTable().max_load_factor(),
+        ttable->getTable().bucket_count(),
+        ttable->getTable().max_bucket_count()
+    );
 }
 
-void Log::printBoardInfo(chess::Board* board)
+void Log::logBoardInfo(chess::Board* board)
 {
-    print("Board Info: ");
-    print("FEN: %s\n", board->getFen().c_str());
-    print("Side to move: %s, ", board->getSide() == chess::Piece::White ? "White" : "Black");
-    print("Fullmoves: %d, ", board->fullmoveCounter());
-    print("Halfmoves: %d, ", board->halfmoveClock());
-    print("En passant: %s\n", square_to_str(board->enpassantTarget()).c_str());
+    logf("Board Info: "
+        "FEN: %s, "
+        "Side to move: %s, "
+        "Fullmoves: %d, "
+        "Halfmoves: %d, "
+        "En passant: %s\n",
+        board->getFen().c_str(),
+        board->getSide() == chess::Piece::White ? "White" : "Black",
+        board->fullmoveCounter(),
+        board->halfmoveClock(),
+        square_to_str(board->enpassantTarget()).c_str()
+    );
 }
 
-void Log::printPV(MoveList* pv)
+void Log::logPV(MoveList* pv)
 {
-    print("PV: ");
+    logf("PV: ");
     for (auto& move : *pv)
     {
-        print("%s ", chess::Piece::notation(Move(move).getFrom(), Move(move).getTo()).c_str());
+        logf("%s ", chess::Piece::notation(Move(move).getFrom(), Move(move).getTo()).c_str());
     }
-    print("\n");
+    logf("\n");
 }
 
-void Log::printGameHistory(chess::GameHistory* gh)
+void Log::logGameHistory(chess::GameHistory* gh)
 {
-    print("Game History: ");
+    logf("Game History: ");
     for (auto& hist : gh->history)
     {
-        print("%s%c ", 
+        logf("%s%c ", 
             chess::Piece::notation(Move(hist.move).getFrom(), Move(hist.move).getTo()).c_str(), 
             hist.side_to_move == chess::Piece::White ? 'W' : 'B'
         );
     }
-    print("\n");
+    logf("\n");
 }
 
-void Log::printStats(Move bestmove, int depth, int score, uint64_t nodes, uint64_t time)
+void Log::printInfo(int depth, int score, bool cp, uint64_t nodes, uint64_t time, MoveList* pv)
 {
-    print("Stats: ");
-    print("bestmove %s, ", chess::Piece::notation(bestmove.getFrom(), bestmove.getTo()).c_str());
-    print("depth %d, ", depth);
-    print("eval %d, ", score);
-    print("nodes %lu, ", nodes);
-    print("time %lu\n", time);
-    time = std::max(time, (uint64_t)1);
-    print("nps %lu\n", (nodes * 1000) / time);
+    time = std::max(time, 1UL);
+
+    std::string str = 
+        "info depth " + std::to_string(depth) 
+        + " score " + (cp ? "cp " : "mate ") + std::to_string(score) 
+        + " nodes " + std::to_string(nodes) 
+        + " time " + std::to_string(time) 
+        + " nps " + std::to_string(nodes * 1000 / time);
+
+
+    if (pv && pv->size() > 0)
+    {
+        str += " pv ";
+        for (auto& move : *pv)
+        {
+            str += chess::Piece::notation(Move(move).getFrom(), Move(move).getTo()) + " ";
+        }
+    }
+
+    str += "\n";
+    log(str);
 }
 

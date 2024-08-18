@@ -241,7 +241,7 @@ namespace chess
     /**
      * @brief Get the status of the game (ongoing, checkmate, stalemate, draw)
      */
-    GameStatus get_status(Board* b, GameHistory* gh, MoveList* ml, CacheMoveGen* cache)
+    GameStatus get_status(Board* b, GameHistory* gh, MoveList* ml)
     {
         if (b->halfmoveClock() >= 100){
             return DRAW;
@@ -249,7 +249,7 @@ namespace chess
 
         // Checkmate / stalemate
         if (ml->size() == 0){
-            if (cache->danger & b->bitboards(b->getSide() == Piece::White)[Piece::King - 1]){
+            if (b->inCheck()){
                 return CHECKMATE;
             }
             return STALEMATE;
