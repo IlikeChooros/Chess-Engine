@@ -21,28 +21,32 @@ namespace chess
     inline bool sort_captures(Move a, Move b, Board* board, CacheMoveGen* cache)
     {
         // Most valuable victim, least valuable attacker
-        return captured_value(a, board) < captured_value(b, board);
+        return captured_value(a, board) > captured_value(b, board);
     }
 
     /**
      * @brief Sort moves by captures, then by history heuristic, returns true if the move a should be ordered before b
      */
-    bool sort_moves(Move a, Move b, Board* board, CacheMoveGen* cache, SearchCache* sc)
+    bool sort_moves(Move a, Move b, Move pv, Board* board, CacheMoveGen* cache, SearchCache* sc)
     {
+        // If a move is the PV move, it should be ordered first
+        if (a == pv || b == pv)
+            return a == pv;
         // If a move is a capture, it should be ordered first
         if (a.isCapture() && b.isCapture())
             return sort_captures(a, b, board, cache);
         if (a.isCapture() || b.isCapture())
-            return b.isCapture();
+            return a.isCapture();
         // Sort non-captures by history heuristic
         bool side = board->getSide() == Piece::White;
-        return sc->getHH().get(side, a) < sc->getHH().get(side, b);
+        return sc->getHH().get(side, a) > sc->getHH().get(side, b);
     }
 
-    void order_moves(MoveList *ml, Board *board, CacheMoveGen* cache, SearchCache* sc)
+    void order_moves(MoveList *ml, MoveList *pv, Board *board, CacheMoveGen* cache, SearchCache* sc)
     {
-        std::sort(ml->begin(), ml->end(), [&board, &cache, &sc](const Move &a, const Move &b) {
-            return sort_moves(a, b, board, cache, sc);
+        Move pvm = pv && pv->size() > 0 ? Move(*pv->begin()) : Move();
+        std::sort(ml->begin(), ml->end(), [&board, &cache, &sc, &pvm](const Move &a, const Move &b) {
+            return sort_moves(a, b, pvm, board, cache, sc);
         });
     }
 }

@@ -120,7 +120,7 @@ namespace chess
             return best;
         }
 
-        order_moves(&ml, b, &cache, sc);
+        order_moves(&ml, nullptr, b, &cache, sc);
         for (size_t i = 0; i < ml.size(); i++){
             Move m(ml[i]);
             ::make(m, b, gh);
@@ -191,6 +191,7 @@ namespace chess
         // Initialize variables
         int eval = MIN;
         Move best_move;
+        MoveList pv;
         MoveList ml;
         CacheMoveGen cache;
         int last_irreversible = board->irreversibleIndex();
@@ -214,7 +215,7 @@ namespace chess
         // Iterative deepening
         while(true){
             int alpha = MIN, beta = MAX;
-            order_moves(&ml, board, &cache, sc);
+            order_moves(&ml, &pv, board, &cache, sc);
 
             // Loop through all the moves and evaluate them
             for (size_t i = 0; i < ml.size(); i++){
@@ -240,6 +241,7 @@ namespace chess
             
             depth++;
             time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count();
+            pv = getPV(board, sc, gh, best_move);
 
             std::unique_lock<std::mutex> lock(result->mutex);
             if (lock.owns_lock()){
@@ -247,7 +249,6 @@ namespace chess
                 result->score = eval * whotomove;
                 result->time = time_taken;
                 result->depth = depth;
-                auto pv = getPV(board, sc, gh, best_move);
                 result->pv = std::list<Move>(pv.begin(), pv.end());
                 lock.unlock();
             }            
@@ -268,7 +269,6 @@ namespace chess
             Piece::notation(best_move.getFrom(), best_move.getTo()).c_str(),
             float(eval * whotomove) / 100.0f
         );
-        auto pv = getPV(board, sc, gh, best_move);
         glogger.printPV(&pv);
         glogger.printStats(best_move, depth, eval * whotomove, params->nodes_searched, time_taken);
         glogger.print("\n");

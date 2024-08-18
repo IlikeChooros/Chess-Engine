@@ -76,6 +76,7 @@ namespace chess
 
     Board::Board()
     {
+        memset(board, Piece::Empty, sizeof(board));
         m_side = Piece::White;
         m_halfmove_clock = 0;
         m_fullmove_counter = 1;  
@@ -107,6 +108,7 @@ namespace chess
         for(int color = 0; color < 2; color++){
             memcpy(m_bitboards[color], other.m_bitboards[color], 6 * sizeof(uint64_t));
         }
+        memcpy(board, other.board, sizeof(board));
         return *this;
     }
 
@@ -174,6 +176,7 @@ namespace chess
      */
     void Board::loadFen(std::string fen){
 
+        memset(board, Piece::Empty, sizeof(board));
         std::stringstream ss(fen);
         
         std::unordered_map<char, int> mapping({
