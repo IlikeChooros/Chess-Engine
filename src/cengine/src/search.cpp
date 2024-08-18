@@ -32,6 +32,7 @@ namespace chess
         MoveList pv;
         int i = 0;
 
+        pv.add(best_move);
         ::make(best_move, b, gh);
         uint64_t hash = get_hash(b);
         while (sc->getTT().contains(hash)){
@@ -47,7 +48,6 @@ namespace chess
         for (auto it = pv.rbegin(); it != pv.rend(); it++){
             ::unmake(Move(*it), b, gh);
         }
-        ::unmake(best_move, b, gh);
         return pv;
     }
 
