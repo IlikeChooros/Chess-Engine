@@ -721,7 +721,7 @@ namespace ui
         auto& results = m_manager->getSearchResult();
         std::unique_lock<std::mutex> lock(results.mutex, std::try_to_lock);
         if (lock.owns_lock()){
-            m_evalBar.setEval(results.score);
+            m_evalBar.setEval(results.score.value);
         }
     }
 
@@ -839,7 +839,7 @@ namespace ui
         auto& results = m_manager->getSearchResult();
         std::unique_lock<std::mutex> lock(results.mutex, std::try_to_lock);
         if (lock.owns_lock()){
-            m_evalBar.setEval(results.score);
+            m_evalBar.setEval(results.score.value);
             std::vector<std::string> moves;
             for (auto& move : results.pv){
                 moves.push_back(Piece::notation(move.getFrom(), move.getTo()));
@@ -878,7 +878,7 @@ namespace ui
         auto& results = m_manager->getSearchResult();
         std::unique_lock<std::mutex> lock(results.mutex, std::try_to_lock);
         if (lock.owns_lock()){
-            m_evalBar.setEval(results.score);
+            m_evalBar.setEval(results.score.value);
             std::vector<std::string> moves;
             for (auto& move : results.pv){
                 moves.push_back(Piece::notation(move.getFrom(), move.getTo()));

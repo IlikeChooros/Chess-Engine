@@ -5,7 +5,7 @@ namespace chess
     constexpr int MIN = -(1 << 29),
                   MAX = 1 << 29,
                   MATE = -(1 << 28) + 1,
-                  MATE_THRESHOLD = MATE - 1000;
+                  MATE_THRESHOLD = -MATE;
 
 
     // Check the search parameters and see if the search should stop
@@ -182,14 +182,18 @@ namespace chess
         if (!board || !gh || !sc || !result)
             return;
 
-        result->move = Move(0);
-        result->depth = 0;
-        result->status = ONGOING;
+        {
+            std::lock_guard<std::mutex> lock(result->mutex);
+            result->move = Move(0);
+            result->depth = 0;      
+            result->status = ONGOING;       
+        }
 
         params->setSearchRunning(true);
 
         // Initialize variables
         int eval = MIN;
+        Score nscore;
         Move best_move;
         MoveList pv;
         MoveList ml;
@@ -243,10 +247,20 @@ namespace chess
             time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count();
             pv = getPV(board, sc, gh, best_move, depth);
 
+            // Update score
+            nscore.value = eval * whotomove;
+            if (abs(eval) >= MATE_THRESHOLD){
+                nscore.value = (pv.size() + 1) / 2;
+                nscore.value = std::max(nscore.value, 1);
+                nscore.value *= eval > 0 ? 1 : -1;
+                nscore.type = Score::mate;
+            }
+
+            // Update the search result 
             std::unique_lock<std::mutex> lock(result->mutex);
             if (lock.owns_lock()){
                 result->move = best_move;
-                result->score = eval * whotomove;
+                result->score = nscore;
                 result->time = time_taken;
                 result->depth = depth;
                 result->pv = std::list<Move>(pv.begin(), pv.end());

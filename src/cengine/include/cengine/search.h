@@ -84,6 +84,15 @@ namespace chess
         }
     };
 
+
+    // Score struct
+    struct Score{
+        enum Type{
+            cp, mate
+        } type = cp;
+        int value = 0;
+    };
+
     // Search result
     // move: Best move found
     // score: Score of the position
@@ -95,7 +104,7 @@ namespace chess
     struct SearchResult
     {
         Move move = Move(Move::nullMove);
-        int score = 0;
+        Score score = {Score::cp, 0};
         int depth = 0;
         uint64_t time = 0;
         GameStatus status = ONGOING;
