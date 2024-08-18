@@ -25,11 +25,12 @@ namespace chess
 
 
     // Get PV from transposition table
-    MoveList getPV(Board* b, SearchCache* sc, GameHistory* gh, Move best_move){
+    MoveList getPV(Board* b, SearchCache* sc, GameHistory* gh, Move best_move, int max_depth = 10){
         if (!sc || !b || !gh || best_move == Move::nullMove)
             return {};
 
         MoveList pv;
+        int i = 0;
 
         ::make(best_move, b, gh);
         uint64_t hash = get_hash(b);
@@ -37,7 +38,7 @@ namespace chess
             TEntry entry = sc->getTT().get(hash);
             if (!entry.bestMove || entry.bestMove == best_move)
                 break;
-            if (pv.size() >= pv.capacity() - 1)
+            if (pv.size() >= pv.capacity() - 1 || i++ > max_depth)
                 break;
             pv.add(entry.bestMove);
             ::make(entry.bestMove, b, gh);
@@ -183,7 +184,6 @@ namespace chess
 
         result->move = Move(0);
         result->depth = 0;
-        result->score = 0;
         result->status = ONGOING;
 
         params->setSearchRunning(true);
@@ -241,7 +241,7 @@ namespace chess
             
             depth++;
             time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count();
-            pv = getPV(board, sc, gh, best_move);
+            pv = getPV(board, sc, gh, best_move, depth);
 
             std::unique_lock<std::mutex> lock(result->mutex);
             if (lock.owns_lock()){

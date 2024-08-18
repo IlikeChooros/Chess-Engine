@@ -94,13 +94,13 @@ namespace chess
     // pv: Principal variation
     struct SearchResult
     {
-        Move move;
-        int score;
-        int depth;
-        uint64_t time;
+        Move move = Move(Move::nullMove);
+        int score = 0;
+        int depth = 0;
+        uint64_t time = 0;
         GameStatus status = ONGOING;
-        std::mutex mutex;
-        std::list<Move> pv;
+        std::mutex mutex = {};
+        std::list<Move> pv = {};
     };
 
     void search(Board* board, GameHistory* gh, SearchCache* sc, SearchParams* params, SearchResult* sr);
