@@ -38,15 +38,7 @@ namespace chess
 
         // Handle moves
         while(iss >> section){
-            int from = str_to_square(section.substr(0, 2));
-            int to = str_to_square(section.substr(2, 2));
-            int flag = -1;
-            if (isalpha(*section.end())){
-                auto vflags = getFlags(from, to);
-                flag = vflags[0] & (Move::FLAG_PROMOTION | Move::FLAG_CAPTURE);
-                flag |= Move::getPromotionPiece(*section.end());
-            }
-            if(!makeMove(from, to, flag)){
+            if (!makeMove(section)){
                 break;
             }
         }
@@ -84,7 +76,7 @@ namespace chess
             }
         }
 
-        std::cout << "Invalid move: " << Piece::notation(from, to) << std::endl;
+        std::cout << "Invalid move: " << Move::notation(from, to) << std::endl;
         return false;
     }
 
@@ -94,29 +86,13 @@ namespace chess
      */
     bool Manager::makeMove(std::string move)
     {
-        if (move.size() < 4)
-            return false;
-        
-        int from = str_to_square(move.substr(0, 2));
-        int to = str_to_square(move.substr(2, 2));
-        int flags = -1;
-        auto vflags = getFlags(from, to);
+        Move m(move);
 
-        if (from == -1 || to == -1 || vflags.empty())
+        if (!m || m.setFlags(move, getFlags(m.getFrom(), m.getTo()))){
             return false;
-        
-        flags = vflags[0];
-        if (move.size() == 5){
-            int promotion = Move::getPromotionPiece(move[4]);
-
-            if (promotion == -1)
-                return false;
-            
-            flags &= (Move::FLAG_PROMOTION | Move::FLAG_CAPTURE);
-            flags |= promotion;
         }
 
-        return makeMove(from, to, flags);
+        return makeMove(m.getFrom(), m.getTo(), m.getFlags());
     }
 
     /**

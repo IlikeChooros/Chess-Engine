@@ -6,9 +6,8 @@
 
 namespace uci
 {
-
-
-    std::unordered_map<std::string, std::string> help_map = {
+    // Help map
+    std::map<std::string, std::string> help_map = {
         {"perft", 
             "perft <depth> - Run perft test at given depth, board should be already initialized\n\n"
         },
@@ -61,6 +60,34 @@ namespace uci
             "For example 'help go' will give you more info about the 'go' command\n\n"        
         },
     };
+
+
+    enum Commands {
+        Uci,
+        UciNewGame,
+        IsReady,
+        Position,
+        Go,
+        Stop,
+        GetFen,
+        MakeMove,
+        Help,
+        Quit,
+    };
+
+    std::map<std::string, Commands> command_map = {
+        {"uci", Uci},
+        {"ucinewgame", UciNewGame},
+        {"isready", IsReady},
+        {"position", Position},
+        {"go", Go},
+        {"stop", Stop},
+        {"getfen", GetFen},
+        {"makemove", MakeMove},
+        {"help", Help},
+        {"quit", Quit},
+    };
+
 
     /**
      * @brief Print an error message and throw an exception
@@ -182,54 +209,75 @@ namespace uci
         std::string command, output;
         iss >> command;
 
-        if (command == "uci"){
-            output = "id name CEngine\n";
-            output += "id author IlikeChooros\n";
-            output += "uciok\n";
+        if (command_map.find(command) == command_map.end()){
+            return "Unknown command: '" + command + "', type 'help' for a list of commands\n";
         }
-        else if (command == "ucinewgame"){
-            manager->reset();
-        }
-        else if (command == "isready"){
-            output = "readyok\n";
-        }
-        else if (command == "position"){
-            position(manager, iss);
-        }
-        else if (command == "stop"){
-            manager->impl()->stopSearchAsync();
-        }
-        else if (command == "go"){
-            go(manager, iss);
-        }
-        else if (command == "getfen"){
-            output = manager->impl()->board->getFen() + "\n";
-        }
-        else if (command == "bestmove"){
-            std::string move;
-            if (!(iss >> move)){
-                fail("(bestmove): Move not specified\n");
-            }
-            if (!manager->makeMove(move)){
-                fail("(bestmove): Invalid move: %s\n", move.c_str());
-            }
-        }
-        else if (command == "help"){
-            // Check if there is a command after help
-            std::string help_command;
-            if (iss >> help_command){
-                if (help_map.find(help_command) != help_map.end()){
-                    output = help_map[help_command];
-                } else {
-                    output = "Unknown command: '" + help_command + "', type 'help' for a list of commands\n";
+
+        Commands comm = command_map[command];
+        
+        switch (comm){
+            case Uci:
+                output = "id name CEngine\n";
+                output += "id author IlikeChooros\n";
+                output += "uciok\n";
+                break;
+
+            case UciNewGame:
+                manager->reset();
+                break;
+
+            case IsReady:
+                output = "readyok\n";
+                break;
+
+            case Position:
+                position(manager, iss);
+                break;
+
+            case Stop:
+                manager->impl()->stopSearchAsync();
+                break;
+
+            case Go:
+                go(manager, iss);
+                break;
+
+            case GetFen:
+                output = manager->impl()->board->getFen() + "\n";
+                break;
+            
+            case MakeMove: {
+                std::string move;
+                if (iss >> move){
+                    if (!manager->makeMove(move)){
+                        output = "Invalid move: " + move + "\n";
+                    }
                 }
-                return output;
             }
-            // Just a help command
-            output = help_map["help"];
-        }
-        else {
-            output = "Unknown command: '" + command + "', type 'help' for a list of commands\n";
+
+            case Help: {
+                // Check if there is a command after help
+                std::string help_command;
+                if (iss >> help_command){
+                    if (help_map.find(help_command) != help_map.end()){
+                        output = help_map[help_command];
+                    } else {
+                        output = "Unknown command: '" + help_command + "', type 'help' for a list of commands\n";
+                    }
+                } else {
+                    // Just a help command
+                    output = help_map["help"];
+                }
+            }
+                break;
+
+            case Quit:
+                output = "Bye!\n";
+                break;
+
+            default:
+                output = "Unknown command: '" + command + "', type 'help' for a list of commands\n";
+                break;
         }
         return output;
     }

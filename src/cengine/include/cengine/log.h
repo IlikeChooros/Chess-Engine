@@ -28,6 +28,7 @@ public:
     void logPV(MoveList* pv);
     void logGameHistory(chess::GameHistory* gh);
     void printInfo(int depth, int score, bool cp, uint64_t nodes, uint64_t time, MoveList* pv = nullptr);
+    void printf(const char* format, ...);
 };
 
 extern Log glogger;

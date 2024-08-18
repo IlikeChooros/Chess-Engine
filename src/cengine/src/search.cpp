@@ -263,6 +263,9 @@ namespace chess
                 result->pv = std::list<Move>(pv.begin(), pv.end());
                 lock.unlock();
             }
+            
+            // Log the search info
+            glogger.printInfo(depth, nscore.value, nscore.type == Score::cp, params->nodes_searched, time_taken, &pv);
 
             // Break if the search should stop
             if (params->depth != -1 && depth > params->depth){
@@ -272,11 +275,7 @@ namespace chess
                 break;
         }
 
-        depth--;
-        time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count();
-        time_taken = std::max(time_taken, 1UL);
-
-        glogger.printInfo(depth, nscore.value, nscore.type == Score::cp, params->nodes_searched, time_taken, &pv);
+        glogger.printf("bestmove %s\n", best_move.notation().c_str());
         glogger.logBoardInfo(board);
         glogger.logTTableInfo(&sc->getTT());
 

@@ -852,7 +852,7 @@ namespace ui
             m_evalBar.setEval(results.score.value, results.score.type == Score::cp);
             std::vector<std::string> moves;
             for (auto& move : results.pv){
-                moves.push_back(Piece::notation(move.getFrom(), move.getTo()));
+                moves.push_back(move.notation());
             }
             m_moveList.setMoves(moves);
         }
@@ -891,7 +891,7 @@ namespace ui
             m_evalBar.setEval(results.score.value, results.score.type == Score::cp);
             std::vector<std::string> moves;
             for (auto& move : results.pv){
-                moves.push_back(Piece::notation(move.getFrom(), move.getTo()));
+                moves.push_back(Move::notation(move.getFrom(), move.getTo()));
             }
             m_moveList.setMoves(moves);
         }
@@ -941,7 +941,7 @@ namespace ui
         state.board = &copy;
         manager = &m;
 
-        // state.screen_state = BoardScreenState::TEST_ENGINE;
+        state.screen_state = BoardScreenState::TEST_ENGINE;
 
         if(!pieces_texture.loadFromFile(global_settings.base_path / "img/ChessPiecesArray.png")){
             return;

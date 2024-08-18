@@ -68,7 +68,7 @@ void Log::logPV(MoveList* pv)
     logf("PV: ");
     for (auto& move : *pv)
     {
-        logf("%s ", chess::Piece::notation(Move(move).getFrom(), Move(move).getTo()).c_str());
+        logf("%s ", Move(move).notation().c_str());
     }
     logf("\n");
 }
@@ -79,7 +79,7 @@ void Log::logGameHistory(chess::GameHistory* gh)
     for (auto& hist : gh->history)
     {
         logf("%s%c ", 
-            chess::Piece::notation(Move(hist.move).getFrom(), Move(hist.move).getTo()).c_str(), 
+            Move(hist.move).notation().c_str(),
             hist.side_to_move == chess::Piece::White ? 'W' : 'B'
         );
     }
@@ -103,11 +103,25 @@ void Log::printInfo(int depth, int score, bool cp, uint64_t nodes, uint64_t time
         str += " pv ";
         for (auto& move : *pv)
         {
-            str += chess::Piece::notation(Move(move).getFrom(), Move(move).getTo()) + " ";
+            str += Move(move).notation() + " ";
         }
     }
 
     str += "\n";
+    std::cout << str;
     log(str);
+}
+
+void Log::printf(const char* str, ...)
+{
+    va_list args;
+    char buffer[1024];
+    va_start(args, str);
+    vsnprintf(buffer, 1024, str, args);
+    va_end(args);
+
+    std::string s(buffer);
+    std::cout << s;
+    log(s);
 }
 

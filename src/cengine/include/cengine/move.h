@@ -1,7 +1,9 @@
 #pragma once
 
+#include <vector>
 #include <cstring>
 
+#include "utils.h"
 #include "types.h"
 
 // Class representing a move, has a from, to and flags. Internally stored as a 32 bit integer
@@ -43,12 +45,55 @@ class Move
     static const uint32_t FLAG_QUEEN_PROMOTION_CAPTURE = 0b1111;
 
     Move() : m_move(0) {};
-    Move(uint32_t from, uint32_t to, uint32_t flags) {
-        m_move = (flags << 12) | (from << 6) | to;
-        // First 6 bits: to, next 6 bits: from, rest: flags (20 bits)
-    };
+    Move(uint32_t from, uint32_t to, uint32_t flags) :
+        Move((flags << 12) | (from << 6) | to) {}; // First 6 bits: to, next 6 bits: from, rest: flags (4 bits)
+          
     Move(uint32_t move) : m_move(move) {};
     Move(const Move& other) : m_move(other.m_move) {};
+
+    /**
+     * @brief Create a move from a string notation (e.g. e2e4, a7a8q),
+     * user should call `setFlags` to set the flags for the move
+     */
+    Move(std::string move) {
+        m_move = 0;
+        if (move.size() < 4){
+            return;
+        }
+
+        int from = str_to_square(move.substr(0, 2));
+        int to = str_to_square(move.substr(2, 2));
+
+        if (from == -1 || to == -1){
+            return;
+        }
+        m_move = (from << 6) | to;
+    }
+
+    /**
+     * @brief Set the flags for the move use only if 
+     * the move was created with the string notation constructor
+     */
+    bool setFlags(std::string move, std::vector<uint32_t> flags) {
+        if (flags.empty()){
+            return false;
+        }
+
+        uint32_t flag = flags[0];
+        if (move.size() == 5){
+            int promotion = getPromotionPiece(move[4]);
+
+            if (promotion == -1 || !(flag & FLAG_PROMOTION)){
+                return false;
+            }
+            
+            flag &= (FLAG_PROMOTION | FLAG_CAPTURE);
+            flag |= promotion;
+        }
+
+        m_move |= flag << 12;
+        return true;
+    }
 
     uint32_t getFrom() const {return (m_move >> 6) & MASK_MOVE;};
     uint32_t getTo() const {return m_move & MASK_MOVE;};
@@ -71,6 +116,25 @@ class Move
     int getPromotionPiece() const {return getFlags() & MASK_PROMOTION_PIECE;};
 
     /**
+     * @brief Get the promotion character, if the move is a promotion
+     * @return n - Knight, b - Bishop, r - Rook, q - Queen, 0 - Invalid
+     */
+    char getPromotionChar() const {
+        switch(getPromotionPiece()){
+            case 0:
+                return 'n';
+            case 1:
+                return 'b';
+            case 2:
+                return 'r';
+            case 3:
+                return 'q';
+            default:
+                return 0;
+        }
+    };
+
+    /**
      * @brief Get the promotion piece, if the move is a promotion
      * @param c The character representing the piece
      * @return 0 - Knight, 1 - Bishop, 2 - Rook, 3 - Queen, -1 - Invalid
@@ -89,6 +153,22 @@ class Move
                 return -1;
         }
     };
+
+    // Get the move in UCI notation, (e.g. e2e4) (no promotion info)
+    static std::string notation(int from, int to){
+        return square_to_str(from) + square_to_str(to);
+    }
+
+    /**
+     * @brief Get the move in UCI notation, (e.g. e2e4, a7a8q)
+     */
+    std::string notation() const {
+        std::string str = square_to_str(getFrom()) + square_to_str(getTo());
+        if (isPromotion()){
+            str += getPromotionChar();
+        }
+        return str;
+    }
 
     operator int() const {return m_move;};
     operator bool() const {return m_move != 0;};
