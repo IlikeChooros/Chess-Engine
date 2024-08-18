@@ -88,7 +88,7 @@ namespace chess
     {
         Move m(move);
 
-        if (!m || m.setFlags(move, getFlags(m.getFrom(), m.getTo()))){
+        if (!(m && m.setFlags(move, getFlags(m.getFrom(), m.getTo())))){
             return false;
         }
 

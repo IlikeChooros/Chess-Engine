@@ -254,6 +254,7 @@ namespace uci
                     }
                 }
             }
+                break;
 
             case Help: {
                 // Check if there is a command after help
@@ -300,6 +301,7 @@ namespace uci
         m_board.init();
         m_manager = chess::Manager(&m_board);
         m_manager.init();
+        m_manager.generateMoves();
 
         std::ios_base::sync_with_stdio(false);
         std::cout.setf(std::ios::unitbuf);

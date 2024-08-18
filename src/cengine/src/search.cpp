@@ -261,16 +261,16 @@ namespace chess
                 result->move = best_move;
                 result->score = nscore;
                 result->time = time_taken;
-                result->depth = depth;
+                result->depth = depth - 1;
                 result->pv = std::list<Move>(pv.begin(), pv.end());
                 lock.unlock();
             }
             
             // Log the search info
-            glogger.printInfo(depth, nscore.value, nscore.type == Score::cp, params->nodes_searched, time_taken, &pv);
+            glogger.printInfo(depth - 1, nscore.value, nscore.type == Score::cp, params->nodes_searched, time_taken, &pv);
 
             // Break if the search should stop
-            if (params->depth != -1 && depth > params->depth){
+            if (depth > params->depth){
                 params->stopSearch();
             }
             if (!keep_searching(params))
