@@ -203,6 +203,7 @@ namespace chess
         result->status = get_status(board, gh, &ml);
 
         if (result->status != ONGOING){
+            glogger.printf("bestmove (none)\n");
             params->setSearchRunning(false);
             return;
         }
