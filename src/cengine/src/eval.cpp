@@ -7,15 +7,8 @@ namespace chess
     const int piece_values[6] = {100, 320, 20000, 330, 500, 900};
     int white_piece_square_table[6][64] = {
         // for white
-        // pawn
-        {0,  0,  0,  0,  0,  0,  0,  0,
-        50, 50, 50, 50, 50, 50, 50, 50,
-        10, 10, 20, 30, 30, 20, 10, 10,
-        5,  5, 10, 25, 25, 10,  5,  5,
-        0,  0,  0, 20, 20,  0,  0,  0,
-        5, -5,-10,  0,  0,-10, -5,  5,
-        5, 10, 10,-20,-20, 10, 10,  5,
-        0,  0,  0,  0,  0,  0,  0,  0,},
+        // pawn (using other table)
+        {0},
         // knight
         {-50,-40,-30,-30,-30,-30,-40,-50,
         -40,-20,  0,  0,  0,  0,-20,-40,
@@ -76,9 +69,51 @@ namespace chess
         -30,-30,  0,  0,  0,  0,-30,-30,
         -50,-30,-30,-30,-30,-30,-30,-50,}
     };
+
+    // For the endgame & middle game
+    int white_pawn_square_table[2][64] = {
+        // for white
+        // middle game
+        {
+            0,  0,  0,  0,  0,  0,  0,  0,
+            50, 50, 50, 50, 50, 50, 50, 50,
+            10, 10, 20, 30, 30, 20, 10, 10,
+            5,  5, 10, 25, 25, 10,  5,  5,
+            0,  0,  0, 20, 20,  0,  0,  0,
+            5, -5,-10,  0,  0,-10, -5,  5,
+            5, 10, 10,-20,-20, 10, 10,  5,
+            0,  0,  0,  0,  0,  0,  0,  0,
+        },
+        // endgame
+        {
+            0,  0,  0,  0,  0,  0,  0,  0,
+            50, 50, 50, 50, 50, 50, 50, 50,
+            40, 40, 40, 40, 40, 40, 40, 40,
+            30, 30, 30, 30, 30, 30, 30, 30,
+            20, 20, 20, 20, 20, 20, 20, 20,
+            10, 10, 10, 10, 10, 10, 10, 10,
+             5,  5,  5,  5,  5,  5,  5,  5,
+             0,  0,  0,  0,  0,  0,  0,  0,
+        },
+    };
+
+    static int manhattan_distance[64][64] = {0};
     static int piece_square_table[2][6][64] = {0};
     static int king_square_tables[2][2][64] = {0};
-    static TTable<int> pawn_table;
+    static int pawn_square_tables[2][2][64] = {0};
+    static TTable<int> pawn_table(8);
+
+    // https://www.chessprogramming.org/Center_Manhattan-Distance
+    const uint8_t center_manhattan_distance[64] = { 
+        6, 5, 4, 3, 3, 4, 5, 6,
+        5, 4, 3, 2, 2, 3, 4, 5,
+        4, 3, 2, 1, 1, 2, 3, 4,
+        3, 2, 1, 0, 0, 1, 2, 3,
+        3, 2, 1, 0, 0, 1, 2, 3,
+        4, 3, 2, 1, 1, 2, 3, 4,
+        5, 4, 3, 2, 2, 3, 4, 5,
+        6, 5, 4, 3, 3, 4, 5, 6
+    };
 
     /**
      * @brief Initialize the boards for evaluation
@@ -86,7 +121,7 @@ namespace chess
     void init_eval()
     {
         // Initialize the pieces tables
-        for(int i = 0; i < 6; i++){
+        for(int i = 1; i < 6; i++){
             if (i == Piece::King - 1){
                 continue;
             }
@@ -101,6 +136,25 @@ namespace chess
             for(int j = 0; j < 64; j++){
                 king_square_tables[1][i][j] = white_king_square_tables[i][j];
                 king_square_tables[0][i][j] = white_king_square_tables[i][63 - j];
+            }
+        }
+
+        // Initialize the pawn square tables
+        for(int i = 0; i < 2; i++){
+            for(int j = 0; j < 64; j++){
+                pawn_square_tables[1][i][j] = white_pawn_square_table[i][j];
+                pawn_square_tables[0][i][j] = white_pawn_square_table[i][63 - j];
+            }
+        }
+
+        // Initialize the manhattan distance
+        for (int i = 0; i < 64; i++){
+            for (int j = 0; j < 64; j++){
+                int rank1 = i / 8;
+                int file1 = i % 8;
+                int rank2 = j / 8;
+                int file2 = j % 8;
+                manhattan_distance[i][j] = abs(rank1 - rank2) + abs(file1 - file2);
             }
         }
     }
@@ -130,7 +184,7 @@ namespace chess
         };
 
         // Count the material & piece square tables
-        for (int type = 0; type < 6; type++){
+        for (int type = 1; type < 6; type++){
             if (type == Piece::King - 1){
                 continue;
             }
@@ -158,6 +212,11 @@ namespace chess
             eval -= 50;
         }
 
+        bool is_endgame = false;
+        if (pop_count(board->pieces()) <= 6 || ((pop_count(board->queens()) == 0) && (pop_count(board->rooks()) == 0))){
+            is_endgame = true;
+        }
+
         // Pawn structure
         // Try to get hashed pawn structure (already calculated)
         uint64_t pawn_hash = get_pawn_hash(board);
@@ -166,9 +225,21 @@ namespace chess
         } else {
             int pawn_eval = 0;
 
-            // Doubled pawns
             uint64_t pawns = board->bitboards(is_white)[Piece::Pawn - 1];
             uint64_t epawns = board->bitboards(is_enemy)[Piece::Pawn - 1];
+
+            // Square tables
+            uint64_t copy_pawns = pawns;
+            while(copy_pawns){
+                pawn_eval += pawn_square_tables[is_white][is_endgame][pop_lsb1(copy_pawns)];
+            }
+
+            copy_pawns = epawns;
+            while(copy_pawns){
+                pawn_eval -= pawn_square_tables[is_enemy][is_endgame][pop_lsb1(copy_pawns)];
+            }
+
+            // Doubled pawns
             for (int i = 0; i < 8; i++){
                 uint64_t file = file_bitboards[i];
                 if (pawns & file && pop_count(pawns & file) > 1){
@@ -178,10 +249,11 @@ namespace chess
                     pawn_eval += 10;
                 }
             }
-
-            // Isolated pawns
+            
             for (int i = 0; i < 8; i++){
                 uint64_t file = file_bitboards[i];
+
+                // Isolated pawns
                 if (pawns & file){
                     if (!(pawns & (file >> 1)) && !(pawns & (file << 1))){
                         pawn_eval -= 10;
@@ -192,11 +264,8 @@ namespace chess
                         pawn_eval += 10;
                     }
                 }
-            }
 
-            // Connected pawns
-            for (int i = 0; i < 8; i++){
-                uint64_t file = file_bitboards[i];
+                // Connected pawns
                 if (pawns & file){
                     if (pawns & (file >> 8) || pawns & (file << 8)){
                         pawn_eval += 10;
@@ -207,33 +276,42 @@ namespace chess
                         pawn_eval -= 10;
                     }
                 }
+
+                // Passed pawns
+                if (pawns & file){
+                    // White passed pawn
+                    if (!(epawns & file) && !(epawns & file >> 1) && !(epawns & file << 1)){
+                        pawn_eval += 20;
+                    }
+                }
+                if (epawns & file){
+                    // Black passed pawn
+                    if (!(pawns & file) && !(pawns & file >> 1) && !(pawns & file << 1)){
+                        pawn_eval -= 20;
+                    }
+                }
             }
 
             // Store the pawn hash
             pawn_table.store(pawn_hash, pawn_eval);
             eval += pawn_eval;
-        }
-
-        // const uint64_t enemy_board_side[2] = {
-        //     0xFFFFFFFF00000000ULL, // for black
-        //     0x00000000FFFFFFFFULL, // for white
-        // };
-        // // Mobility / Activity (doesn't work properly -> enemy activity is too high)
-        // uint64_t allied_activity = c->activity & enemy_board_side[is_white];
-        // uint64_t enemy_activity = c->danger & enemy_board_side[is_enemy];
-
-        // eval += (pop_count(allied_activity) - pop_count(enemy_activity)) * 5;
-        
+        }        
 
         // King square tables
-        bool is_endgame = false;
-
-        if (pop_count(board->pieces()) <= 6 || ((pop_count(board->queens()) == 0) && (pop_count(board->rooks()) == 0))){
-            is_endgame = true;
-        }
-
         eval += king_square_tables[is_white][is_endgame][king_sq];
         eval -= king_square_tables[is_enemy][is_endgame][eking_sq];
+
+        // If one side has a significant advantage + the other one has no pawns, king should be more aggressive
+        // and drive the other one to a corner, so it's easier to checkmate
+        int whotomove = board->getSide() == Piece::White ? 1 : -1;
+        int pos_eval = 0;
+        if (is_endgame && pop_count(board->bitboards(is_enemy)[Board::PAWN_TYPE]) < 2 && eval * whotomove > 500){
+            // Favor enemy king to be in the corner
+            pos_eval += center_manhattan_distance[eking_sq] * 4 * whotomove;
+            // Favor own king to be close to the enemy king
+            pos_eval += manhattan_distance[king_sq][eking_sq] * 2 * whotomove;
+        }
+        eval += pos_eval;
 
         return eval;
     }

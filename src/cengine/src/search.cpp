@@ -53,6 +53,11 @@ namespace chess
         return pv;
     }
 
+    // Search extensions
+    int extensions(int extensions, Board* b){
+        return extensions < 16 ? b->inCheck() : 0;
+    }
+
 
     // Quiescence (no quiet) search, runs aplha beta on captures only and evaluates the position
     int quiescence(Board* b, GameHistory* gh, SearchParams* params, int alpha, int beta){
@@ -82,7 +87,7 @@ namespace chess
     }
 
     // Negamax with alpha-beta pruning
-    int negaAlphaBeta(Board* b, GameHistory* gh, SearchCache* sc, SearchParams* params, int alpha, int beta, int depth){
+    int negaAlphaBeta(Board* b, GameHistory* gh, SearchCache* sc, SearchParams* params, int alpha, int beta, int depth, int n_extension = 0){
         using namespace std::chrono;
 
         // Lookup transposition table and check for possible cutoffs
@@ -126,7 +131,8 @@ namespace chess
             Move m(ml[i]);
             ::make(m, b, gh);
             params->nodes_searched++;
-            best = std::max(best, -negaAlphaBeta(b, gh, sc, params, -beta, -alpha, depth - 1));
+            int ext = extensions(n_extension, b);
+            best = std::max(best, -negaAlphaBeta(b, gh, sc, params, -beta, -alpha, depth + ext - 1, n_extension + ext));
             ::unmake(m, b, gh);
             b->irreversibleIndex() = last_irreversible;
 
@@ -203,6 +209,7 @@ namespace chess
         result->status = get_status(board, gh, &ml);
 
         if (result->status != ONGOING){
+            glogger.printf("bestmove (none)\n");
             params->setSearchRunning(false);
             return;
         }
