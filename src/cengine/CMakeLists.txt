@@ -20,5 +20,3 @@ target_sources(cengine
 )
 
 target_include_directories(cengine PUBLIC include)
-
-target_link_libraries(cengine sfml-graphics sfml-window sfml-system)

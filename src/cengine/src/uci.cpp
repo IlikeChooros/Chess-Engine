@@ -44,7 +44,17 @@ namespace uci
         {"isready", "isready - Check if the engine is ready\n\n"},
         {"stop", "stop - Stop the search\n\n"},
         {"getfen", "getfen - Get the current FEN (unofficial)\n\n"},
-        {"help", 
+        {"makemove", "makemove <move> - Make a move, with format <from><to><promotion>\n"
+            "Where <from> and <to> are the square names, and <promotion> is the promotion piece:\n"
+            " - q: Queen\n"
+            " - r: Rook\n"
+            " - b: Bishop\n"
+            " - n: Knight\n\n"
+            "Example: makemove e2e4\n"
+        },
+        {"quit", "quit - Quit the engine\n\n"},
+        {"debug", "debug <on | off> - Toggle debug mode\n\n"},
+        {"help",
             "\nAvaible commands:\n"
             "uci\n"
             "ucinewgame\n"
@@ -54,7 +64,9 @@ namespace uci
             "perft <depth>\n"
             "stop\n"
             "getfen\n"
-            "help\n"
+            "makemove <move>\n"
+            "debug <on | off>\n"
+            "help <command>\n"
             "quit\n\n"
             "Try 'help <command>' for more info about a command\n"
             "For example 'help go' will give you more info about the 'go' command\n\n"        
@@ -71,6 +83,7 @@ namespace uci
         Stop,
         GetFen,
         MakeMove,
+        Debug,
         Help,
         Quit,
     };
@@ -84,6 +97,7 @@ namespace uci
         {"stop", Stop},
         {"getfen", GetFen},
         {"makemove", MakeMove},
+        {"debug", Debug},
         {"help", Help},
         {"quit", Quit},
     };
@@ -254,6 +268,15 @@ namespace uci
                     }
                 }
             }
+                break;
+            
+            case Debug:
+                if (iss >> command){
+                    bool on = command == "on";
+                    if (on || command == "off"){
+                        glogger.setf(on ? Log::console | Log::file : Log::console);
+                    }
+                }
                 break;
 
             case Help: {

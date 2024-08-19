@@ -267,7 +267,10 @@ namespace chess
             }
             
             // Log the search info
-            glogger.printInfo(depth - 1, nscore.value, nscore.type == Score::cp, params->nodes_searched, time_taken, &pv);
+            glogger.printInfo(
+                depth - 1, nscore.value, nscore.type == Score::cp, 
+                params->nodes_searched, time_taken, &pv, false
+            );
 
             // Break if the search should stop
             if (depth > params->depth){

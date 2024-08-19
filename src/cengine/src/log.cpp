@@ -4,6 +4,7 @@ Log glogger = Log((global_settings.base_path / "log.txt").string());
 
 Log::Log(std::string logfile)
 {
+    m_settings = LogSettings();
     m_log_file = logfile;
     m_log_stream.open(m_log_file, std::ios::out | std::ios::app);
 }
@@ -13,12 +14,31 @@ Log::~Log()
     m_log_stream.close();
 }
 
+/**
+ * @brief Log to file
+ */
 void Log::log(std::string& str)
 {
+    if (!(m_settings.flags & LogFlags::file))
+        return;
+    
     m_log_stream << str;
     m_log_stream.flush();
 }
 
+/**
+ * @brief Print to console and log file
+ */
+void Log::sprint(std::string& str)
+{
+    if (m_settings.flags & LogFlags::console)
+        std::cout << str;
+    log(str);
+}
+
+/**
+ * @brief Log a formatted string
+ */
 void Log::logf(const char* format, ...)
 {
     va_list args;
@@ -31,6 +51,9 @@ void Log::logf(const char* format, ...)
     log(str);
 }
 
+/**
+ * @brief Log transposition table info
+ */
 void Log::logTTableInfo(TTable<TEntry>* ttable)
 {
     logf("Transposition Table Info: "
@@ -47,6 +70,9 @@ void Log::logTTableInfo(TTable<TEntry>* ttable)
     );
 }
 
+/**
+ * @brief Log board info
+ */
 void Log::logBoardInfo(chess::Board* board)
 {
     logf("Board Info: "
@@ -63,6 +89,9 @@ void Log::logBoardInfo(chess::Board* board)
     );
 }
 
+/**
+ * @brief Log principal variation
+ */
 void Log::logPV(MoveList* pv)
 {
     logf("PV: ");
@@ -73,6 +102,9 @@ void Log::logPV(MoveList* pv)
     logf("\n");
 }
 
+/**
+ * @brief Log game history
+ */
 void Log::logGameHistory(chess::GameHistory* gh)
 {
     logf("Game History: ");
@@ -86,7 +118,10 @@ void Log::logGameHistory(chess::GameHistory* gh)
     logf("\n");
 }
 
-void Log::printInfo(int depth, int score, bool cp, uint64_t nodes, uint64_t time, MoveList* pv)
+/**
+ * @brief Print search info (depth, score, nodes, time, pv) and log to file
+ */
+void Log::printInfo(int depth, int score, bool cp, uint64_t nodes, uint64_t time, MoveList* pv, bool log)
 {
     time = std::max(time, 1UL);
 
@@ -108,10 +143,12 @@ void Log::printInfo(int depth, int score, bool cp, uint64_t nodes, uint64_t time
     }
 
     str += "\n";
-    std::cout << str;
-    log(str);
+    this->sprint(str);
 }
 
+/**
+ * @brief Log a formatted string to console and file
+ */
 void Log::printf(const char* str, ...)
 {
     va_list args;
@@ -121,6 +158,5 @@ void Log::printf(const char* str, ...)
     va_end(args);
 
     std::string s(buffer);
-    std::cout << s;
-    log(s);
+    this->sprint(s);
 }
