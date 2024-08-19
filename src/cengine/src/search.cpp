@@ -7,6 +7,8 @@ namespace chess
                   MATE = -(1 << 28) + 1,
                   MATE_THRESHOLD = -MATE;
 
+    static TimeManagement time_management = TimeManagement();
+
 
     // Check the search parameters and see if the search should stop
     bool keep_searching(SearchParams* params){
@@ -14,9 +16,8 @@ namespace chess
 
         if (params->shouldStop())
             return false;
-        if (params->infinite)
-            return true;
-        if (duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count() >= params->movetime){
+
+        if (time_management.end()){
             params->stopSearch();
             return false;
         }
@@ -189,10 +190,11 @@ namespace chess
             return;
 
         {
+            // Reset the search result
             std::lock_guard<std::mutex> lock(result->mutex);
             result->move = Move(0);
-            result->depth = 0;      
-            result->status = ONGOING;       
+            result->depth = 0;
+            result->status = ONGOING;
         }
 
         params->setSearchRunning(true);
@@ -201,7 +203,7 @@ namespace chess
         int best_eval = MIN;
         Score nscore;
         Move best_move;
-        MoveList pv;
+        MoveList pv = getPV(board, sc, gh, best_move, 1);
         MoveList ml;
         int last_irreversible = board->irreversibleIndex();
         void(::gen_legal_moves(&ml, board));
@@ -215,11 +217,9 @@ namespace chess
         }
 
         // Prepare the timer
-        using namespace std::chrono;
-        params->start_time = high_resolution_clock::now();
+        time_management.reset(params->infinite, params->movetime);
         params->nodes_searched = 0;
         int depth = 1;
-        uint64_t time_taken = 1;
 
         // Iterative deepening
         while(true){
@@ -249,7 +249,6 @@ namespace chess
             }
             
             depth++;
-            time_taken = duration_cast<milliseconds>(high_resolution_clock::now() - params->start_time).count();
             pv = getPV(board, sc, gh, best_move, depth);
 
             // Update score
@@ -267,7 +266,7 @@ namespace chess
             if (lock.owns_lock()){
                 result->move = best_move;
                 result->score = nscore;
-                result->time = time_taken;
+                result->time = time_management.elapsed();
                 result->depth = depth - 1;
                 result->pv = std::list<Move>(pv.begin(), pv.end());
                 lock.unlock();
@@ -276,7 +275,7 @@ namespace chess
             // Log the search info
             glogger.printInfo(
                 depth - 1, nscore.value, nscore.type == Score::cp, 
-                params->nodes_searched, time_taken, &pv, false
+                params->nodes_searched, time_management.elapsed(), &pv, false
             );
 
             // Break if the search should stop

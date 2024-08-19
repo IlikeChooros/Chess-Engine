@@ -11,6 +11,7 @@
 #include "cache.h"
 #include "transp_table.h"
 #include "move_ordering.h"
+#include "time_management.h"
 
 
 namespace chess
@@ -21,19 +22,18 @@ namespace chess
         int depth = INT32_MAX; // In plies, that is max possible depth
         uint64_t nodes = UINT64_MAX;
         int mate = 0;
-        int64_t movetime = INT64_MAX; // In milliseconds
+        int64_t movetime = 0; // In milliseconds
         uint64_t wtime = 0;
         uint64_t btime = 0;
         uint64_t winc = 0;
         uint64_t binc = 0;
-        bool infinite = false;
+        bool infinite = true;
         bool ponder = false;
 
         // Asynchronous search
         bool stop = false;
         bool is_running = false;
         uint64_t nodes_searched = 0;
-        std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
         std::mutex mutex = {};
 
         SearchParams() = default;
@@ -52,6 +52,8 @@ namespace chess
             infinite = other.infinite;
             ponder = other.ponder;
             stop = other.stop;
+            is_running = other.is_running;
+            nodes_searched = other.nodes_searched;
             return *this;
         }
 
