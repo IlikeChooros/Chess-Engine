@@ -57,7 +57,7 @@ namespace chess
         static inline void init() {
             init_board();
             init_eval();
-            init_hashing();
+            Zobrist::init_hashing();
             init_magics(false);
         }
 
@@ -66,7 +66,7 @@ namespace chess
          * @return The number of moves generated
          */
         inline int generateMoves() { 
-            n_moves = ::gen_legal_moves(&move_list, board, &cache); 
+            n_moves = ::gen_legal_moves(&move_list, board); 
             return n_moves;
         }
 
@@ -174,7 +174,6 @@ namespace chess
         std::thread search_thread;
         SearchResult search_result;
         SearchParams search_params;
-        CacheMoveGen cache;
         GameHistory history;
         MoveList move_list;
         int n_moves;

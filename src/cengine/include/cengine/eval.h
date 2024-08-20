@@ -17,7 +17,7 @@ namespace chess
 
     
     void init_eval();
-    int evaluate(Board* board, CacheMoveGen* c, MoveList* ml);
+    int evaluate(Board* board);
     GameStatus get_status(Board* board, GameHistory* gh, MoveList *ml);
 
     extern const int piece_values[6];

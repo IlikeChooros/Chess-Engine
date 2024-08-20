@@ -121,18 +121,9 @@ namespace chess
     void init_eval()
     {
         // Initialize the pieces tables
-        for(int i = 0; i < 6; i++){
-            if (i == Piece::Pawn - 1){
-                for (int j = 0; j < 64; j++){
-                    piece_square_table[1][0][j] = white_pawn_square_table[0][j];
-                    piece_square_table[0][0][j] = white_pawn_square_table[0][63 - j];
-                }
-            }
+        for(int i = 1; i < 6; i++){
             if (i == Piece::King - 1){
-                for(int j = 0; j < 64; j++){
-                    piece_square_table[1][0][j] = white_king_square_tables[0][j];
-                    piece_square_table[0][0][j] = white_king_square_tables[0][63 - j];
-                }
+                continue;
             }
             for(int j = 0; j < 64; j++){
                 piece_square_table[1][i][j] = white_piece_square_table[i][j];
@@ -190,61 +181,12 @@ namespace chess
             // Up to 6 pieces, no queens, up to 2 rooks (R, b b vs r, b, n)
         );
     }
-
-    /**
-     * @brief Get the endgame factor for the board, based on the material used
-     * to mesh the square tables, to get more accurate evaluation
-     */
-    float get_endgame_factor(Board* b, int material_allies, int material_enemy)
-    {
-        int material = std::min(material_allies, material_enemy);
-        float material_factor = 0.0f;
-
-        if (material <= 1000){
-            material_factor = 1.0f; // if there is less than 1000 centipawns, it's the endgame
-        } else {
-            material -= 1000;
-            material_factor = 1.0f - material / (200.0f + material);
-        }
-
-        return material_factor;
-    }
-
-    inline void mesh_square_table(float factor, int* endgame_table, int* middle_game_table, int* result)
-    {
-        for(int i = 0; i < 64; i++){
-            result[i] = endgame_table[i] * factor + middle_game_table[i] * (1.0f - factor);
-        }
-    }
-
-    /**
-     * @brief Mesh the square tables based on the endgame factor
-     */
-    void mesh_square_tables(float endgame_factor)
-    {
-        const int mesh_pieces[] = {Piece::Pawn - 1, Piece::King - 1};
-        int (*square_tables[]) [2][64] = {
-            pawn_square_tables,
-            king_square_tables
-        };
-
-        for(size_t i = 0; i < sizeof(mesh_pieces) / sizeof(mesh_pieces[0]); i++){
-            for(int color = 0; color < 2; color++){
-                mesh_square_table(
-                    endgame_factor,
-                    square_tables[i][color][1],
-                    square_tables[i][color][0],
-                    piece_square_table[color][mesh_pieces[i]]
-                );
-            }
-        }
-    }
     
     /**
      * @brief Evaluation function for the board in centipawns
      * positive values are good for white, negative values are good for black
      */
-    int evaluate(Board* board, CacheMoveGen* c, MoveList* ml)
+    int evaluate(Board* board)
     {
         int eval = 0;
         bool is_white = board->getSide() == Piece::White;
@@ -265,36 +207,25 @@ namespace chess
             0x8080808080808080ULL
         };
 
-        // Count the material of pawns
-        eval += pop_count(board->bitboards(is_white)[Board::PAWN_TYPE]) * piece_values[Board::PAWN_TYPE];
-        eval -= pop_count(board->bitboards(is_enemy)[Board::PAWN_TYPE]) * piece_values[Board::PAWN_TYPE];
-
-        // Count the material of the rest of the pieces
-        for (int type = 1; type < 6; type++){
+        // Count the material and piece square table
+        for (int type = Piece::Knight - 1; type < 6; type++){
             if (type == Piece::King - 1){
                 continue;
             }
-            int count = pop_count(board->bitboards(is_white)[type]);
-            int ecount = pop_count(board->bitboards(is_enemy)[type]);
-            material += count * piece_values[type];
-            eval += count * piece_values[type];
+            uint64_t bitboard = board->bitboards(is_white)[type];
+            while(bitboard){
+                material += piece_values[type];
+                eval += piece_square_table[is_white][type][pop_lsb1(bitboard)];
+            }
 
-            ematerial += ecount * piece_values[type];
-            eval -= ecount * piece_values[type];
+            bitboard = board->bitboards(is_enemy)[type];
+            while(bitboard){
+                ematerial += piece_values[type];
+                eval -= piece_square_table[is_enemy][type][pop_lsb1(bitboard)];
+            }
         }
-
+        eval += material - ematerial;
         bool is_endgame = check_is_endgame(board, material, ematerial);
-        float endgame_factor = get_endgame_factor(board, material, ematerial);
-        mesh_square_tables(endgame_factor);
-
-        // Piece square tables
-        for (int type = 0; type < 6; type++){
-            uint64_t epieces = board->bitboards(is_enemy)[type];
-            uint64_t apieces = board->bitboards(is_white)[type];
-
-            while(epieces) eval -= piece_square_table[is_enemy][type][pop_lsb1(epieces)];
-            while(apieces) eval += piece_square_table[is_white][type][pop_lsb1(apieces)];
-        }
         
         // Bonus for having the bishop pair
         if (pop_count(board->bitboards(is_white)[Piece::Bishop - 1]) >= 2){
@@ -306,7 +237,7 @@ namespace chess
 
         // Pawn structure
         // Try to get hashed pawn structure (already calculated)
-        uint64_t pawn_hash = get_pawn_hash(board);
+        uint64_t pawn_hash = Zobrist::get_pawn_hash(board);
         if (pawn_table.contains(pawn_hash)){
             eval += pawn_table.get(pawn_hash);
         } else {
@@ -314,6 +245,20 @@ namespace chess
 
             uint64_t pawns = board->bitboards(is_white)[Piece::Pawn - 1];
             uint64_t epawns = board->bitboards(is_enemy)[Piece::Pawn - 1];
+            uint64_t bitboard;
+
+            // Pawn square table & material
+            bitboard = pawns;
+            while (bitboard){
+                pawn_eval += pawn_square_tables[is_white][is_endgame][pop_lsb1(bitboard)];
+                pawn_eval += piece_values[Piece::Pawn - 1];
+            }
+
+            bitboard = epawns;
+            while (bitboard){
+                pawn_eval -= pawn_square_tables[is_enemy][is_endgame][pop_lsb1(bitboard)];
+                pawn_eval -= piece_values[Piece::Pawn - 1];
+            }
 
             // Doubled pawns
             for (int i = 0; i < 8; i++){

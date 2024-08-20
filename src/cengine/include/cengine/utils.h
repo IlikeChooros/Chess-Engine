@@ -40,7 +40,7 @@ inline int str_to_square(std::string str, bool inverse = true){
 /**
  * @brief Get the LSB1 index (the least significant bit that is 1)
  */
-inline int bitScanForward(uint64_t bb){
+constexpr int bitScanForward(uint64_t bb){
     #if defined(__GNUC__) || defined(__clang__)
         return __builtin_ctzll(bb);
     #elif defined(_MSC_VER)
@@ -72,14 +72,14 @@ inline int bitScanForward(uint64_t bb){
 /**
  * @brief Pop the least significant bit that is 1 from a bitboard and return its index
  */
-inline int pop_lsb1(uint64_t& b)
+constexpr int pop_lsb1(uint64_t& b)
 {
-    int lsb1 = b != 0 ? bitScanForward(b) : 0;
+    int lsb1 = bitScanForward(b);
     b &= b - 1;
     return lsb1;
 }
 
-inline int pop_count(uint64_t b){
+constexpr int pop_count(uint64_t b){
     #if defined(__GNUC__) || defined(__clang__)
         return __builtin_popcountll(b);
     #elif defined(_MSC_VER)
@@ -95,31 +95,6 @@ inline int pop_count(uint64_t b){
         return count;
     #endif
 }
-
-typedef std::chrono::time_point<std::chrono::high_resolution_clock> dtimer_t;
-
-#if DEBUG_PERFORMANCE
-
-/**
- * @brief Starts a timer
- */
-inline void start_timer(dtimer_t& start){
-    start = std::chrono::high_resolution_clock::now();
-}
-
-/**
- * @brief Ends a timer and prints the duration
- */
-inline void end_timer(dtimer_t& start, const char* msg = "Total time"){
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    printf("%s: %ldus\n", msg, duration.count());
-}
-
-#else
-inline void start_timer(dtimer_t& start){return;}
-inline void end_timer(dtimer_t& start, const char* msg = "Total time"){return;}
-#endif
 
 
 #if DEBUG_DETAILS

@@ -13,7 +13,7 @@
 #include "history.h"
 
 class Log
-{;
+{
 public:
     enum LogFlags
     {

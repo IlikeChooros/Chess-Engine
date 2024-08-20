@@ -105,9 +105,9 @@ namespace chess
             auto move = Move(m_impl->move_list[i]);
             if (move.getFrom() == from){
                 moves.push_back({
-                    .x = move.getTo() % 8,
-                    .y = move.getTo() / 8,
-                    .flags = move.getFlags()
+                    move.getTo() % 8,
+                    move.getTo() / 8,
+                    move.getFlags()
                 });
             }
         }

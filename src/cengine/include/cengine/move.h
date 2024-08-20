@@ -44,10 +44,14 @@ class Move
     static const uint32_t FLAG_ROOK_PROMOTION_CAPTURE = 0b1110;
     static const uint32_t FLAG_QUEEN_PROMOTION_CAPTURE = 0b1111;
 
+    // Helper function to create a move
+    static constexpr uint32_t fmove(int from, int to, int flags){
+        return (flags << 12) | (from << 6) | to;
+    }
+
     Move() : m_move(0) {};
     Move(uint32_t from, uint32_t to, uint32_t flags) :
-        Move((flags << 12) | (from << 6) | to) {}; // First 6 bits: to, next 6 bits: from, rest: flags (4 bits)
-          
+        m_move((flags << 12) | (from << 6) | to) {}; // First 6 bits: to, next 6 bits: from, rest: flags (4 bits)
     Move(uint32_t move) : m_move(move) {};
     Move(const Move& other) : m_move(other.m_move) {};
 

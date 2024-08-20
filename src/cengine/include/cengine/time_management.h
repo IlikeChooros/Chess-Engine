@@ -39,7 +39,7 @@ public:
         return *this;
     }
 
-    void reset(bool infinite, int movetime)
+    inline void reset(bool infinite, int movetime)
     {
         this->infinite = infinite;
         this->start_time = std::chrono::high_resolution_clock::now();
@@ -48,16 +48,22 @@ public:
     }
 
     // Check if the time has ended
-    bool end() 
+    inline bool end() 
     {
         using namespace std::chrono;
         return !infinite && high_resolution_clock::now() >= end_time;
     }
 
     // Get the elapsed time in milliseconds (from start to now)
-    size_t elapsed() 
+    inline size_t elapsed() 
     {
         using namespace std::chrono;
         return duration_cast<milliseconds>(high_resolution_clock::now() - start_time).count();
+    }
+
+    inline size_t elapsed_us()
+    {
+        using namespace std::chrono;
+        return duration_cast<microseconds>(high_resolution_clock::now() - start_time).count();
     }
 };

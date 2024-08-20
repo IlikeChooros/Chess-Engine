@@ -19,7 +19,7 @@ inline uint64_t xRayRookAttacks(uint64_t occupied, uint64_t blockers, int square
 inline uint64_t xRayBishopAttacks(uint64_t occupied, uint64_t blockers, int square);
 
 void gen_captures(MoveList* ml, chess::Board* board);
-size_t gen_legal_moves(MoveList* move_list, chess::Board* board, chess::CacheMoveGen* cache = nullptr);
+size_t gen_legal_moves(MoveList* move_list, chess::Board* board);
 
 void make(Move& move, chess::Board* board, chess::GameHistory* ghistory);
 void unmake(Move move, chess::Board* board, chess::GameHistory* history);

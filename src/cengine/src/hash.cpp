@@ -3,76 +3,67 @@
 namespace chess
 {
 
-    static int hash_pieces[2][6][64] = {0};
-    static int hash_castling[16] = {0};
-    static int hash_turn = 0;
-    static int hash_enpassant[8] = {0};
+    uint64_t Zobrist::hash_values[64 * 12 + 16 + 8 + 1];
 
     // Initialize the hashing tables
-    void init_hashing()
+    void Zobrist::init_hashing()
     {
-        constexpr int seed = 0x12345678;
+        constexpr int seed = 0x21376942;
 
         std::mt19937 gen(seed);
         std::uniform_int_distribution<int> dist(0, std::numeric_limits<int>().max());
         
-        for (int k = 0; k < 2; k++)
-            for (int i = 0; i < 6; i++)
-                for (int j = 0; j < 64; j++)
-                    hash_pieces[k][i][j] = dist(gen);
+        // Initialize piece hashes
+        for (int k = 0; k < 2; k++) // color
+            for (int i = 0; i < 6; i++) // piece type
+                for (int j = 0; j < 64; j++) // square
+                    hash_values[k * 6 * 64 + i * 64 + j] = dist(gen);
 
-        for (int i = 0; i < 16; i++)
-            hash_castling[i] = dist(gen);
-        
-        hash_turn = dist(gen);
+        // Castling rights
+        for (int i = 0; i < 16; i++) 
+            hash_values[64 * 12 + i] = dist(gen);
 
+        // Enpassant target
         for (int i = 0; i < 8; i++)
-            hash_enpassant[i] = dist(gen);
+            hash_values[64 * 12 + 16 + i] = dist(gen);
+
+        // Turn
+        hash_values[64 * 12 + 16 + 8] = dist(gen);
     }
 
     // Generate a hash for a given board state
-    uint64_t get_hash(Board* b)
+    uint64_t Zobrist::get_hash(Board* b)
     {
         uint64_t hash = 0;
-
-        for(int type = 0; type < 6; type++){
-            uint64_t white = b->bitboards(true)[type];
-            uint64_t black = b->bitboards(false)[type];
-
-            while(white){
-                hash ^= hash_pieces[0][type][pop_lsb1(white)];
-            }
-            while(black){
-                hash ^= hash_pieces[1][type][pop_lsb1(black)];
+        for (int k = 0; k < 2; k++){
+            for (int i = 0; i < 6; i++){
+                uint64_t pieces = b->bitboards(k)[i];
+                while(pieces){
+                    hash ^= hash_values[k * 6 * 64 + i * 64 + pop_lsb1(pieces)];
+                }
             }
         }
+        hash ^= hash_values[64 * 12 + b->castlingRights().get()];
 
-        if (b->getSide() == Piece::Black)
-            hash ^= hash_turn;
+        int target = b->enpassantTarget();
+        if (target != 0)
+            hash ^= hash_values[64 * 12 + 16 + target % 8]; // get the file
 
-        if (b->enpassantTarget() != 0)
-            hash ^= hash_enpassant[b->enpassantTarget()];
-
-        hash ^= hash_castling[b->castlingRights().get()];
+        hash ^= hash_values[64 * 12 + 16 + 8];
 
         return hash;
     }
 
     // Generate a hash for a given pawn structure
-    uint64_t get_pawn_hash(Board* board)
+    uint64_t Zobrist::get_pawn_hash(Board* board)
     {
         uint64_t hash = 0;
-
-        uint64_t white = board->bitboards(true)[Piece::Pawn];
-        uint64_t black = board->bitboards(false)[Piece::Pawn];
-
-        while(white){
-            hash ^= hash_pieces[0][Piece::Pawn - 1][pop_lsb1(white)];
+        for(int k = 0; k < 2; k++){
+            uint64_t pawns = board->bitboards(k)[Board::PAWN_TYPE];
+            while(pawns){
+                hash ^= hash_values[k * 6 * 64 + Board::PAWN_TYPE * 64 + pop_lsb1(pawns)];
+            }
         }
-        while(black){
-            hash ^= hash_pieces[1][Piece::Pawn - 1][pop_lsb1(black)];
-        }
-
         return hash;
     }
 }

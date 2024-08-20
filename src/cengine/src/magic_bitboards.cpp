@@ -249,7 +249,7 @@ uint64_t index_occupied(int index, int bit, uint64_t mask)
     int pop;
     uint64_t occ = 0;
     for (int i = 0; i < bit; i++){
-        pop = pop_lsb1(mask);
+        pop = mask != 0 ? pop_lsb1(mask) : 0;
         if (index & (1 << i)){
             occ |= (1ULL << pop);
         }
@@ -286,9 +286,7 @@ uint64_t findMagic(int sq, int shift, bool bishop)
     //          - check if the attacks at `index` are the same as the precomputed ones for given occupancy
     // 5. If the magic number is valid, return it
     // 6. If not, repeat the process
-
-    int size = bishop ? 512 : 4096;
-    uint64_t attacks[size], occ[size], used[size]; // 4096 = 2^12 (max number of occupancy combinations)
+    uint64_t attacks[4096], occ[4096], used[4096]; // 4096 = 2^12 (max number of occupancy combinations)
     uint64_t mask = bishop ? bishopMask(sq) : rookMask(sq); // get the mask
     int bits = pop_count(mask); // number of bits set in mask
     

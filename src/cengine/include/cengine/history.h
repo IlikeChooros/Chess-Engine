@@ -75,7 +75,7 @@ namespace chess
         void push(Board* board, Move move) 
         {
             CHistory h;
-            h.hash = get_hash(board);
+            h.hash = Zobrist::get_hash(board);
             h.move = move.get();
             h.side_to_move = board->getSide();
             h.captured_piece = board->capturedPiece();

@@ -12,7 +12,13 @@
 
 namespace chess
 {
-    void init_hashing();
-    uint64_t get_hash(Board* board);
-    uint64_t get_pawn_hash(Board* board); 
+    class Zobrist
+    {
+    public:
+        static uint64_t hash_values[64 * 12 + 16 + 8 + 1];
+        
+        static void init_hashing();
+        static uint64_t get_hash(Board* board);
+        static uint64_t get_pawn_hash(Board* board);
+    };
 }
