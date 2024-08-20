@@ -4,5 +4,5 @@ Settings global_settings = {
     .debug_level = DEBUG_LEVEL,
     .debug_performance = DEBUG_PERFORMANCE,
     .base_path = std::filesystem::current_path(),
-    .version = "2.0-manhattan_king-pawn_promo-check_ext"
+    .version = "3.0-square_table_mesh"
 }; 
