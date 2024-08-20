@@ -11,9 +11,7 @@ namespace chess
 
 
     // Check the search parameters and see if the search should stop
-    bool keep_searching(SearchParams* params){
-        using namespace std::chrono;
-
+    inline bool keep_searching(SearchParams* params){
         if (params->shouldStop())
             return false;
 
@@ -55,7 +53,7 @@ namespace chess
     }
 
     // Search extensions
-    int extensions(int extensions, Board* b){
+    inline int extensions(int extensions, Board* b){
         return extensions < 16 ? b->inCheck() : 0;
     }
 
@@ -203,7 +201,7 @@ namespace chess
         int best_eval = MIN;
         Score nscore;
         Move best_move;
-        MoveList pv = getPV(board, sc, gh, best_move, 1);
+        MoveList pv;
         MoveList ml;
         int last_irreversible = board->irreversibleIndex();
         void(::gen_legal_moves(&ml, board));

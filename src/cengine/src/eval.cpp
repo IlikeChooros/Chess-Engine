@@ -159,6 +159,29 @@ namespace chess
         }
     }
 
+
+    /**
+     * @brief Check if the game is in the endgame phase, based on the material
+     * @param b Board to check
+     * @param material_allies Material of the allies without pawns & king
+     * @param material_enemy Material of the enemy without pawns & king
+     */
+    bool check_is_endgame(Board* b, int material_allies, int material_enemy)
+    {
+        int material = std::min(material_allies, material_enemy);
+        uint64_t n_pieces = pop_count(b->pieces());
+        uint64_t n_queens = pop_count(b->queens());
+        uint64_t n_rooks = pop_count(b->rooks());
+
+        return (
+            material <= 1000 || // Less than 1000 centipawns (without pawns)
+            // No queens, up to 1 rook per side, and total of 6 pieces (ex. R N B vs r n n)
+            (n_pieces <= 4) || // 4 pieces or less (Q, R vs q, r, etc.)
+            (n_pieces <= 6 && ((n_queens == 0 && n_rooks <= 2)))
+            // Up to 6 pieces, no queens, up to 2 rooks (R, b b vs r, b, n)
+        );
+    }
+
     
     /**
      * @brief Evaluation function for the board in centipawns
@@ -171,6 +194,8 @@ namespace chess
         bool is_enemy = !is_white;
         int king_sq = bitScanForward(board->bitboards(is_white)[Piece::King - 1]);
         int eking_sq = bitScanForward(board->bitboards(is_enemy)[Piece::King - 1]);
+        int material = 0;
+        int ematerial = 0;
 
         const uint64_t file_bitboards[8] = {
             0x0101010101010101ULL,
@@ -195,11 +220,13 @@ namespace chess
             while(epieces){
                 int sq = pop_lsb1(epieces);
                 eval -= piece_values[type];
+                ematerial += piece_values[type];
                 eval -= piece_square_table[is_enemy][type][sq];
             }
             while(apieces){
                 int sq = pop_lsb1(apieces);
                 eval += piece_values[type];
+                material += piece_values[type];
                 eval += piece_square_table[is_white][type][sq];
             }
         }
@@ -212,10 +239,7 @@ namespace chess
             eval -= 50;
         }
 
-        bool is_endgame = false;
-        if (pop_count(board->pieces()) <= 6 || ((pop_count(board->queens()) == 0) && (pop_count(board->rooks()) == 0))){
-            is_endgame = true;
-        }
+        bool is_endgame = check_is_endgame(board, material, ematerial);
 
         // Pawn structure
         // Try to get hashed pawn structure (already calculated)
@@ -231,11 +255,13 @@ namespace chess
             // Square tables
             uint64_t copy_pawns = pawns;
             while(copy_pawns){
+                pawn_eval += piece_values[Board::PAWN_TYPE];
                 pawn_eval += pawn_square_tables[is_white][is_endgame][pop_lsb1(copy_pawns)];
             }
 
             copy_pawns = epawns;
             while(copy_pawns){
+                pawn_eval -= piece_values[Board::PAWN_TYPE];
                 pawn_eval -= pawn_square_tables[is_enemy][is_endgame][pop_lsb1(copy_pawns)];
             }
 
@@ -279,7 +305,6 @@ namespace chess
 
                 // Passed pawns
                 if (pawns & file){
-                    // White passed pawn
                     if (!(epawns & file) && !(epawns & file >> 1) && !(epawns & file << 1)){
                         pawn_eval += 20;
                     }
@@ -305,7 +330,7 @@ namespace chess
         // and drive the other one to a corner, so it's easier to checkmate
         int whotomove = board->getSide() == Piece::White ? 1 : -1;
         int pos_eval = 0;
-        if (is_endgame && pop_count(board->bitboards(is_enemy)[Board::PAWN_TYPE]) < 2 && eval * whotomove > 500){
+        if (is_endgame && pop_count(board->bitboards(is_enemy)[Board::PAWN_TYPE]) < 2 && eval * whotomove >= 500){
             // Favor enemy king to be in the corner
             pos_eval += center_manhattan_distance[eking_sq] * 4 * whotomove;
             // Favor own king to be close to the enemy king
@@ -343,25 +368,5 @@ namespace chess
         }
 
         return ONGOING;
-    }
-
-    /**
-     * @brief Convert the game status to a string
-     */
-    std::string game_status_to_string(GameStatus status)
-    {
-        switch (status)
-        {
-        case ONGOING:
-            return "Ongoing";
-        case CHECKMATE:
-            return "Checkmate";
-        case STALEMATE:
-            return "Stalemate";
-        case DRAW:
-            return "Draw";
-        default:
-            return "Unknown";
-        }
     }
 }
