@@ -150,12 +150,14 @@ namespace uci
         iss >> command;
         if (command == "startpos"){
             fen = chess::Board::startFen;
-            if ((iss >> command) && command != "moves"){
-                fail("(position): Invalid command after startpos: %s\n", command.c_str());
-            }
-            fen += " moves ";
-            while (iss >> command){ // parse moves
-                fen += command + " ";
+            if ((iss >> command)){
+                if (command != "moves"){
+                    fail("(position): Invalid command after startpos: %s\n", command.c_str());
+                }
+                fen += " moves ";
+                while (iss >> command){ // parse moves
+                    fen += command + " ";
+                }
             }
         }
         else if (command == "fen"){
@@ -214,7 +216,7 @@ namespace uci
             }
         }
         // Start the search
-        manager->impl()->search_params = params;
+        manager->impl()->setSearchParams(params);
         manager->asyncSearch();
     }
 
@@ -319,7 +321,6 @@ namespace uci
     }
 
     // UCI
-
     UCI::UCI(): m_queue(1), m_ready(true)
     {
         m_board.init();

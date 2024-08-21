@@ -33,7 +33,7 @@ namespace chess
 
         pv.add(best_move);
         ::make(best_move, b, gh);
-        uint64_t hash = Zobrist::get_hash(b);
+        uint64_t hash = b->hash();
         while (sc->getTT().contains(hash)){
             TEntry entry = sc->getTT().get(hash);
             if (!entry.bestMove || entry.bestMove == best_move)
@@ -42,7 +42,7 @@ namespace chess
                 break;
             pv.add(entry.bestMove);
             ::make(entry.bestMove, b, gh);
-            hash = Zobrist::get_hash(b);
+            hash = b->hash();
         }
         for (auto it = pv.rbegin(); it != pv.rend(); it++){
             ::unmake(Move(*it), b, gh);
@@ -58,7 +58,6 @@ namespace chess
 
     // Quiescence (no quiet) search, runs aplha beta on captures only and evaluates the position
     int quiescence(Board* b, GameHistory* gh, SearchParams* params, int alpha, int beta){
-
         int eval = evaluate(b);
         if (eval >= beta)
             return beta;
@@ -83,8 +82,10 @@ namespace chess
     }
 
     // Negamax with alpha-beta pruning
-    int negaAlphaBeta(Board* b, GameHistory* gh, SearchCache* sc, SearchParams* params, int alpha, int beta, int depth, int n_extension = 0){
-        using namespace std::chrono;
+    int negaAlphaBeta(
+        Board* b, GameHistory* gh, SearchCache* sc, SearchParams* params, 
+        int alpha, int beta, int depth, int n_extension = 0
+    ){
 
         // Lookup transposition table and check for possible cutoffs
         TTable<TEntry> *ttable = &sc->getTT();

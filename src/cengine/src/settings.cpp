@@ -4,5 +4,5 @@ Settings global_settings = {
     DEBUG_LEVEL,
     DEBUG_PERFORMANCE,
     std::filesystem::current_path(),
-    "3.0-square_table_mesh"
+    "3.0-hash_on_move-faster_move_gen"
 }; 

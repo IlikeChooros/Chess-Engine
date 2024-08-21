@@ -257,10 +257,12 @@ void make(Move& move, chess::Board* board, chess::GameHistory* ghistory)
         iboard[to + offset] = Piece::Empty;
 
         // Update the bitboard for the captured piece
+        Zobrist::modify_piece(board, !is_white, Piece::getType(board->capturedPiece()) - 1, to + offset);
         board->bitboards(Piece::isWhite(board->capturedPiece()))[Piece::getType(board->capturedPiece()) - 1] ^= 1ULL << (to + offset);
     }
 
     // Reset the enpassant target
+    Zobrist::modify_enpassant_target(board, board->enpassantTarget());
     board->enpassantTarget() = 0;
 
     // If the move is a castle, move the rook
@@ -276,19 +278,17 @@ void make(Move& move, chess::Board* board, chess::GameHistory* ghistory)
             {3, 59}, // queen castle
             {5, 61} // king castle
         };
-        const int rights[2] = { CastlingRights::BLACK, CastlingRights::WHITE };
 
         int rook_from = castling_pos[is_king_castle][is_white],
             rook_to = rooks_to[is_king_castle][is_white];
-
-        // Update castling rights
-        board->castlingRights().remove(rights[is_white]);
 
         // Move the rook (king will be handled outside of this block)
         iboard[rook_to] = iboard[rook_from]; 
         iboard[rook_from] = Piece::Empty;
 
         // Update the bitboard for the rook
+        Zobrist::modify_piece(board, is_white, Piece::Rook - 1, rook_from);
+        Zobrist::modify_piece(board, is_white, Piece::Rook - 1, rook_to);
         board->updateBitboard(is_white, Piece::Rook - 1, rook_from, rook_to);
     }
 
@@ -297,20 +297,26 @@ void make(Move& move, chess::Board* board, chess::GameHistory* ghistory)
         const int dir[2] = {-8, 8};
         board->enpassantTarget() = to + dir[is_white];
         board->irreversibleIndex() = ghistory->ply();
+        Zobrist::modify_enpassant_target(board, board->enpassantTarget());
     }
 
     // If that's a promotion, update the piece
     if (move.isPromotion()){
-        const int promotion_piece[4] = { Piece::Knight, Piece::Bishop, Piece::Rook, Piece::Queen };
-        iboard[from] = promotion_piece[move.getPromotionPiece()] | (board->getSide()); // set the piece with the correct color
+        iboard[from] = Piece::promotion(move.getPromotionPiece(), board->getSide()); // set the piece with the correct color
         board->bitboards(is_white)[Piece::Pawn - 1] ^= 1ULL << from; // remove the pawn
         board->bitboards(is_white)[Piece::getType(iboard[from]) - 1] |= 1ULL << from; // add the promoted piece (not moved yet)
         board->irreversibleIndex() = ghistory->ply();
+        Zobrist::modify_piece(board, is_white, Piece::Pawn - 1, from); // remove the pawn from hash
+        Zobrist::modify_piece(board, is_white, Piece::getType(iboard[from]) - 1, from); // add the promoted piece to hash
     }
 
     // Update castling rights & king position
     if (Piece::getType(iboard[from]) == Piece::King){
-        board->m_castling_rights.remove(Piece::isWhite(iboard[from]) ? CastlingRights::WHITE : CastlingRights::BLACK);
+        const int rights[2] = { CastlingRights::BLACK, CastlingRights::WHITE };
+        Zobrist::modify_castling_rights(board, board->castlingRights().get()); // remove current castling rights
+        board->m_castling_rights.remove(rights[is_white]);
+        board->irreversibleIndex() = ghistory->ply();
+        Zobrist::modify_castling_rights(board, board->castlingRights().get()); // set the new castling rights
     } else if (Piece::getType(iboard[from]) == Piece::Rook){
         // If the rook is moved from the starting position, remove the castling rights for that side
         uint64_t rook = 1ULL << from;
@@ -321,20 +327,27 @@ void make(Move& move, chess::Board* board, chess::GameHistory* ghistory)
             {CastlingRights::WHITE_QUEEN, CastlingRights::WHITE_KING}
         };
         if (rook & queen_castle){ // queen side rook
+            Zobrist::modify_castling_rights(board, board->castlingRights().get());
             board->m_castling_rights.remove(rights[is_white][0]);
+            Zobrist::modify_castling_rights(board, board->castlingRights().get());
         } else if (rook & king_castle){ // king side rook
+            Zobrist::modify_castling_rights(board, board->castlingRights().get());
             board->m_castling_rights.remove(rights[is_white][1]);
+            Zobrist::modify_castling_rights(board, board->castlingRights().get());
         }
     }
 
     // Move the piece
     iboard[to] = iboard[from];
     iboard[from] = Piece::Empty;
+    Zobrist::modify_piece(board, is_white, Piece::getType(iboard[to]) - 1, from);
+    Zobrist::modify_piece(board, is_white, Piece::getType(iboard[to]) - 1, to);
 
     // Update the bitboard for the piece
     board->updateBitboard(is_white, Piece::getType(iboard[to]) - 1, from, to);
 
     // Now update the side to move
+    Zobrist::modify_turn(board);
     board->m_side = Piece::opposite(board->getSide());
     ghistory->push(board, move);
 }
@@ -403,6 +416,7 @@ void unmake(Move move, chess::Board* board, chess::GameHistory* ghistory)
     iboard[captured_pos] = board->capturedPiece();
 
     // restore other variables
+    board->hash() = history.hash;
     board->getSide() = history.side_to_move;
     board->halfmoveClock() = history.halfmove_clock;
     board->enpassantTarget() = history.enpassant_target;

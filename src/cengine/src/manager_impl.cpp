@@ -16,6 +16,7 @@ namespace chess{
         if (board == nullptr)
             return;
         
+        Zobrist::set_hash(board);
         pushHistory();
     }
 
@@ -39,6 +40,7 @@ namespace chess{
      */
     void ManagerImpl::reload()
     {
+        Zobrist::set_hash(board);
         this->curr_move = Move();
         this->n_moves = 0;
         this->move_list.clear();

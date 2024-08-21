@@ -9,4 +9,3 @@ target_link_libraries(CEngineTests PUBLIC GTest::gtest GTest::gtest_main cengine
 include(GoogleTest)
 gtest_discover_tests(CEngineTests)
 
-

@@ -50,6 +50,11 @@ namespace chess{
         void updateBitboards();
 
         /**
+         * @brief Get the side to move (true if white, false if black)
+         */
+        inline bool wside() {return this->m_side == Piece::White; };
+
+        /**
          * @brief Get the side to move
          */
         inline int& getSide() {return this->m_side; };
@@ -88,6 +93,11 @@ namespace chess{
          * @brief Get bool flag wheter the king is in check
          */
         inline bool& inCheck() {return this->m_in_check; };
+
+        /**
+         * @brief Get the hash of the board
+         */
+        inline uint64_t& hash() {return this->m_hash; };
 
         /**
          * @brief Get raw board data
@@ -182,6 +192,7 @@ namespace chess{
         
 
         int board[64];
+        uint64_t m_hash;
         bool m_in_check;
         int m_side;
         int m_enpassant_target;
