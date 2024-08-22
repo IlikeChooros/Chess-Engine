@@ -222,7 +222,7 @@ inline uint64_t xRayBishopAttacks(uint64_t occupied, uint64_t blockers, int bish
  * @param board The board to update
  * @param ghistory The game history to push the move
  */
-void make(Move& move, chess::Board* board, chess::GameHistory* ghistory)
+void make(Move move, chess::Board* board, chess::GameHistory* ghistory)
 {
     using namespace chess;
 

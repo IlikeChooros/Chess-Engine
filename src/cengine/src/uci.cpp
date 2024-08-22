@@ -265,7 +265,7 @@ namespace uci
             
             case MakeMove: {
                 std::string move;
-                if (iss >> move){
+                while(iss >> move){
                     if (!manager->makeMove(move)){
                         output = "Invalid move: " + move + "\n";
                     }

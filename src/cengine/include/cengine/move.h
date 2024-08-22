@@ -65,11 +65,28 @@ class Move
         return (flags << 12) | (from << 6) | to;
     }
 
+#if DEBUG_DETAILS
+    Move() : m_move(0) {};
+    Move(uint32_t from, uint32_t to, uint32_t flags) :
+        m_move((flags << 12) | (from << 6) | to) {
+        m_repr = notation();
+    }; // First 6 bits: to, next 6 bits: from, rest: flags (4 bits)
+    Move(uint32_t move) : m_move(move) {
+        m_repr = notation();
+    };
+    Move(const Move& other) : m_move(other.m_move) {
+        m_repr = notation();
+    };
+
+    std::string m_repr;
+
+#else
     Move() : m_move(0) {};
     Move(uint32_t from, uint32_t to, uint32_t flags) :
         m_move((flags << 12) | (from << 6) | to) {}; // First 6 bits: to, next 6 bits: from, rest: flags (4 bits)
     Move(uint32_t move) : m_move(move) {};
     Move(const Move& other) : m_move(other.m_move) {};
+#endif
 
     /**
      * @brief Create a move from a string notation (e.g. e2e4, a7a8q),
@@ -260,7 +277,7 @@ class MoveList
             return tmp;
         }
 
-        ptrdiff_t operator-(const MoveListIterator& other) {
+        difference_type operator-(const MoveListIterator& other) {
             return m_ptr - other.m_ptr;
         }
 

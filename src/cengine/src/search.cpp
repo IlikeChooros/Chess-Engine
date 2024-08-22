@@ -4,10 +4,12 @@ namespace chess
 {
     constexpr int MIN = -(1 << 29),
                   MAX = 1 << 29,
-                  MATE = -(1 << 28) + 1,
+                  MATE = -(1 << 16) + 1,
                   MATE_THRESHOLD = -MATE;
 
     static TimeManagement time_management = TimeManagement();
+    static SearchCache *sc = nullptr;
+    constexpr int ASP_WINDOW_SIZE = 25, ASP_WINDOW_WIDEN = 75;
 
 
     // Check the search parameters and see if the search should stop
@@ -22,9 +24,32 @@ namespace chess
         return true;
     }
 
+    // Get the principal variation from the root
+    MoveList getRootPV(Board* b, GameHistory *gh, int max_depth = 8) {
+        if (!sc || !b || !gh)
+            return {};
+
+        MoveList pv;
+        int depth = 0;
+        uint64_t hash = b->hash();
+        while (sc->getTT().contains(hash)) {
+            TEntry entry = sc->getTT().get(hash);
+            if (!entry.bestMove)
+                break;
+            if (pv.size() >= pv.capacity() - 1 || depth++ > max_depth)
+                break;
+            pv.add(entry.bestMove);
+            ::make(entry.bestMove, b, gh);
+            hash = b->hash();
+        }
+        for (auto it = pv.rbegin(); it != pv.rend(); it++) {
+            ::unmake(Move(*it), b, gh);
+        }
+        return pv;
+    }
 
     // Get PV from transposition table
-    MoveList getPV(Board* b, SearchCache* sc, GameHistory* gh, Move best_move, int max_depth = 10){
+    MoveList getPV(Board* b, GameHistory* gh, Move best_move, int max_depth = 10){
         if (!sc || !b || !gh || best_move == Move::nullMove)
             return {};
 
@@ -49,12 +74,6 @@ namespace chess
         }
         return pv;
     }
-
-    // Search extensions
-    inline int extensions(int extensions, Board* b){
-        return extensions < 16 ? b->inCheck() : 0;
-    }
-
 
     // Quiescence (no quiet) search, runs aplha beta on captures only and evaluates the position
     int quiescence(Board* b, GameHistory* gh, SearchParams* params, int alpha, int beta){
@@ -81,11 +100,8 @@ namespace chess
         return alpha;
     }
 
-    // Negamax with alpha-beta pruning
-    int negaAlphaBeta(
-        Board* b, GameHistory* gh, SearchCache* sc, SearchParams* params, 
-        int alpha, int beta, int depth, int n_extension = 0
-    ){
+    // Normal search with aspiration window
+    int search(Board* b, GameHistory* gh, SearchParams* params, int alpha, int beta, int depth){
 
         // Lookup transposition table and check for possible cutoffs
         TTable<TEntry> *ttable = &sc->getTT();
@@ -104,18 +120,12 @@ namespace chess
                 if (alpha >= beta)
                     return entry.score;
             }
-        }
-
-        if (depth == 0)
-            return quiescence(b, gh, params, alpha, beta);
-
-        MoveList ml;
-        void(::gen_legal_moves(&ml, b));
-        int best = MATE - depth;
-        int last_irreversible = b->irreversibleIndex();
-        Move best_move;
+        }   
 
         // Look for draw conditions and check if the game is over
+        int best = MATE - depth;
+        MoveList ml;
+        void(::gen_legal_moves(&ml, b));
         auto status = get_status(b, gh, &ml);
         if (status != ONGOING){
             if (status == DRAW || status == STALEMATE)
@@ -123,26 +133,34 @@ namespace chess
             return best;
         }
 
+        // The game is not over, so do a non-quiet move search (captures only)
+        if (depth == 0)
+            return quiescence(b, gh, params, alpha, beta);
+
+        // Do a principal variation search with aspiration window
+        int last_irreversible = b->irreversibleIndex();
+        Move best_move;
         order_moves(&ml, nullptr, b, sc);
         for (size_t i = 0; i < ml.size(); i++){
             Move m(ml[i]);
             ::make(m, b, gh);
             params->nodes_searched++;
-            int ext = extensions(n_extension, b);
-            best = std::max(best, -negaAlphaBeta(b, gh, sc, params, -beta, -alpha, depth + ext - 1, n_extension + ext));
+            int eval = -search(b, gh, params, -beta, -alpha, depth -1);
             ::unmake(m, b, gh);
             b->irreversibleIndex() = last_irreversible;
 
-            if (best > alpha){
-                alpha = best;
+            if (!keep_searching(params))
+                break;
+
+            if (eval > best){
+                best = eval;
                 best_move = ml[i];
             }
+            
+            if (eval > alpha)
+                alpha = eval;
 
-            if (alpha >= beta){      
-                break;
-            }
-
-            if (!keep_searching(params))
+            if (alpha >= beta)
                 break;
         }
 
@@ -152,17 +170,19 @@ namespace chess
                 // Alpha cutoff
                 ttable->get(hash) = {hash, depth, TEntry::UPPERBOUND, best, best_move, gh->age()};
             }
+            // A move is *too* good to be true
             else if (best >= beta){
                 // Beta cutoff
                 ttable->get(hash) = {hash, depth, TEntry::LOWERBOUND, best, best_move, gh->age()};
-                sc->getHH().update(b->getSide() == Piece::White, best_move, depth);
+                sc->getHH().update(b->wside(), best_move, depth);
             }
+            // Exact score of the position
             else {
                 // Exact score
                 ttable->get(hash) = {hash, depth, TEntry::EXACT, best, best_move, gh->age()};
             }
         }
-            
+
         return best;
     }
 
@@ -179,10 +199,10 @@ namespace chess
      *  - [x] Move ordering
      *  - [ ] SEE
      */
-    void search(Board* board, GameHistory* gh, SearchCache* sc, SearchParams* params, SearchResult* result)
+    void search(Board* board, GameHistory* gh, SearchCache* search_cache, SearchParams* params, SearchResult* result)
     {
         
-        if (!board || !gh || !sc || !result)
+        if (!board || !gh || !search_cache || !result)
             return;
 
         {
@@ -196,10 +216,11 @@ namespace chess
         params->setSearchRunning(true);
 
         // Initialize variables
+        sc = search_cache;
         int best_eval = MIN;
         Score nscore;
         Move best_move;
-        MoveList pv;
+        MoveList pv = getRootPV(board, gh);
         MoveList ml;
         int last_irreversible = board->irreversibleIndex();
         void(::gen_legal_moves(&ml, board));
@@ -215,7 +236,8 @@ namespace chess
         // Prepare the timer
         time_management.reset(params->infinite, params->movetime);
         params->nodes_searched = 0;
-        int depth = 1;
+        int depth = 0;
+        int asp_window[2]{ MIN, MAX };
 
         // Iterative deepening
         while(true){
@@ -227,25 +249,41 @@ namespace chess
                 Move m(ml[i]);
                 ::make(m, board, gh);
                 params->nodes_searched++;
-                int eval = -negaAlphaBeta(board, gh, sc, params, alpha, beta, depth);
+                int eval = -search(board, gh, params, asp_window[0], asp_window[1], depth);
+                if (alpha < eval && eval < beta){
+                    eval = -search(board, gh, params, MIN, MAX, depth);
+                }
                 ::unmake(m, board, gh);
                 board->irreversibleIndex() = last_irreversible;
-
-                if (eval > best_eval){
-                    best_eval = eval;
-                    best_move = ml[i];
-                }
 
                 if (!keep_searching(params))
                     break;
 
-                alpha = std::max(alpha, best_eval);
+                if (eval > best_eval){
+                    best_eval = eval;
+                    best_move = ml[i];
+                    alpha = std::max(alpha, eval);
+                }
+
                 if (alpha >= beta)
                     break;
             }
             
+            // Update the aspiration window
+            if (best_eval <= asp_window[0]){
+                beta = best_eval + ASP_WINDOW_SIZE;
+            }
+            else if (best_eval >= asp_window[1]){
+                alpha = best_eval - ASP_WINDOW_SIZE;
+            }
+            else {
+                alpha = best_eval - ASP_WINDOW_WIDEN;
+                beta = best_eval + ASP_WINDOW_WIDEN;
+            }
+            asp_window[0] = alpha;
+            asp_window[1] = beta;
             depth++;
-            pv = getPV(board, sc, gh, best_move, depth);
+            pv = getPV(board, gh, best_move, depth + 1);
 
             // Update score
             nscore.value = best_eval * whotomove;
@@ -270,7 +308,7 @@ namespace chess
             
             // Log the search info
             glogger.printInfo(
-                depth - 1, nscore.value, nscore.type == Score::cp, 
+                depth, nscore.value, nscore.type == Score::cp, 
                 params->nodes_searched, time_management.elapsed(), &pv, false
             );
 

@@ -31,7 +31,7 @@ extern Settings global_settings;
 #   if DEBUG_PERFORMANCE
 #       define DEBUG_LEVEL DEBUG_LEVEL_ERR
 #   else
-#       define DEBUG_LEVEL DEBUG_LEVEL_DETAILS 
+#       define DEBUG_LEVEL DEBUG_LEVEL_NONE 
 #   endif
 #endif
 

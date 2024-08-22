@@ -19,7 +19,7 @@ namespace chess
     struct SearchParams
     {
         // Basic UCI options
-        int depth = INT32_MAX; // In plies, that is max possible depth
+        int depth = 64; // In plies, that is max possible depth
         uint64_t nodes = UINT64_MAX;
         int mate = 0;
         int64_t movetime = 0; // In milliseconds
