@@ -1,0 +1,174 @@
+info depth 1 score cp 50 nodes 31 time 1 nps 31000 pv g1f3 
+info depth 2 score cp 50 nodes 760 time 2 nps 380000 pv g1f3 g8f6 
+info depth 3 score cp 50 nodes 6031 time 21 nps 287190 pv g1f3 g8f6 e2e4 
+info depth 4 score cp 50 nodes 31517 time 100 nps 315170 pv g1f3 g8f6 d2d3 d8b6 
+bestmove g1f3
+Board Info: FEN: r1bqkbnr/pp1ppppp/2n5/2p5/2P5/2N5/PP1PPPPP/R1BQKBNR w KQkq - 2 3, Side to move: White, Fullmoves: 3, Halfmoves: 2, En passant: a8
+Transposition Table Info: Size: 2286, Load factor: 0.001066, Max load factor: 1.000000, Bucket count: 2144977, Max bucket count: 192153584101141162
+info depth 1 score cp 40 nodes 54 time 1 nps 54000 pv e2e4 d8b6 
+info depth 2 score cp 40 nodes 597 time 2 nps 298500 pv e2e4 d8b6 
+info depth 3 score cp 50 nodes 24915 time 57 nps 437105 pv d2d4 e7e6 e2e4 
+info depth 4 score cp 50 nodes 45833 time 100 nps 458330 pv d2d4 c5d4 f3d4 c6e5 
+bestmove d2d4
+Board Info: FEN: r1bqkb1r/pp1ppppp/2n2n2/2p5/2P5/2N2N2/PP1PPPPP/R1BQKB1R w KQkq - 4 4, Side to move: White, Fullmoves: 4, Halfmoves: 4, En passant: a8
+Transposition Table Info: Size: 3209, Load factor: 0.001496, Max load factor: 1.000000, Bucket count: 2144977, Max bucket count: 192153584101141162
+info depth 1 score cp -20 nodes 455 time 1 nps 455000 pv c5d4 f3d4 c6e5 
+info depth 2 score cp -20 nodes 7184 time 14 nps 513142 pv c5d4 f3d4 c6e5 
+info depth 3 score cp -20 nodes 55024 time 100 nps 550240 pv c5d4 f3d4 c6e5 
+bestmove c5d4
+Board Info: FEN: r1bqkb1r/pp1ppppp/2n2n2/2p5/2PP4/2N2N2/PP2PPPP/R1BQKB1R b KQkq d3 0 4, Side to move: Black, Fullmoves: 4, Halfmoves: 0, En passant: d3
+Transposition Table Info: Size: 3529, Load factor: 0.001645, Max load factor: 1.000000, Bucket count: 2144977, Max bucket count: 192153584101141162
+info depth 1 score mate 1 nodes 237 time 1 nps 237000 pv d1a4 d4c3 
+info depth 2 score mate 1 nodes 271 time 1 nps 271000 pv d1a4 d4c3 
+info depth 3 score mate 1 nodes 305 time 1 nps 305000 pv d1a4 d4c3 
+info depth 4 score mate 1 nodes 339 time 1 nps 339000 pv d1a4 d4c3 
+info depth 5 score mate 1 nodes 373 time 1 nps 373000 pv d1a4 d4c3 
+info depth 6 score mate 1 nodes 407 time 1 nps 407000 pv d1a4 d4c3 
+info depth 7 score mate 1 nodes 441 time 1 nps 441000 pv d1a4 d4c3 
+info depth 8 score mate 1 nodes 475 time 1 nps 475000 pv d1a4 d4c3 
+info depth 9 score mate 1 nodes 509 time 1 nps 509000 pv d1a4 d4c3 
+info depth 10 score mate 1 nodes 543 time 1 nps 543000 pv d1a4 d4c3 
+info depth 11 score mate 1 nodes 577 time 1 nps 577000 pv d1a4 d4c3 
+info depth 12 score mate 1 nodes 611 time 2 nps 305500 pv d1a4 d4c3 
+info depth 13 score mate 1 nodes 645 time 2 nps 322500 pv d1a4 d4c3 
+info depth 14 score mate 1 nodes 679 time 2 nps 339500 pv d1a4 d4c3 
+info depth 15 score mate 1 nodes 713 time 2 nps 356500 pv d1a4 d4c3 
+info depth 16 score mate 1 nodes 747 time 2 nps 373500 pv d1a4 d4c3 
+info depth 17 score mate 1 nodes 781 time 2 nps 390500 pv d1a4 d4c3 
+info depth 18 score mate 1 nodes 815 time 2 nps 407500 pv d1a4 d4c3 
+info depth 19 score mate 1 nodes 849 time 2 nps 424500 pv d1a4 d4c3 
+info depth 20 score mate 1 nodes 883 time 2 nps 441500 pv d1a4 d4c3 
+info depth 21 score mate 1 nodes 917 time 2 nps 458500 pv d1a4 d4c3 
+info depth 22 score mate 1 nodes 951 time 2 nps 475500 pv d1a4 d4c3 
+info depth 23 score mate 1 nodes 985 time 2 nps 492500 pv d1a4 d4c3 
+info depth 24 score mate 1 nodes 1019 time 2 nps 509500 pv d1a4 d4c3 
+info depth 25 score mate 1 nodes 1053 time 2 nps 526500 pv d1a4 d4c3 
+info depth 26 score mate 1 nodes 1087 time 3 nps 362333 pv d1a4 d4c3 
+info depth 27 score mate 1 nodes 1121 time 3 nps 373666 pv d1a4 d4c3 
+info depth 28 score mate 1 nodes 1155 time 3 nps 385000 pv d1a4 d4c3 
+info depth 29 score mate 1 nodes 1189 time 3 nps 396333 pv d1a4 d4c3 
+info depth 30 score mate 1 nodes 1223 time 3 nps 407666 pv d1a4 d4c3 
+info depth 31 score mate 1 nodes 1257 time 3 nps 419000 pv d1a4 d4c3 
+info depth 32 score mate 1 nodes 1291 time 3 nps 430333 pv d1a4 d4c3 
+info depth 33 score mate 1 nodes 1325 time 3 nps 441666 pv d1a4 d4c3 
+info depth 34 score mate 1 nodes 1359 time 3 nps 453000 pv d1a4 d4c3 
+info depth 35 score mate 1 nodes 1393 time 3 nps 464333 pv d1a4 d4c3 
+info depth 36 score mate 1 nodes 1427 time 3 nps 475666 pv d1a4 d4c3 
+info depth 37 score mate 1 nodes 1461 time 3 nps 487000 pv d1a4 d4c3 
+info depth 38 score mate 1 nodes 1495 time 3 nps 498333 pv d1a4 d4c3 
+info depth 39 score mate 1 nodes 1529 time 3 nps 509666 pv d1a4 d4c3 
+info depth 40 score mate 1 nodes 1563 time 3 nps 521000 pv d1a4 d4c3 
+info depth 41 score mate 1 nodes 1597 time 4 nps 399250 pv d1a4 d4c3 
+info depth 42 score mate 1 nodes 1631 time 4 nps 407750 pv d1a4 d4c3 
+info depth 43 score mate 1 nodes 1665 time 4 nps 416250 pv d1a4 d4c3 
+info depth 44 score mate 1 nodes 1699 time 4 nps 424750 pv d1a4 d4c3 
+info depth 45 score mate 1 nodes 1733 time 4 nps 433250 pv d1a4 d4c3 
+info depth 46 score mate 1 nodes 1767 time 4 nps 441750 pv d1a4 d4c3 
+info depth 47 score mate 1 nodes 1801 time 4 nps 450250 pv d1a4 d4c3 
+info depth 48 score mate 1 nodes 1835 time 4 nps 458750 pv d1a4 d4c3 
+info depth 49 score mate 1 nodes 1869 time 4 nps 467250 pv d1a4 d4c3 
+info depth 50 score mate 1 nodes 1903 time 4 nps 475750 pv d1a4 d4c3 
+info depth 51 score mate 1 nodes 1937 time 4 nps 484250 pv d1a4 d4c3 
+info depth 52 score mate 1 nodes 1971 time 4 nps 492750 pv d1a4 d4c3 
+info depth 53 score mate 1 nodes 2005 time 4 nps 501250 pv d1a4 d4c3 
+info depth 54 score mate 1 nodes 2039 time 4 nps 509750 pv d1a4 d4c3 
+info depth 55 score mate 1 nodes 2073 time 4 nps 518250 pv d1a4 d4c3 
+info depth 56 score mate 1 nodes 2107 time 5 nps 421400 pv d1a4 d4c3 
+info depth 57 score mate 1 nodes 2141 time 5 nps 428200 pv d1a4 d4c3 
+info depth 58 score mate 1 nodes 2175 time 5 nps 435000 pv d1a4 d4c3 
+info depth 59 score mate 1 nodes 2209 time 5 nps 441800 pv d1a4 d4c3 
+info depth 60 score mate 1 nodes 2243 time 5 nps 448600 pv d1a4 d4c3 
+info depth 61 score mate 1 nodes 2277 time 5 nps 455400 pv d1a4 d4c3 
+info depth 62 score mate 1 nodes 2311 time 5 nps 462200 pv d1a4 d4c3 
+info depth 63 score mate 1 nodes 2345 time 5 nps 469000 pv d1a4 d4c3 
+info depth 64 score mate 1 nodes 2379 time 5 nps 475800 pv d1a4 d4c3 
+info depth 65 score mate 1 nodes 2413 time 5 nps 482600 pv d1a4 d4c3 
+bestmove d1a4
+Board Info: FEN: r1bqkb1r/pp1ppppp/2n2n2/8/2Pp4/2N2N2/Pp2PppP/R1BQKB1R w KQkq - 0 5, Side to move: White, Fullmoves: 5, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 3529, Load factor: 0.001645, Max load factor: 1.000000, Bucket count: 2144977, Max bucket count: 192153584101141162
+info depth 1 score cp -20 nodes 491 time 1 nps 491000 pv f3d4 c6e5 
+info depth 2 score cp -20 nodes 2095 time 5 nps 419000 pv f3d4 c6e5 
+info depth 3 score cp 75 nodes 11437 time 25 nps 457480 pv c3b1 g7g6 b1d2 
+info depth 4 score cp 75 nodes 122366 time 289 nps 423411 pv c3b1 e7e5 b1d2 d7d5 
+info depth 5 score cp 75 nodes 2375490 time 3647 nps 651354 pv c3b1 b7b5 c1g5 a7a6 c4b5 
+info depth 6 score cp 75 nodes 6582287 time 10368 nps 634865 pv c3b1 e7e5 e2e3 d4e3 c1e3 d7d5 
+bestmove c3b1
+Board Info: FEN: r1bqkb1r/pp1ppppp/2n2n2/8/2Pp4/2N2N2/PP2PPPP/R1BQKB1R w KQkq - 0 5, Side to move: White, Fullmoves: 5, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 163554, Load factor: 0.076250, Max load factor: 1.000000, Bucket count: 2144977, Max bucket count: 192153584101141162
+info depth 1 score mate -2 nodes 125 time 1 nps 125000 pv f3d4 d4c6 d7c6 
+info depth 2 score mate -2 nodes 358 time 1 nps 358000 pv f3d4 d4c6 d7c6 
+info depth 3 score mate -2 nodes 419 time 1 nps 419000 pv f3d4 d4c6 d7c6 
+info depth 4 score mate -2 nodes 480 time 1 nps 480000 pv f3d4 d4c6 d7c6 
+info depth 5 score mate -2 nodes 541 time 1 nps 541000 pv f3d4 d4c6 d7c6 
+info depth 6 score mate -2 nodes 602 time 2 nps 301000 pv f3d4 d4c6 d7c6 
+info depth 7 score mate -2 nodes 663 time 2 nps 331500 pv f3d4 d4c6 d7c6 
+info depth 8 score mate -2 nodes 724 time 2 nps 362000 pv f3d4 d4c6 d7c6 
+info depth 9 score mate -2 nodes 785 time 2 nps 392500 pv f3d4 d4c6 d7c6 
+info depth 10 score mate -2 nodes 846 time 2 nps 423000 pv f3d4 d4c6 d7c6 
+info depth 11 score mate -2 nodes 907 time 2 nps 453500 pv f3d4 d4c6 d7c6 
+info depth 12 score mate -2 nodes 968 time 2 nps 484000 pv f3d4 d4c6 d7c6 
+info depth 13 score mate -2 nodes 1029 time 2 nps 514500 pv f3d4 d4c6 d7c6 
+info depth 14 score mate -2 nodes 1090 time 3 nps 363333 pv f3d4 d4c6 d7c6 
+info depth 15 score mate -2 nodes 1151 time 3 nps 383666 pv f3d4 d4c6 d7c6 
+info depth 16 score mate -2 nodes 1212 time 3 nps 404000 pv f3d4 d4c6 d7c6 
+info depth 17 score mate -2 nodes 1273 time 3 nps 424333 pv f3d4 d4c6 d7c6 
+info depth 18 score mate -2 nodes 1334 time 3 nps 444666 pv f3d4 d4c6 d7c6 
+info depth 19 score mate -2 nodes 1395 time 3 nps 465000 pv f3d4 d4c6 d7c6 
+info depth 20 score mate -2 nodes 1456 time 3 nps 485333 pv f3d4 d4c6 d7c6 
+info depth 21 score mate -2 nodes 1517 time 3 nps 505666 pv f3d4 d4c6 d7c6 
+info depth 22 score mate -2 nodes 1578 time 3 nps 526000 pv f3d4 d4c6 d7c6 
+info depth 23 score mate -2 nodes 1639 time 4 nps 409750 pv f3d4 d4c6 d7c6 
+info depth 24 score mate -2 nodes 1700 time 4 nps 425000 pv f3d4 d4c6 d7c6 
+info depth 25 score mate -2 nodes 1761 time 4 nps 440250 pv f3d4 d4c6 d7c6 
+info depth 26 score mate -2 nodes 1822 time 4 nps 455500 pv f3d4 d4c6 d7c6 
+info depth 27 score mate -2 nodes 1883 time 4 nps 470750 pv f3d4 d4c6 d7c6 
+info depth 28 score mate -2 nodes 1944 time 4 nps 486000 pv f3d4 d4c6 d7c6 
+info depth 29 score mate -2 nodes 2005 time 4 nps 501250 pv f3d4 d4c6 d7c6 
+info depth 30 score mate -2 nodes 2066 time 4 nps 516500 pv f3d4 d4c6 d7c6 
+info depth 31 score mate -2 nodes 2127 time 5 nps 425400 pv f3d4 d4c6 d7c6 
+info depth 32 score mate -2 nodes 2188 time 5 nps 437600 pv f3d4 d4c6 d7c6 
+info depth 33 score mate -2 nodes 2249 time 5 nps 449800 pv f3d4 d4c6 d7c6 
+info depth 34 score mate -2 nodes 2310 time 5 nps 462000 pv f3d4 d4c6 d7c6 
+info depth 35 score mate -2 nodes 2371 time 5 nps 474200 pv f3d4 d4c6 d7c6 
+info depth 36 score mate -2 nodes 2432 time 5 nps 486400 pv f3d4 d4c6 d7c6 
+info depth 37 score mate -2 nodes 2493 time 5 nps 498600 pv f3d4 d4c6 d7c6 
+info depth 38 score mate -2 nodes 2554 time 5 nps 510800 pv f3d4 d4c6 d7c6 
+info depth 39 score mate -2 nodes 2615 time 5 nps 523000 pv f3d4 d4c6 d7c6 
+info depth 40 score mate -2 nodes 2676 time 6 nps 446000 pv f3d4 d4c6 d7c6 
+info depth 41 score mate -2 nodes 2737 time 6 nps 456166 pv f3d4 d4c6 d7c6 
+info depth 42 score mate -2 nodes 2798 time 6 nps 466333 pv f3d4 d4c6 d7c6 
+info depth 43 score mate -2 nodes 2859 time 6 nps 476500 pv f3d4 d4c6 d7c6 
+info depth 44 score mate -2 nodes 2920 time 6 nps 486666 pv f3d4 d4c6 d7c6 
+info depth 45 score mate -2 nodes 2981 time 6 nps 496833 pv f3d4 d4c6 d7c6 
+info depth 46 score mate -2 nodes 3042 time 6 nps 507000 pv f3d4 d4c6 d7c6 
+info depth 47 score mate -2 nodes 3103 time 6 nps 517166 pv f3d4 d4c6 d7c6 
+info depth 48 score mate -2 nodes 3164 time 6 nps 527333 pv f3d4 d4c6 d7c6 
+info depth 49 score mate -2 nodes 3225 time 7 nps 460714 pv f3d4 d4c6 d7c6 
+info depth 50 score mate -2 nodes 3286 time 7 nps 469428 pv f3d4 d4c6 d7c6 
+info depth 51 score mate -2 nodes 3347 time 7 nps 478142 pv f3d4 d4c6 d7c6 
+info depth 52 score mate -2 nodes 3408 time 7 nps 486857 pv f3d4 d4c6 d7c6 
+info depth 53 score mate -2 nodes 3469 time 7 nps 495571 pv f3d4 d4c6 d7c6 
+info depth 54 score mate -2 nodes 3530 time 7 nps 504285 pv f3d4 d4c6 d7c6 
+info depth 55 score mate -2 nodes 3591 time 7 nps 513000 pv f3d4 d4c6 d7c6 
+info depth 56 score mate -2 nodes 3652 time 7 nps 521714 pv f3d4 d4c6 d7c6 
+info depth 57 score mate -2 nodes 3713 time 8 nps 464125 pv f3d4 d4c6 d7c6 
+info depth 58 score mate -2 nodes 3774 time 8 nps 471750 pv f3d4 d4c6 d7c6 
+info depth 59 score mate -2 nodes 3835 time 8 nps 479375 pv f3d4 d4c6 d7c6 
+info depth 60 score mate -2 nodes 3896 time 8 nps 487000 pv f3d4 d4c6 d7c6 
+info depth 61 score mate -2 nodes 3957 time 8 nps 494625 pv f3d4 d4c6 d7c6 
+info depth 62 score mate -2 nodes 4018 time 8 nps 502250 pv f3d4 d4c6 d7c6 
+info depth 63 score mate -2 nodes 4079 time 8 nps 509875 pv f3d4 d4c6 d7c6 
+info depth 64 score mate -2 nodes 4140 time 8 nps 517500 pv f3d4 d4c6 d7c6 
+info depth 65 score mate -2 nodes 4201 time 8 nps 525125 pv f3d4 d4c6 d7c6 
+bestmove f3d4
+Board Info: FEN: r1bqkb1r/pp1pPppp/2n2n2/8/2Pp4/5N2/PP2PPPP/RNBQKB1R b KQkq - 1 5, Side to move: Black, Fullmoves: 5, Halfmoves: 1, En passant: a8
+Transposition Table Info: Size: 163555, Load factor: 0.076250, Max load factor: 1.000000, Bucket count: 2144977, Max bucket count: 192153584101141162
+info depth 1 score cp -170 nodes 321 time 1 nps 321000 pv e7e5 e2e3 d4e3 c1e3 
+info depth 2 score cp -170 nodes 2461 time 5 nps 492200 pv e7e5 e2e3 d4e3 c1e3 d7d5 
+info depth 3 score cp -170 nodes 25048 time 63 nps 397587 pv e7e5 e2e3 d4e3 c1e3 d7d5 
+info depth 4 score cp -170 nodes 444482 time 848 nps 524153 pv e7e5 e2e3 d4e3 c1e3 d7d5 
+info depth 5 score cp -170 nodes 2384663 time 3530 nps 675541 pv e7e5 e2e3 d4e3 c1e3 d7d5 
+info depth 6 score cp -170 nodes 44067592 time 48719 nps 904525 pv e7e5 b1d2 d4d3 e2e3 b7b5 f1d3 
+bestmove e7e5
+Board Info: FEN: r1bqkb1r/pp1ppppp/2n2n2/8/2Pp4/5N2/PP2PPPP/RNBQKB1R b KQkq - 1 5, Side to move: Black, Fullmoves: 5, Halfmoves: 1, En passant: a8
+Transposition Table Info: Size: 325955, Load factor: 0.151962, Max load factor: 1.000000, Bucket count: 2144977, Max bucket count: 192153584101141162

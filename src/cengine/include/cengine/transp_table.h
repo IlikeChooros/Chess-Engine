@@ -37,7 +37,7 @@ public:
     typedef typename std::unordered_map<uint64_t, T> TableType;
 
     TTable(size_t sizeMB = 1) noexcept {
-        const size_t size = sizeMB * 1000000 / sizeof(T);
+        const size_t size = sizeMB * 1024 * 1024 / sizeof(T);
         table.reserve(size);
     }
 

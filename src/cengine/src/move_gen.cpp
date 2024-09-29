@@ -685,7 +685,7 @@ size_t gen_legal_moves(MoveList* moves, chess::Board* board)
 
             if (pmoves & block_path){
                 // If the pawn is on the 2nd (black) or 7th rank (white), generate promotion moves
-                if (rank == ranks[!is_white]){
+                if (rank == ranks[is_enemy]){
                     int to = bitScanForward(pmoves);
                     moves->add(Move::fmove(sq, to, Move::FLAG_ROOK_PROMOTION));
                     moves->add(Move::fmove(sq, to, Move::FLAG_BISHOP_PROMOTION));

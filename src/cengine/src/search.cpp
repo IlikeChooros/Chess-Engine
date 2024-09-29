@@ -250,8 +250,9 @@ namespace chess
                 ::make(m, board, gh);
                 params->nodes_searched++;
                 int eval = -search(board, gh, params, asp_window[0], asp_window[1], depth);
-                if (alpha < eval && eval < beta){
+                if (alpha < eval && eval < beta && depth > 0){
                     eval = -search(board, gh, params, MIN, MAX, depth);
+                    asp_window[0] = std::max(asp_window[0], eval);
                 }
                 ::unmake(m, board, gh);
                 board->irreversibleIndex() = last_irreversible;
@@ -262,7 +263,6 @@ namespace chess
                 if (eval > best_eval){
                     best_eval = eval;
                     best_move = ml[i];
-                    alpha = std::max(alpha, eval);
                 }
 
                 if (alpha >= beta)
