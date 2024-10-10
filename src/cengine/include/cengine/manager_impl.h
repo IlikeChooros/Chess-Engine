@@ -93,6 +93,7 @@ namespace chess
          * @brief Searches for the best move in the current position in async mode
          */
         inline void searchAsync() noexcept {
+            search_params.setSearchRunning(true);
             if (search_thread.joinable()){
                 search_thread.join();
             }

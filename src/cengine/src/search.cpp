@@ -31,7 +31,6 @@ namespace chess
 
         int pv_depth = 0;
         MoveList pv;
-        int i = 0;
 
         pv.add(best_move);
         ::make(best_move, b, gh);
@@ -40,12 +39,11 @@ namespace chess
             TEntry entry = sc->getTT().get(hash);
             if (!entry.bestMove || entry.bestMove == best_move)
                 break;
-            if (pv.size() >= pv.capacity() - 1 || i++ > max_depth)
+            if (pv.size() >= pv.capacity() - 1 || pv_depth++ > max_depth)
                 break;
             pv.add(entry.bestMove);
             ::make(entry.bestMove, b, gh);
             hash = get_hash(b);
-            pv_depth++;
         }
         for (auto it = pv.rbegin(); it != pv.rend(); it++){
             ::unmake(Move(*it), b, gh);

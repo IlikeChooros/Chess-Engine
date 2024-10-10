@@ -6,6 +6,16 @@ static sf::Sprite pieces_sprite;
 static chess::Manager *manager;
 static BoardWindowState state = {};
 
+// Screen constants
+static int 
+    window_width = 1000, 
+    window_height = 800, 
+    board_size = window_height, 
+    eval_width = 0.05f * board_size,
+    board_padding = (window_width - board_size) / 2;
+
+
+
 namespace ui
 {
     using namespace chess;
@@ -237,7 +247,8 @@ namespace ui
         Manager* manager, sf::Vector2f pos, sf::Vector2f size
     ): BaseChessWindow(font, texture, manager, pos, size)
     {
-        this->m_rect = sf::RectangleShape({4 * (120 + 10) + 2*10, 120 + 50});
+
+        this->m_rect = sf::RectangleShape({4 * (size.x + 10) + 2*10, size.y + 50});
         this->m_pos.x = pos.x - m_rect.getSize().x / 2;
         this->m_pos.y = pos.y;
         this->m_rect.setFillColor(sf::Color(0, 0, 0, 192));
@@ -247,8 +258,8 @@ namespace ui
         m_buttons.reserve(4);
         for(size_t i = 0; i < 4; i++){
             m_buttons.emplace_back(
-                texture, sf::Vector2f{m_pos.x + (120 + 10) * i + 10, m_pos.y + 40}, 
-                sf::Vector2f{120, 120}, sf::IntRect(texture_x[i], 60, 60, 60)
+                texture, sf::Vector2f{m_pos.x + (size.x + 10) * i + 10, m_pos.y + 40}, 
+                size, sf::IntRect(texture_x[i], 60, 60, 60)
             );
             m_buttons.back().setOutline(sf::Color(255, 255, 255, 128), 2);
         }
@@ -390,7 +401,7 @@ namespace ui
         if (Piece::getType((*m_state->board)[index]) != Piece::Empty){
             sf::Sprite sprite;
             sprite.setTexture(m_texture);
-            sprite.setScale(2, 2);
+            sprite.setScale(size / 60.0f, size / 60.0f);
             matchPiece(&sprite, (*m_state->board)[index]);
             sprite.setPosition(position);
             target.draw(sprite, states);
@@ -466,8 +477,8 @@ namespace ui
     ): BaseChessWindow(font, texture, manager, pos, size)
     {
         this->m_state = state;
-        this->m_boardDisplay = ChessboardDisplay(font, texture, manager, {250, 0}, {1000, 1000}, state);
-        this->m_promotionWindow = PromotionWindow(font, texture, manager, {750, 500}, {120, 120});
+        this->m_boardDisplay = ChessboardDisplay(font, texture, manager, {board_padding, 0}, {board_size, board_size}, state);
+        this->m_promotionWindow = PromotionWindow(font, texture, manager, {window_width / 2, window_height / 2}, {120, 120});
     }
 
     BoardWindow& BoardWindow::operator=(BoardWindow&& other)
@@ -537,7 +548,7 @@ namespace ui
         m_manager = manager;
 
         m_rect.setFillColor(sf::Color(42, 42, 42, 192));
-        m_boardWindow = BoardWindow(font, texture, manager, {250, 0}, {1000, 1000}, state);
+        m_boardWindow = BoardWindow(font, texture, manager, {board_padding, 0}, {board_size, board_size}, state);
         m_inputHandler.onPromotion([this](int index, BoardWindowState* state, sf::RenderWindow* window, sf::Event& event){
             m_boardWindow.getPromotionWindow().handleInput(event, window, state);
         });
@@ -595,30 +606,36 @@ namespace ui
         sf::Vector2f pos, sf::Vector2f size
     ): ScreenBase(font, pos, size)
     {
+
+        const int btn_size = window_height / 5,
+                  padding = btn_size / 4,
+                  m_x = window_width / 2 - btn_size * 1.5 - padding,
+                  m_y = window_height / 2 - btn_size / 2;
+
         m_rect.setFillColor(sf::Color(42, 42, 42, 192));
 
         // Create buttons
         m_buttons.reserve(3);
         // Player vs Player
         m_buttons.emplace_back(
-            font, texture, sf::Vector2f{pos.x + 400, pos.y + 400}, 
-            sf::Vector2f{200, 200}, sf::IntRect(60, 0, 60, 60)
+            font, texture, sf::Vector2f{pos.x + m_x, pos.y + m_y}, 
+            sf::Vector2f{btn_size, btn_size}, sf::IntRect(60, 0, 60, 60)
         );
         m_buttons.back().setOutline(sf::Color(255, 255, 255, 128), 2);
         m_buttons.back().setText("Player vs Player");
 
         // Player vs AI
         m_buttons.emplace_back(
-            font, texture, sf::Vector2f{pos.x + 400 + (50 + 200), pos.y + 400}, 
-            sf::Vector2f{200, 200}, sf::IntRect(120, 0, 60, 60)
+            font, texture, sf::Vector2f{pos.x + m_x + (padding + btn_size), pos.y + m_y}, 
+            sf::Vector2f{btn_size, btn_size}, sf::IntRect(120, 0, 60, 60)
         );
         m_buttons.back().setOutline(sf::Color(255, 255, 255, 128), 2);
         m_buttons.back().setText("Player vs AI");
 
         // Analysis
         m_buttons.emplace_back(
-            font, texture, sf::Vector2f{pos.x + 400 + (50 + 200)*2, pos.y + 400}, 
-            sf::Vector2f{200, 200}, sf::IntRect(180, 0, 60, 60)
+            font, texture, sf::Vector2f{pos.x + m_x + (padding + btn_size)*2, pos.y + m_y}, 
+            sf::Vector2f{btn_size, btn_size}, sf::IntRect(180, 0, 60, 60)
         );
         m_buttons.back().setOutline(sf::Color(255, 255, 255, 128), 2);
         m_buttons.back().setText("Analysis");
@@ -636,7 +653,7 @@ namespace ui
         target.draw(m_rect, states);
 
         sf::Text text("Main Menu", m_font, 24);
-        text.setPosition(m_pos.x + m_size.x / 2 - 50, m_pos.y + 350);
+        text.setPosition(m_pos.x + m_size.x / 2 - 50, m_pos.y + window_width / 8);
         text.setFillColor(sf::Color::White);
         target.draw(text, states);
 
@@ -699,7 +716,7 @@ namespace ui
         m_boardWindow.getBoardDisplay().setRotate(
             state->player_color == Piece::Black
         );
-        m_evalBar = EvalBar(font, {200, 0}, {50, 1000});
+        m_evalBar = EvalBar(font, {board_padding - eval_width, 0}, {eval_width, board_size});
     }
 
     PlayerVsEngineWindow& PlayerVsEngineWindow::operator=(PlayerVsEngineWindow&& other)
@@ -723,7 +740,7 @@ namespace ui
                 m_backend.sendCommand("go depth 4 movetime 2500");
                 m_engine_running = true;
             }
-            else if(m_backend.commandsLeft() == 0){ // backend has finished processing all commands
+            else if(!m_manager->searchRunning() && m_backend.commandsLeft() == 0){ // backend has finished processing all commands
                 // Engine has finished searching
                 m_manager->makeEngineMove();
                 *m_state->board = *m_manager->board();
@@ -810,8 +827,8 @@ namespace ui
             }
         });
 
-        m_evalBar = EvalBar(font, {200, 0}, {50, 1000});
-        m_moveList = MoveList(font, {0, 0}, {200, 1000});
+        m_evalBar = EvalBar(font, {board_padding - eval_width, 0}, {eval_width, board_size});
+        m_moveList = MoveList(font, {0, 0}, {board_padding - eval_width, board_size});
     }
 
     AnalysisWindow::~AnalysisWindow()
@@ -864,8 +881,8 @@ namespace ui
         Manager* manager, BoardWindowState* state
     ): ChessScreen(font, texture, pos, size, manager, state)
     {
-        m_evalBar = EvalBar(font, {200, 0}, {50, 1000});
-        m_moveList = MoveList(font, {0, 0}, {200, 1000});
+        m_evalBar = EvalBar(font, {board_padding - eval_width, 0}, {eval_width, board_size});
+        m_moveList = MoveList(font, {0, 0}, {board_padding - eval_width, board_size});
 
         m_logger.run(manager);
     }
@@ -907,17 +924,17 @@ namespace ui
     ScreenBase* getScreen(BoardScreenState state){
         switch(state){
             case BoardScreenState::MAIN_MENU:
-                return new MainMenuWindow(font, pieces_texture, {0, 0}, {1500, 1000});
+                return new MainMenuWindow(font, pieces_texture, {0, 0}, {window_width, window_height});
             case BoardScreenState::ANALYSIS:
-                return new AnalysisWindow(font, pieces_texture, {0, 0}, {1500, 1000}, manager, &::state);
+                return new AnalysisWindow(font, pieces_texture, {0, 0}, {window_width, window_height}, manager, &::state);
             case BoardScreenState::PLAYER_VS_ENGINE:
-                return new PlayerVsEngineWindow(font, pieces_texture, {0, 0}, {1500, 1000}, manager, &::state);
+                return new PlayerVsEngineWindow(font, pieces_texture, {0, 0}, {window_width, window_height}, manager, &::state);
             case BoardScreenState::PLAYER_VS_PLAYER:
-                return new PlayerVsPlayerWindow(font, pieces_texture, {0, 0}, {1500, 1000}, manager, &::state);
+                return new PlayerVsPlayerWindow(font, pieces_texture, {0, 0}, {window_width, window_height}, manager, &::state);
             case BoardScreenState::TEST_ENGINE:
-                return new EngineTesterWindow(font, pieces_texture, {0, 0}, {1500, 1000}, manager, &::state);
+                return new EngineTesterWindow(font, pieces_texture, {0, 0}, {window_width, window_height}, manager, &::state);
             default:
-                return new MainMenuWindow(font, pieces_texture, {0, 0}, {1500, 1000});
+                return new MainMenuWindow(font, pieces_texture, {0, 0}, {window_width, window_height});
         }
     }
 
@@ -941,7 +958,7 @@ namespace ui
         state.board = &copy;
         manager = &m;
 
-        state.screen_state = BoardScreenState::TEST_ENGINE;
+        // state.screen_state = BoardScreenState::TEST_ENGINE;
 
         if(!pieces_texture.loadFromFile(global_settings.base_path / "img/ChessPiecesArray.png")){
             return;
@@ -962,7 +979,7 @@ namespace ui
         std::cout << "That's it!\n";
 
         Clock timer;
-        RenderWindow window = sf::RenderWindow(sf::VideoMode(1500, 1000), "CEngine");
+        RenderWindow window = sf::RenderWindow(sf::VideoMode(window_width, window_height), "CEngine");
 
         while(window.isOpen()){
             std::unique_ptr<ScreenBase> screen(getScreen(state.screen_state));
