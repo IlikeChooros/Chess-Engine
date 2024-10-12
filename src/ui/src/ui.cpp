@@ -7,7 +7,7 @@ static chess::Manager *manager;
 static BoardWindowState state = {};
 
 // Screen constants
-static int 
+static float 
     window_width = 1000, 
     window_height = 800, 
     board_size = window_height, 
@@ -606,39 +606,31 @@ namespace ui
         sf::Vector2f pos, sf::Vector2f size
     ): ScreenBase(font, pos, size)
     {
-
-        const int btn_size = window_height / 5,
-                  padding = btn_size / 4,
-                  m_x = window_width / 2 - btn_size * 1.5 - padding,
+        const float
+                  buttons = 4.0f, 
+                  btn_size = window_height / (buttons + 2),
+                  padding = btn_size / (buttons + 1),
+                  m_x = window_width / 2 - btn_size * (buttons / 2) - padding,
                   m_y = window_height / 2 - btn_size / 2;
 
         m_rect.setFillColor(sf::Color(42, 42, 42, 192));
 
+        const int texture_x[] = {60, 120, 180, 240};
+        const char* text[] = {"Player vs Player", "Player vs AI", "Analysis", "Tester"};
+
         // Create buttons
-        m_buttons.reserve(3);
-        // Player vs Player
-        m_buttons.emplace_back(
-            font, texture, sf::Vector2f{pos.x + m_x, pos.y + m_y}, 
-            sf::Vector2f{btn_size, btn_size}, sf::IntRect(60, 0, 60, 60)
-        );
-        m_buttons.back().setOutline(sf::Color(255, 255, 255, 128), 2);
-        m_buttons.back().setText("Player vs Player");
+        m_buttons.reserve(sizeof(text) / sizeof(text[0]));
 
-        // Player vs AI
-        m_buttons.emplace_back(
-            font, texture, sf::Vector2f{pos.x + m_x + (padding + btn_size), pos.y + m_y}, 
-            sf::Vector2f{btn_size, btn_size}, sf::IntRect(120, 0, 60, 60)
-        );
-        m_buttons.back().setOutline(sf::Color(255, 255, 255, 128), 2);
-        m_buttons.back().setText("Player vs AI");
 
-        // Analysis
-        m_buttons.emplace_back(
-            font, texture, sf::Vector2f{pos.x + m_x + (padding + btn_size)*2, pos.y + m_y}, 
-            sf::Vector2f{btn_size, btn_size}, sf::IntRect(180, 0, 60, 60)
-        );
-        m_buttons.back().setOutline(sf::Color(255, 255, 255, 128), 2);
-        m_buttons.back().setText("Analysis");
+        for (size_t i = 0; i < sizeof(text) / sizeof(text[0]); i++)
+        {
+            m_buttons.emplace_back(
+                font, texture, sf::Vector2f{pos.x + m_x + (padding + btn_size) * i, pos.y + m_y},
+                sf::Vector2f{btn_size, btn_size}, sf::IntRect(texture_x[i], 0, 60, 60)
+            );
+            m_buttons.back().setOutline(sf::Color(255, 255, 255, 128), 2);
+            m_buttons.back().setText(text[i]);
+        }
     }
 
     MainMenuWindow& MainMenuWindow::operator=(MainMenuWindow&& other)
@@ -657,7 +649,7 @@ namespace ui
         text.setFillColor(sf::Color::White);
         target.draw(text, states);
 
-        for(size_t i = 0; i < 3; i++){
+        for(size_t i = 0; i < m_buttons.size(); i++){
             m_buttons[i].draw(target, states);
         }
     }
@@ -666,7 +658,7 @@ namespace ui
     {
         if(event.type == sf::Event::MouseButtonPressed){
             auto mouse = sf::Mouse::getPosition(*window);
-            for(size_t i = 0; i < 3; i++){
+            for(size_t i = 0; i < 4; i++){
                 if (m_buttons[i].isClicked(mouse)){
                     state->screen_state = static_cast<BoardScreenState>(i + 1);
                     m_exit = true;

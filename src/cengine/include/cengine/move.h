@@ -11,6 +11,8 @@ class Move
 {
     public:
 
+    typedef uint16_t move_t;
+
     // Mask for the from and to fields (6 bits)
     static const uint32_t MASK_MOVE = 0b111111;
     static const int bits = 16; // 6 + 6 + 4
@@ -43,10 +45,15 @@ class Move
     static const uint32_t FLAG_BISHOP_PROMOTION_CAPTURE = 0b1101;
     static const uint32_t FLAG_ROOK_PROMOTION_CAPTURE = 0b1110;
     static const uint32_t FLAG_QUEEN_PROMOTION_CAPTURE = 0b1111;
+    
+    // Fast move creation
+    static constexpr uint16_t fmove(uint32_t from, uint32_t to, uint32_t flags) {
+        return (flags << 12) | (from << 6) | to;
+    }
 
     Move() : m_move(0) {};
     Move(uint32_t from, uint32_t to, uint32_t flags) :
-        Move((flags << 12) | (from << 6) | to) {}; // First 6 bits: to, next 6 bits: from, rest: flags (4 bits)
+        m_move(fmove(from, to, flags)) {}; // First 6 bits: to, next 6 bits: from, rest: flags (4 bits)
           
     Move(uint32_t move) : m_move(move) {};
     Move(const Move& other) : m_move(other.m_move) {};
@@ -98,7 +105,7 @@ class Move
     uint32_t getFrom() const {return (m_move >> 6) & MASK_MOVE;};
     uint32_t getTo() const {return m_move & MASK_MOVE;};
     uint32_t getFlags() const {return m_move >> 12;};
-    uint32_t get() const {return m_move;};
+    uint16_t get() const {return m_move;};
 
     bool isCapture() const {return getFlags() & FLAG_CAPTURE;};
     bool isPromotion() const {return getFlags() & FLAG_PROMOTION;};
@@ -171,7 +178,6 @@ class Move
     }
 
     operator int() const {return m_move;};
-    operator bool() const {return m_move != 0;};
 
     Move& operator=(const Move& other) {
         m_move = other.m_move;
@@ -195,14 +201,14 @@ class Move
     };
     
     private:
-    uint32_t m_move;
+    uint16_t m_move;
 };
 
 // Move list class, stores a list of moves
 class MoveList
 {
     public:
-    typedef uint32_t move_t;
+    typedef uint16_t move_t;
 
     // Iterator for the move list
     class MoveListIterator {
@@ -295,8 +301,8 @@ class MoveList
     inline iterator end() {return iterator(moves + n_moves);}
     inline reverse_iterator rbegin() {return reverse_iterator(end());}
     inline reverse_iterator rend() {return reverse_iterator(begin());}
-    inline const uint32_t* data() const {return moves;}
+    inline const move_t* data() const {return moves;}
 
-    uint32_t moves[256];
+    move_t moves[256];
     size_t n_moves;
 };

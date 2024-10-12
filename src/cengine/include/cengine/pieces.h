@@ -48,55 +48,55 @@ namespace chess
          * @brief Get the color of a piece
          * @return piece & colorMask, either 0b01000 or 0b10000
          */
-        static inline int getColor(const int& piece){
+        static constexpr int getColor(const int& piece){
             return piece & colorMask;
         }
 
         /**
          * @brief Get the type of a piece
          */
-        static inline int getType(const int& piece){
+        static constexpr int getType(const int& piece){
             return piece & pieceMask;
         }
         
         /**
          * @brief Check if the piece is white
          */
-        static inline bool isWhite(const int& piece){
+        static constexpr bool isWhite(const int& piece){
             return getColor(piece) == White;
         }
         /**
          * @brief Create a piece with a given type and color
          */
-        static inline int createPiece(int type, int color, int special = 0){
+        static constexpr int createPiece(int type, int color, int special = 0){
             return type | color | special;
         }
 
         /**
          * @brief Check if the piece is a sliding piece
          */
-        static inline bool isSliding(const int& piece){
+        static constexpr bool isSliding(const int& piece){
             return getType(piece) & 0b100;
         }
 
         /**
          * @brief Get the piece representing the king of a given color
          */
-        static inline int getKing(int color){
+        static constexpr int getKing(int color){
             return King | color;
         }
 
         /**
          * @brief Get the piece representing the rook of a given color
          */
-        static inline int getRook(int color){
+        static constexpr int getRook(int color){
             return Rook | color;
         }
 
         /**
          * @brief Return the opposite color
          */
-        static inline int opposite(int color){
+        static constexpr int opposite(int color){
             return color ^ colorMask;
         }
 
