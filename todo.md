@@ -34,3 +34,7 @@
       - r4rk1/pppb1p2/3bq2p/3NN2Q/2B3p1/8/PP1R2PP/4R2K b - - 0 23
   - [ ] Evaluation
     - [ ] Pawn structure (phalanx) 
+
+
+Code related:
+- refactor `search` function, it's a mess

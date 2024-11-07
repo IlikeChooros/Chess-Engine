@@ -28,6 +28,7 @@ namespace chess
 
         OrderedMove() = default;
 
+        // Set the move and its value
         inline void set(const Move& m, const Move& pvm, Board* b, SearchCache* sc)
         {
             move = m;
@@ -37,11 +38,13 @@ namespace chess
             value += sc->getHH().get(b->getSide() == Piece::White, m) * 25; // History heuristic
         }
 
+        // Compare two moves
         inline bool operator<(const OrderedMove& other) const
         {
             return value < other.value;
         }
 
+        // Compare two moves by their value
         inline bool operator>(const OrderedMove& other) const
         {
             return value > other.value;

@@ -2,6 +2,9 @@
 
 namespace chess
 {
+    /**
+     * @brief Order the moves in the move list, modifies the list in place
+     */
     void order_moves(MoveList *ml, MoveList *pv, Board *board, SearchCache* sc)
     {
         Move pvm = pv && pv->size() > 0 ? Move(*pv->begin()) : Move();

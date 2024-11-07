@@ -2,14 +2,9 @@
 
 namespace chess
 {
-    constexpr int MIN = -(1 << 29),
-                  MAX = 1 << 29,
-                  MATE = -(1 << 28) + 1,
-                  MATE_THRESHOLD = -MATE;
-
-
     // Check the search parameters and see if the search should stop
-    bool keep_searching(SearchParams* params){
+    bool keep_searching(SearchParams* params)
+    {
         using namespace std::chrono;
 
         if (params->shouldStop())
@@ -25,7 +20,8 @@ namespace chess
 
 
     // Get PV from transposition table
-    MoveList getPV(Board* b, SearchCache* sc, GameHistory* gh, Move best_move, int max_depth = 10){
+    MoveList getPV(Board* b, SearchCache* sc, GameHistory* gh, Move best_move, int max_depth = 10)
+    {
         if (!sc || !b || !gh || best_move == Move::nullMove)
             return {};
 
@@ -35,7 +31,9 @@ namespace chess
         pv.add(best_move);
         ::make(best_move, b, gh);
         uint64_t hash = get_hash(b);
-        while (sc->getTT().contains(hash)){
+
+        while (sc->getTT().contains(hash))
+        {
             TEntry entry = sc->getTT().get(hash);
             if (!entry.bestMove || entry.bestMove == best_move)
                 break;
@@ -53,7 +51,8 @@ namespace chess
 
 
     // Quiescence (no quiet) search, runs aplha beta on captures only and evaluates the position
-    int quiescence(Board* b, GameHistory* gh, SearchParams* params, int alpha, int beta){
+    int quiescence(Board* b, GameHistory* gh, SearchParams* params, int alpha, int beta)
+    {
         // return evaluate(b, nullptr, nullptr);
 
         int eval = evaluate(b, nullptr, nullptr);
@@ -244,25 +243,10 @@ namespace chess
             pv = getPV(board, sc, gh, best_move, depth);
 
             // Update score
-            nscore.value = best_eval * whotomove;
-            if (abs(best_eval) >= MATE_THRESHOLD){
-                nscore.value = (pv.size() + 1) / 2;
-                nscore.value = std::max(nscore.value, 1);
-                nscore.value *= best_eval > 0 ? 1 : -1;
-                nscore.value *= whotomove;
-                nscore.type = Score::mate;
-            }
+            update_score(nscore, best_eval, whotomove, pv);
 
             // Update the search result 
-            std::unique_lock<std::mutex> lock(result->mutex);
-            if (lock.owns_lock()){
-                result->move = best_move;
-                result->score = nscore;
-                result->time = time_taken;
-                result->depth = depth - 1;
-                result->pv = std::list<Move>(pv.begin(), pv.end());
-                lock.unlock();
-            }
+            update_result(result, best_move, nscore, depth, time_taken, ONGOING, pv);
             
             // Log the search info
             glogger.printInfo(depth - 1, nscore.value, nscore.type == Score::cp, params->nodes_searched, time_taken, &pv);
