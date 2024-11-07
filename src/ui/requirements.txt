@@ -1,0 +1,4 @@
+cairosvg==2.7.1
+chess==1.11.1
+Pillow==11.0.0
+pygame==2.6.1
