@@ -4,8 +4,7 @@ import pygame
 import cairosvg
 import io
 from PIL import Image
-from . import inputs
-from . import settings
+from . import inputs, settings, engine
 
 # Initialize Pygame
 pygame.init()
@@ -16,6 +15,9 @@ pygame.display.set_caption('Chess')
 
 # Create the board
 board = chess.Board()
+
+# Create the engine
+engine_ = engine.Engine(settings.ENGINE_PATH)
 
 # ----------------- Functions -----------------
 
@@ -58,6 +60,8 @@ def draw_promotion_menu() -> pygame.Surface:
 
 # ----------------- Main loop -----------------
 
+FPS = 30
+clock = pygame.time.Clock()
 running: bool = True
 while running:
     # Handle events
@@ -67,7 +71,10 @@ while running:
         else:
             inputs.handle_inputs(event, board)
     
-    # Draw the board
+    # Update the display at 60 FPS
+    clock.tick(FPS)
+
+    # Draw the board 
     window.blit(draw_board(board), (0, 0))
 
     if inputs.handle_promotion:
