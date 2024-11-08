@@ -7,6 +7,8 @@ import subprocess
 import chess
 import dataclasses
 import enum
+import numpy as np
+import typing
 
 # Custom exceptions
 class EngineNotRunning(Exception):
@@ -26,6 +28,8 @@ class Evaluation:
     
     score: int
     score_type: ScoreType
+    nodes: int
+    pv: list[chess.Move]
 
 
 @dataclasses.dataclass
@@ -143,22 +147,42 @@ class Engine:
         self.search_options = options
     
     
-    def get_evaluation(self):
+    def get_evaluation(self) -> typing.Generator[Evaluation, None, None]:
         """
-        Get the evaluation of the current position, in real-time,
+        Run search and get the evaluation of the current position, in real-time,
         This is a generator that yields Evaluation objects
         """
         self._send_command(f'go {str(self.search_options)}')
+        print('go', str(self.search_options))
         while True:
             line = self._read_line()
+            print(line)
             if line.startswith('bestmove'):
                 break
             
             splitted = line.split()
+            pv: list[chess.Move] = []
+            nodes: int = 0
+
+            if 'nodes' in splitted:
+                nodes = int(splitted[splitted.index('nodes') + 1])
+
+            if 'pv' in splitted:
+                # Get the principal variation
+                pv_index = splitted.index('pv')
+
+                try:
+                    while True:
+                        pv.append(chess.Move.from_uci(splitted[pv_index + 1]))
+                        pv_index += 1
+                except (IndexError, chess.InvalidMoveError):
+                    pass
+
             if 'score' in splitted:
                 score = int(splitted[splitted.index('score') + 2])
                 score_type = Evaluation.ScoreType.CP if 'cp' in splitted else Evaluation.ScoreType.MATE
-                yield Evaluation(score, Evaluation.ScoreType(score_type))
+            
+                yield Evaluation(score, Evaluation.ScoreType(score_type), nodes, list(pv))
 
 
     def search(self) -> chess.Move:

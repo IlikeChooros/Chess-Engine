@@ -3,8 +3,13 @@ Project settings
 """
 
 # Window width and height
-WIDTH, HEIGHT = 700, 700
+WIDTH, HEIGHT = 900, 700
+WINDOW_SIZE = (WIDTH, HEIGHT)
+
+# Board settings
 BOARD_SIZE = HEIGHT
+BOARD_OFFSETS = ((WIDTH - BOARD_SIZE) // 2, 0)
+
 
 # Promotion menu settings
 PROMOTION_MENU_SIZE = (400, 100)
@@ -16,13 +21,14 @@ PROMOTION_WINDOW_OFFSETS = (
     (HEIGHT - PROMOTION_MENU_SIZE[1]) // 2
 )
 
-# Window size
-WINDOW_SIZE = (WIDTH, HEIGHT)
 
+# Evaluation settings
+EVALUATION_SIZE = (BOARD_OFFSETS[0], HEIGHT)
+EVALUATION_FONT_SIZE = 16
 
 # Engine settings
 
 import os
 
-BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 ENGINE_PATH = os.path.join(BASE_PATH, 'engines', 'CEngine')

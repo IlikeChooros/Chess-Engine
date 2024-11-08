@@ -1,10 +1,12 @@
 import chess
-import chess.svg
 import pygame
-import cairosvg
-import io
-from PIL import Image
-from . import inputs, settings, engine
+import typing
+
+import package.ui as ui
+import package.inputs as inputs
+import package.settings as settings
+import package.engine as engine
+
 
 # Initialize Pygame
 pygame.init()
@@ -18,51 +20,36 @@ board = chess.Board()
 
 # Create the engine
 engine_ = engine.Engine(settings.ENGINE_PATH)
+search_options = engine.SearchOptions(
+    depth=6, movetime=1000
+)
+engine_.set_search_options(search_options)
 
-# ----------------- Functions -----------------
+# ----------------- Callbacks -----------------
 
-def draw_board(board: chess.Board) -> pygame.Surface:
-    """
-    Return current board as a Pygame Surface,
-    using the chess.svg.board function.
-    """
-    svg_data = chess.svg.board(
-        board=board, size=settings.BOARD_SIZE, coordinates=False, 
-        **inputs.render_settings.__dict__()
-    ).encode('utf-8') 
-    png_data = cairosvg.svg2png(bytestring=svg_data)
-    image = Image.open(io.BytesIO(png_data))
-    mode, size, data = image.mode, image.size, image.tobytes()
-    return pygame.image.fromstring(data, size, mode)
+evaluation_generator: typing.Generator[engine.Evaluation, None, None] | None = None
 
+def update_eval() -> None:
+    engine_.stop()
+    engine_.isready()
+    engine_.load_game(board)
 
-def draw_promotion_menu() -> pygame.Surface:
-    """
-    Return the promotion menu as a Pygame Surface.
-    """
-    color: chess.Color = board.turn
-    surface = pygame.Surface(settings.PROMOTION_MENU_SIZE)    
+    global evaluation_generator
 
-    for index, piece in enumerate(inputs.PROMOTION_PIECES):
-        svg_data = chess.svg.piece(
-            chess.Piece(piece, color), 
-            size=settings.PROMOTION_PIECE_SIZE
-        ).encode('utf-8')
+    if evaluation_generator is not None:
+        evaluation_generator.close()
+    
+    evaluation_generator = engine_.get_evaluation()
 
-        png_data = cairosvg.svg2png(bytestring=svg_data)
-        image = Image.open(io.BytesIO(png_data))
-        mode, size, data = image.mode, image.size, image.tobytes()
-        piece_surface = pygame.image.fromstring(data, size, mode)
-
-        surface.blit(piece_surface, (index * settings.PROMOTION_PIECE_SIZE, 0))
-
-    return surface
+inputs.make_move_callback = update_eval
+evaluation: engine.Evaluation | None = None
 
 # ----------------- Main loop -----------------
 
 FPS = 30
 clock = pygame.time.Clock()
 running: bool = True
+
 while running:
     # Handle events
     for event in pygame.event.get():
@@ -71,14 +58,24 @@ while running:
         else:
             inputs.handle_inputs(event, board)
     
-    # Update the display at 60 FPS
+    # Update the display at `FPS` frames per second`
     clock.tick(FPS)
 
     # Draw the board 
-    window.blit(draw_board(board), (0, 0))
+    window.blit(ui.draw_board(board), settings.BOARD_OFFSETS)
 
     if inputs.handle_promotion:
-        window.blit(draw_promotion_menu(), settings.PROMOTION_WINDOW_OFFSETS)
+        window.blit(ui.draw_promotion_menu(board), settings.PROMOTION_WINDOW_OFFSETS)
+
+    # Update the evaluation
+    if evaluation_generator is not None:
+        try:
+            evaluation = next(evaluation_generator)
+        except StopIteration:
+            evaluation_generator = None
+
+    if evaluation is not None:
+        window.blit(ui.draw_evaluation(evaluation), (0, 0))
 
     pygame.display.flip()
 

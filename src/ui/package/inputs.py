@@ -35,9 +35,18 @@ class BoardRenderSettings:
 render_settings = BoardRenderSettings() 
 handle_promotion: bool = False
 PROMOTION_PIECES = (chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT)
+make_move_callback = lambda: None
 _last_square: chess.Square | None = None
 _selected_square: chess.Square | None = None
 
+def is_out_of_bounds(pos: tuple[int, int], box: tuple[int, int]) -> bool:
+    """
+    Check if a position is out of bounds
+
+    :param pos: Position to check
+    :return: True if the position is out of bounds
+    """
+    return pos[1] < 0 or pos[1] > box[1] or pos[0] < 0 or pos[0] > box[0]
 
 def _make_move(board: chess.Board, move: chess.Move) -> None:
     """
@@ -58,6 +67,7 @@ def _make_move(board: chess.Board, move: chess.Move) -> None:
     if move in board.legal_moves:
         board.push(move)
         render_settings.lastmove = move
+        make_move_callback()
 
 
 def handle_promotion_menu(event: pygame.event.Event, board: chess.Board) -> None:
@@ -73,10 +83,7 @@ def handle_promotion_menu(event: pygame.event.Event, board: chess.Board) -> None
         pos = np.array(event.pos) - np.array(settings.PROMOTION_WINDOW_OFFSETS)
 
         # Out of bounds
-        if pos[1] < 0 or pos[1] > settings.PROMOTION_MENU_SIZE[1]:
-            return
-        
-        if pos[0] < 0 or pos[0] > settings.PROMOTION_MENU_SIZE[0]:
+        if is_out_of_bounds(pos, settings.PROMOTION_MENU_SIZE):
             return
         
         # Get the piece selected
@@ -105,7 +112,14 @@ def handle_inputs(event: pygame.event.Event, board: chess.Board) -> None:
             return
 
         # Get the position of the mouse and normalize it to the board coordinates
-        pos = np.array(event.pos) // (settings.BOARD_SIZE // 8)
+        pos = (np.array(event.pos) - np.array(settings.BOARD_OFFSETS))
+
+        # Out of bounds
+        if is_out_of_bounds(pos, (settings.BOARD_SIZE, settings.BOARD_SIZE)):
+            return
+
+        # Normalize the position to the board coordinates
+        pos = pos // (settings.BOARD_SIZE // 8)
 
         # Set y position to 7 - y if orientation is white
         y_pos = 7 - pos[1] if render_settings.orientation == chess.WHITE else pos[1]
