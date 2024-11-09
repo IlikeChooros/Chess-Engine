@@ -10,8 +10,28 @@ import chess
 import chess.svg
 import pygame
 import cairosvg
+import numpy as np
 from PIL import Image
 from . import inputs, settings, engine
+
+
+def init():
+    """
+    Initialize the Pygame font
+    """
+    pygame.init()
+    pygame.font.init()
+    
+    global FONT
+    FONT = pygame.font.Font(None, settings.EVALUATION_FONT_SIZE)
+
+FONT: pygame.font.Font
+DARK_EVALUATION_COLOR = (26, 26, 26)
+LIGHT_EVALUATION_COLOR = (216, 216, 216)
+GREY_COLOR = (192, 192, 192)
+DARK_COLOR = (64, 64, 64)
+WHITE_COLOR = (255, 255, 255)
+BLACK_COLOR = (0, 0, 0)
 
 def get_svg_data(data: str) -> tuple[bytes, tuple[int, int], str]:
     """
@@ -21,21 +41,43 @@ def get_svg_data(data: str) -> tuple[bytes, tuple[int, int], str]:
     image = Image.open(io.BytesIO(png_data))
     return image.tobytes(), image.size, image.mode
 
+def eval_bar_score_clamp(score: int) -> float:
+    """
+    Clamp the score to the range [0, 1]
+    """
+    fscore: float = score / 400
+    return (fscore / (1 + np.abs(fscore))) * 0.5 + 0.5
+
+def _eval_bar(score: int) -> pygame.Surface:
+    """
+    Return the evaluation bar as a Pygame Surface
+    """
+    clamp = eval_bar_score_clamp(score)
+    black_height: int = settings.EVALUATION_BAR_SIZE[1] * (1 - clamp)
+    surface = pygame.Surface(settings.EVALUATION_BAR_SIZE)
+    surface.fill(WHITE_COLOR)
+    surface.fill(DARK_EVALUATION_COLOR, (0, 0, settings.EVALUATION_BAR_SIZE[0], black_height))
+    
+    text_color = GREY_COLOR if clamp < 0.5 else DARK_COLOR
+    text = FONT.render(str(score), True, text_color)
+    surface.blit(text, text.get_rect(center=(settings.EVALUATION_BAR_SIZE[0] // 2, settings.EVALUATION_BAR_SIZE[1] // 2)))
+    return surface
+
 def draw_evaluation(evaluation: engine.Evaluation) -> pygame.Surface:
     """
     Return the evaluation as a Pygame Surface
     """
     surface = pygame.Surface(settings.EVALUATION_SIZE)
-    font = pygame.font.Font(None, settings.EVALUATION_FONT_SIZE)
-    text = font.render('HELLO', True, (0, 0, 0))
-    surface.blit(text, (0, 0))
 
     # Draw the principal variation
-    # for index, move in enumerate(evaluation.pv):
-    #     text = font.render(str(move), True, (0, 0, 0))
-    #     surface.blit(text, (0, (index + 1) * settings.EVALUATION_FONT_SIZE))
+    for index, move in enumerate(evaluation.pv):
+        text = FONT.render(str(move), True, WHITE_COLOR)
+        surface.blit(text, (0, index * settings.EVALUATION_FONT_SIZE))
 
+    # Draw the eval bar
+    surface.blit(_eval_bar(evaluation.score), settings.EVALUATION_BAR_OFFSETS)
     return surface
+
 
 def draw_board(board: chess.Board) -> pygame.Surface:
     """

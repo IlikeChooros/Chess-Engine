@@ -7,8 +7,8 @@ import subprocess
 import chess
 import dataclasses
 import enum
-import numpy as np
 import typing
+import select
 
 # Custom exceptions
 class EngineNotRunning(Exception):
@@ -28,8 +28,32 @@ class Evaluation:
     
     score: int
     score_type: ScoreType
-    nodes: int
+    nps: int
     pv: list[chess.Move]
+
+    def _from_string(self, string: str) -> None:
+        """
+        Set the Evaluation from a uci engine output string
+
+        ex. `info depth 1 seldepth 1 score cp 0 nps 0 time 0 nodes 0 pv e2e4`
+        """
+        splitted = string.split()
+        
+        # Read the score, type and nodes per second
+        self.score = int(splitted[splitted.index('score') + 2])
+        self.score_type = Evaluation.ScoreType.CP if 'cp' in splitted else Evaluation.ScoreType.MATE
+        self.nps = int(splitted[splitted.index('nps') + 1])
+
+        # Read the principal variation
+        self.pv.clear()
+        pv_index: int = splitted.index('pv')
+        while True:
+            try:
+                self.pv.append(chess.Move.from_uci(splitted[pv_index + 1]))
+                pv_index += 1
+            except (IndexError, chess.InvalidMoveError):
+                break
+
 
 
 @dataclasses.dataclass
@@ -98,12 +122,21 @@ class Engine:
 
         self.process.stdin.write(command + '\n')
         self.process.stdin.flush()
+
     
     def _read_line(self) -> str:
         """
         Read a single line from the engine output
         """
         return self.process.stdout.readline().strip()
+    
+    def _try_read_line(self) -> str | None:
+        """
+        Try to read a single line from the engine output
+        """
+        if select.select([self.process.stdout], [], [], 0)[0]:
+            return self._read_line()
+        return None
     
     def _read_until_bestmove(self) -> str:
         """
@@ -153,41 +186,27 @@ class Engine:
         This is a generator that yields Evaluation objects
         """
         self._send_command(f'go {str(self.search_options)}')
-        print('go', str(self.search_options))
+        prev_evaluation: Evaluation = Evaluation(0, Evaluation.ScoreType.CP, 0, [])
+
         while True:
-            line = self._read_line()
+            line = self._try_read_line()
+
+            # If the engine didn't output anything, yield the previous evaluation
+            if line is None:
+                yield prev_evaluation
+                continue
+
             print(line)
             if line.startswith('bestmove'):
                 break
             
-            splitted = line.split()
-            pv: list[chess.Move] = []
-            nodes: int = 0
-
-            if 'nodes' in splitted:
-                nodes = int(splitted[splitted.index('nodes') + 1])
-
-            if 'pv' in splitted:
-                # Get the principal variation
-                pv_index = splitted.index('pv')
-
-                try:
-                    while True:
-                        pv.append(chess.Move.from_uci(splitted[pv_index + 1]))
-                        pv_index += 1
-                except (IndexError, chess.InvalidMoveError):
-                    pass
-
-            if 'score' in splitted:
-                score = int(splitted[splitted.index('score') + 2])
-                score_type = Evaluation.ScoreType.CP if 'cp' in splitted else Evaluation.ScoreType.MATE
-            
-                yield Evaluation(score, Evaluation.ScoreType(score_type), nodes, list(pv))
-
+            prev_evaluation._from_string(line)
+            yield prev_evaluation
 
     def search(self) -> chess.Move:
         """
-        Search for the best move in the current position
+        Search for the best move in the current position,
+        waits for the engine to finish searching
 
         :param options: Search options
         :return: Best move found by the engine as a chess.Move object

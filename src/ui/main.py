@@ -9,7 +9,7 @@ import package.engine as engine
 
 
 # Initialize Pygame
-pygame.init()
+ui.init()
 
 # Create the window
 window = pygame.display.set_mode(settings.WINDOW_SIZE)
@@ -46,7 +46,7 @@ evaluation: engine.Evaluation | None = None
 
 # ----------------- Main loop -----------------
 
-FPS = 30
+FPS = 60
 clock = pygame.time.Clock()
 running: bool = True
 
@@ -58,8 +58,8 @@ while running:
         else:
             inputs.handle_inputs(event, board)
     
-    # Update the display at `FPS` frames per second`
-    clock.tick(FPS)
+    # Update the display at `FPS` frames per second
+    # clock.tick(FPS)
 
     # Draw the board 
     window.blit(ui.draw_board(board), settings.BOARD_OFFSETS)
@@ -75,9 +75,19 @@ while running:
             evaluation_generator = None
 
     if evaluation is not None:
-        window.blit(ui.draw_evaluation(evaluation), (0, 0))
+      window.blit(ui.draw_evaluation(evaluation), (0, 0))
+    
+    # Draw the FPS
+    surface = pygame.Surface((settings.BOARD_OFFSETS[0], 50))
+    surface.fill(ui.BLACK_COLOR)
+    fps = ui.FONT.render(f'FPS: {clock.get_fps():.1f}', True, ui.WHITE_COLOR)
+    surface.blit(fps, (0, 0))
 
+    window.blit(surface, (settings.WIDTH - settings.BOARD_OFFSETS[0], 0))
     pygame.display.flip()
+
+    # Update the clock
+    clock.tick(FPS)
 
 pygame.quit()
 
