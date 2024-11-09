@@ -14,8 +14,17 @@ import numpy as np
 from PIL import Image
 from . import inputs, settings, engine
 
+FONT: pygame.font.Font
+DARK_EVALUATION_COLOR = (26, 26, 26)
+LIGHT_EVALUATION_COLOR = (216, 216, 216)
+GREY_COLOR = (192, 192, 192)
+DARK_COLOR = (64, 64, 64)
+WHITE_COLOR = (255, 255, 255)
+BLACK_COLOR = (0, 0, 0)
 
-def init():
+_prev_board_svg: tuple[bytes, tuple[int, int], str] | None = None
+
+def init() -> None:
     """
     Initialize the Pygame font
     """
@@ -25,13 +34,6 @@ def init():
     global FONT
     FONT = pygame.font.Font(None, settings.EVALUATION_FONT_SIZE)
 
-FONT: pygame.font.Font
-DARK_EVALUATION_COLOR = (26, 26, 26)
-LIGHT_EVALUATION_COLOR = (216, 216, 216)
-GREY_COLOR = (192, 192, 192)
-DARK_COLOR = (64, 64, 64)
-WHITE_COLOR = (255, 255, 255)
-BLACK_COLOR = (0, 0, 0)
 
 def get_svg_data(data: str) -> tuple[bytes, tuple[int, int], str]:
     """
@@ -41,12 +43,14 @@ def get_svg_data(data: str) -> tuple[bytes, tuple[int, int], str]:
     image = Image.open(io.BytesIO(png_data))
     return image.tobytes(), image.size, image.mode
 
+
 def eval_bar_score_clamp(score: int) -> float:
     """
     Clamp the score to the range [0, 1]
     """
     fscore: float = score / 400
     return (fscore / (1 + np.abs(fscore))) * 0.5 + 0.5
+
 
 def _eval_bar(score: int) -> pygame.Surface:
     """
@@ -62,6 +66,7 @@ def _eval_bar(score: int) -> pygame.Surface:
     text = FONT.render(str(score), True, text_color)
     surface.blit(text, text.get_rect(center=(settings.EVALUATION_BAR_SIZE[0] // 2, settings.EVALUATION_BAR_SIZE[1] // 2)))
     return surface
+
 
 def draw_evaluation(evaluation: engine.Evaluation) -> pygame.Surface:
     """
@@ -84,12 +89,19 @@ def draw_board(board: chess.Board) -> pygame.Surface:
     Return current board as a Pygame Surface,
     using the chess.svg.board function.
     """
-    return pygame.image.fromstring(
-        *get_svg_data(
+
+    global _prev_board_svg
+
+    # Check if the board has changed or if the previous board is None
+    if inputs.render_settings_diff() or _prev_board_svg is None:
+        inputs.update_render_settings()
+        _prev_board_svg = get_svg_data(
             chess.svg.board(
                 board=board, size=settings.BOARD_SIZE, coordinates=False, 
                 **inputs.render_settings.__dict__()
-            )))
+        ))
+
+    return pygame.image.fromstring(*_prev_board_svg)
 
 
 def draw_promotion_menu(board: chess.Board) -> pygame.Surface:

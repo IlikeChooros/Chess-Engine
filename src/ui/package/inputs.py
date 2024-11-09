@@ -8,14 +8,15 @@ import chess
 import chess.svg
 import numpy as np
 from . import settings
+import dataclasses
 
-
+@dataclasses.dataclass
 class BoardRenderSettings:
     """
     Rendering settings for the board
     """
     
-    fill: dict = {}
+    fill: dict = dataclasses.field(default_factory=dict)
     lastmove: chess.Move | None = None
     check: chess.Color | None = None
     orientation: chess.Color = chess.WHITE
@@ -26,18 +27,35 @@ class BoardRenderSettings:
             'lastmove': self.lastmove,
             'check': self.check,
             'orientation': self.orientation
-        }        
+        }
 
     def __str__(self) -> str:
         return str(self.__dict__())
 
 
 render_settings = BoardRenderSettings() 
+_prev_render_settings = BoardRenderSettings()
 handle_promotion: bool = False
 PROMOTION_PIECES = (chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT)
 make_move_callback = lambda: None
 _last_square: chess.Square | None = None
 _selected_square: chess.Square | None = None
+
+
+def render_settings_diff() -> bool:
+    """
+    Return the difference between the current and previous render settings
+    """
+    return dataclasses.asdict(render_settings) != dataclasses.asdict(_prev_render_settings)
+
+
+def update_render_settings() -> None:
+    """
+    Update the previous render settings
+    """
+    global _prev_render_settings
+    _prev_render_settings = dataclasses.replace(render_settings)
+
 
 def is_out_of_bounds(pos: tuple[int, int], box: tuple[int, int]) -> bool:
     """
@@ -102,10 +120,12 @@ def handle_inputs(event: pygame.event.Event, board: chess.Board) -> None:
     :param event: Event to handle
     :param board: Chess board instance
     """
-    global _selected_square, _last_square, render_settings, handle_promotion
+    global _selected_square, _last_square, render_settings, handle_promotion, _prev_render_settings
 
     if event.type == pygame.MOUSEBUTTONDOWN:
         
+        update_render_settings()
+
         # Handle promotion menu if it's active
         if handle_promotion:
             handle_promotion_menu(event, board)

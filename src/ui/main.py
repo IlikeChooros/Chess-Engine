@@ -57,9 +57,6 @@ while running:
             running = False
         else:
             inputs.handle_inputs(event, board)
-    
-    # Update the display at `FPS` frames per second
-    # clock.tick(FPS)
 
     # Draw the board 
     window.blit(ui.draw_board(board), settings.BOARD_OFFSETS)
