@@ -123,3 +123,15 @@ def draw_promotion_menu(board: chess.Board) -> pygame.Surface:
         surface.blit(piece_surface, (index * settings.PROMOTION_PIECE_SIZE, 0))
 
     return surface
+
+
+def draw_fps(clock: pygame.time.Clock) -> pygame.Surface:
+    """
+    Return the FPS as a Pygame Surface
+    """
+
+    surface = pygame.Surface((settings.BOARD_OFFSETS[0], 50))
+    surface.fill(BLACK_COLOR)
+    fps = FONT.render(f'FPS: {clock.get_fps():.1f}', True, WHITE_COLOR)
+    surface.blit(fps, fps.get_rect(center=(settings.BOARD_OFFSETS[0] // 2, settings.EVALUATION_FONT_SIZE // 2)))
+    return surface

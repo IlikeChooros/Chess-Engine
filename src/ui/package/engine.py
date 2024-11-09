@@ -9,13 +9,17 @@ import dataclasses
 import enum
 import typing
 import select
+import pathlib
 
 # Custom exceptions
 class EngineNotRunning(Exception):
+    """
+    Exception raised when the engine is not running
+    """
     pass
 
-# Dataclasses
 
+# Dataclasses
 @dataclasses.dataclass
 class Evaluation:
     """
@@ -94,9 +98,11 @@ class Engine:
     engine_path: str
     killed: bool = False
     search_options: SearchOptions = SearchOptions()
+    name: str = 'Engine'
 
     def __init__(self, engine_path: str) -> None:
         self.engine_path = engine_path
+        self.name = pathlib.Path(engine_path).stem
 
         self.process = subprocess.Popen(
             engine_path,
@@ -106,16 +112,22 @@ class Engine:
         )
 
         if not self.isready():
-            raise EngineNotRunning('Engine is not responding to `isready` command')
+            raise EngineNotRunning(self._format_error('Engine is not ready'))
 
     # Private methods
     
+    def _format_error(self, error: str) -> str:
+        """
+        Format an error message
+        """
+        return f'[{self.name}]: {error}'
+
     def _send_command(self, command: str) -> None:
         """
         Send a command to the engine
         """
         if self.process.poll() is not None or self.killed:
-            raise EngineNotRunning('Engine is not running')
+            raise EngineNotRunning(self._format_error('Engine is not ready'))
         
         if command == 'quit':
             self.killed = True

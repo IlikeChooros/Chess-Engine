@@ -75,12 +75,9 @@ while running:
       window.blit(ui.draw_evaluation(evaluation), (0, 0))
     
     # Draw the FPS
-    surface = pygame.Surface((settings.BOARD_OFFSETS[0], 50))
-    surface.fill(ui.BLACK_COLOR)
-    fps = ui.FONT.render(f'FPS: {clock.get_fps():.1f}', True, ui.WHITE_COLOR)
-    surface.blit(fps, (0, 0))
+    window.blit(ui.draw_fps(clock), (settings.WIDTH - settings.BOARD_OFFSETS[0], 0))
 
-    window.blit(surface, (settings.WIDTH - settings.BOARD_OFFSETS[0], 0))
+    # Update the window
     pygame.display.flip()
 
     # Update the clock
