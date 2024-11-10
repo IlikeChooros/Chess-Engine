@@ -32,12 +32,14 @@ class BoardRenderSettings:
     def __str__(self) -> str:
         return str(self.__dict__())
 
+def default_move_callback() -> None:
+    pass
 
 render_settings = BoardRenderSettings() 
 _prev_render_settings = BoardRenderSettings()
 handle_promotion: bool = False
 PROMOTION_PIECES = (chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT)
-make_move_callback = lambda: None
+make_move_callback = default_move_callback
 _last_square: chess.Square | None = None
 _selected_square: chess.Square | None = None
 

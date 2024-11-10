@@ -13,27 +13,43 @@ ui.init()
 
 # Create the window
 window = pygame.display.set_mode(settings.WINDOW_SIZE)
-pygame.display.set_caption('Chess')
+pygame.display.set_caption('Chess Engine')
 
 # Create the board
+STARTING_FEN: str = 'r4rk1/4bp2/1Bppq1p1/4p1n1/2P1Pn2/3P2N1/P2Q1PBK/1R5R b - - 0 1'
 board = chess.Board()
+board.set_fen(STARTING_FEN)
 
 # Create the engine
 engine_ = engine.Engine(settings.ENGINE_PATH)
 search_options = engine.SearchOptions(
-    depth=6, movetime=1000
+    depth=6, movetime=3000
 )
 engine_.set_search_options(search_options)
+engine_.set_position(board)
+
+# ----------------- Widgets -----------------
+
+clock = pygame.time.Clock()
+evaluation = engine.Evaluation()
+
+ui_window = ui.AnalysisWindow(board, evaluation, clock)
 
 # ----------------- Callbacks -----------------
 
 evaluation_generator: typing.Generator[engine.Evaluation, None, None] | None = None
 
 def update_eval() -> None:
+    """
+    Update the evaluation of the current position, this is a hook for the make_move_callback
+    Whenever a move is made, the evaluation is updated by this function
+    """
+
     engine_.stop()
     engine_.isready()
-    engine_.load_game(board)
+    engine_.load_game(board, fen=STARTING_FEN)
 
+    # Update the evaluation generator
     global evaluation_generator
 
     if evaluation_generator is not None:
@@ -42,27 +58,19 @@ def update_eval() -> None:
     evaluation_generator = engine_.get_evaluation()
 
 inputs.make_move_callback = update_eval
-evaluation: engine.Evaluation | None = None
 
 # ----------------- Main loop -----------------
 
 FPS = 60
-clock = pygame.time.Clock()
-running: bool = True
+evaluation_generator = engine_.get_evaluation() # Start the evaluation generator
 
-while running:
+while ui.ui_running:
     # Handle events
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
+            ui.ui_running = False
         else:
-            inputs.handle_inputs(event, board)
-
-    # Draw the board 
-    window.blit(ui.draw_board(board), settings.BOARD_OFFSETS)
-
-    if inputs.handle_promotion:
-        window.blit(ui.draw_promotion_menu(board), settings.PROMOTION_WINDOW_OFFSETS)
+            ui_window.input(event, board)
 
     # Update the evaluation
     if evaluation_generator is not None:
@@ -71,11 +79,9 @@ while running:
         except StopIteration:
             evaluation_generator = None
 
-    if evaluation is not None:
-      window.blit(ui.draw_evaluation(evaluation), (0, 0))
-    
-    # Draw the FPS
-    window.blit(ui.draw_fps(clock), (settings.WIDTH - settings.BOARD_OFFSETS[0], 0))
+    # Update the window
+    ui_window.update(board, evaluation, clock)
+    ui_window.draw(window)
 
     # Update the window
     pygame.display.flip()

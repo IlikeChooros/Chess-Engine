@@ -30,10 +30,10 @@ class Evaluation:
         CP = 'cp'
         MATE = 'mate'
     
-    score: int
-    score_type: ScoreType
-    nps: int
-    pv: list[chess.Move]
+    score: int = 0
+    score_type: ScoreType = ScoreType.CP
+    nps: int = 0
+    pv: list[chess.Move] = dataclasses.field(default_factory=list)
 
     def _from_string(self, string: str) -> None:
         """
@@ -120,7 +120,8 @@ class Engine:
         """
         Format an error message
         """
-        return f'[{self.name}]: {error}'
+        return '[%s] %s' % (self.name, error)
+
 
     def _send_command(self, command: str) -> None:
         """
@@ -132,6 +133,7 @@ class Engine:
         if command == 'quit':
             self.killed = True
 
+        print(command)
         self.process.stdin.write(command + '\n')
         self.process.stdin.flush()
 
@@ -140,7 +142,9 @@ class Engine:
         """
         Read a single line from the engine output
         """
-        return self.process.stdout.readline().strip()
+        out = self.process.stdout.readline().strip()
+        print(out)
+        return out
     
     def _try_read_line(self) -> str | None:
         """
@@ -164,25 +168,36 @@ class Engine:
 
     # Public methods
 
-    def set_position(self, board: chess.Board) -> None:
+    @typing.overload
+    def set_position(self, board: chess.Board) -> None: 
         """
-        Set the position of the engine
+        Set the position of the engine, based on a chess.Board object
         """
-        self._send_command('position fen ' + board.fen())
+        ...
 
-
+    @typing.overload
     def set_position(self, moves: list[chess.Move], fen: str = chess.STARTING_FEN) -> None:
         """
         Set the position of the engine, based on a list of moves and a FEN string
         """
-        self._send_command(f'position fen {fen} moves ' + ' '.join(map(str, moves)))
+        ...
     
+
+    def set_position(self, *args, **kwargs) -> None:
+        # Implement the overloads
+        if len(args) == 1:
+            if isinstance(args[0], chess.Board):
+                self._send_command('position fen ' + args[0].fen())
+            elif isinstance(args[0], list):
+                self._send_command(f'position fen {kwargs.get("fen", chess.STARTING_FEN)} moves ' + ' '.join(map(str, args[0])))
+        else:
+            raise ValueError('Invalid arguments')
 
     def load_game(self, board: chess.Board, fen: str = chess.STARTING_FEN) -> None:
         """
         Load a game into the engine, based on the board's move stack and a FEN string
         """
-        self.set_position(board.move_stack, fen)
+        self.set_position(board.move_stack, fen=fen)
 
 
     def set_search_options(self, options: SearchOptions) -> None:
@@ -198,7 +213,7 @@ class Engine:
         This is a generator that yields Evaluation objects
         """
         self._send_command(f'go {str(self.search_options)}')
-        prev_evaluation: Evaluation = Evaluation(0, Evaluation.ScoreType.CP, 0, [])
+        prev_evaluation = Evaluation()
 
         while True:
             line = self._try_read_line()
@@ -208,7 +223,6 @@ class Engine:
                 yield prev_evaluation
                 continue
 
-            print(line)
             if line.startswith('bestmove'):
                 break
             
