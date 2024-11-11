@@ -16,7 +16,7 @@ window = pygame.display.set_mode(settings.WINDOW_SIZE)
 pygame.display.set_caption('Chess Engine')
 
 # Create the board
-STARTING_FEN: str = 'r4rk1/4bp2/1Bppq1p1/4p1n1/2P1Pn2/3P2N1/P2Q1PBK/1R5R b - - 0 1'
+STARTING_FEN: str = '6k1/5pp1/1Q2b2p/4P3/7P/8/3r2PK/3q4 w - - 1 34'
 board = chess.Board()
 board.set_fen(STARTING_FEN)
 

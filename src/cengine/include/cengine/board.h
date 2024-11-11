@@ -6,39 +6,47 @@
 #include <unordered_map>
 #include <vector>
 
+#include "state.h"
 #include "pieces.h"
 #include "move.h"
 #include "utils.h"
 #include "castling_rights.h"
+#include "zobrist.h"
+#include "mailbox.h"
+#include "magic_bitboards.h"
 
 namespace chess{
 
-    class Board
+    /**
+     * ## Board
+     * 
+     * The board class represents the chess board and its state.
+     * Uses both mailbox and bitboard representation.
+     * 
+     */
+    class Board: public Mailbox
     {
+
+        void push_state(Move move);
+        void verify_castling_rights();
+
     public:
-        static const int mailbox64[64];
-        static const int mailbox[120];
-        static const int piece_move_offsets[6][8];
-        static const int pawn_attack_offsets[2][2];
-        static const int pawn_move_offsets[2][2];
-        static const int n_piece_rays[6];
-        static const bool is_piece_sliding[6];
 
         // Helper bitboards initialized in move_gen.cpp
-        static uint64_t in_between[64][64];
-        static uint64_t pawnAttacks[2][64];
-        static uint64_t pieceAttacks[6][64];
+        static Bitboard in_between[64][64];
+        static Bitboard pawnAttacks[2][64];
+        static Bitboard pieceAttacks[6][64];
 
         // Starting position
         static const char startFen[57];
 
         // Piece types
-        static const int PAWN_TYPE = Piece::Pawn - 1;
-        static const int ROOK_TYPE = Piece::Rook - 1;
-        static const int BISHOP_TYPE = Piece::Bishop - 1;
-        static const int QUEEN_TYPE = Piece::Queen - 1;
-        static const int KING_TYPE = Piece::King - 1;
-        static const int KNIGHT_TYPE = Piece::Knight - 1;
+        static constexpr int PAWN_TYPE = Piece::Pawn - 1;
+        static constexpr int ROOK_TYPE = Piece::Rook - 1;
+        static constexpr int BISHOP_TYPE = Piece::Bishop - 1;
+        static constexpr int QUEEN_TYPE = Piece::Queen - 1;
+        static constexpr int KING_TYPE = Piece::King - 1;
+        static constexpr int KNIGHT_TYPE = Piece::Knight - 1;
 
         Board();
         Board(const Board& other);
@@ -48,6 +56,17 @@ namespace chess{
         void loadFen(std::string fen);
         std::string getFen();
         void updateBitboards();
+        void makeMove(Move move);
+        void undoMove(Move move);
+        uint64_t hash();
+        bool isRepetition();
+        bool isLegal(Move move);
+        Move match(Move move);
+
+        MoveList generateLegalCaptures();
+        MoveList generateLegalMoves();
+
+        void print();
 
         /**
          * @brief Get the side to move
@@ -95,15 +114,20 @@ namespace chess{
         inline int* getBoard() {return this->board; };
 
         /**
+         * @brief Get the history of the game
+         */
+        inline StateList& history() {return this->m_history; };
+
+        /**
          * @brief Get the bitboards for a given color
          */
-        inline uint64_t* bitboards(bool is_white) {return this->m_bitboards[is_white]; };
+        inline Bitboard* bitboards(bool is_white) {return this->m_bitboards[is_white]; };
 
         /**
          * @brief Get the occupied squares for a given color
          */
-        inline uint64_t occupied(bool is_white) {
-            uint64_t color = 0;
+        inline Bitboard occupied(bool is_white) {
+            Bitboard color = 0;
             for (int i = 0; i < 6; i++){
                 color |= this->m_bitboards[is_white][i];
             }
@@ -113,8 +137,8 @@ namespace chess{
         /**
          * @brief Get the occupied squares on the board
          */
-        inline uint64_t occupied() {
-            uint64_t occ = 0;
+        inline Bitboard occupied() {
+            Bitboard occ = 0;
             for (int i = 0; i < 6; i++){
                 occ |= this->m_bitboards[0][i] | this->m_bitboards[1][i];
             }
@@ -124,40 +148,40 @@ namespace chess{
         /**
          * @brief Get the opposite rooks / queen bitboard
          */
-        inline uint64_t oppRooksQueens(bool is_white) {
+        inline Bitboard oppRooksQueens(bool is_white) {
             return this->m_bitboards[!is_white][ROOK_TYPE] | this->m_bitboards[!is_white][QUEEN_TYPE];
         }
 
         /**
          * @brief Get the opposite bishops / queen bitboard
          */
-        inline uint64_t oppBishopsQueens(bool is_white) {
+        inline Bitboard oppBishopsQueens(bool is_white) {
             return this->m_bitboards[!is_white][BISHOP_TYPE] | this->m_bitboards[!is_white][QUEEN_TYPE];
         }
 
         /**
          * @brief Get the pieces bitboard
          */
-        inline uint64_t pieces() {
+        inline Bitboard pieces() {
             return m_bitboards[0][KNIGHT_TYPE] | m_bitboards[0][ROOK_TYPE] | m_bitboards[0][BISHOP_TYPE] | m_bitboards[0][QUEEN_TYPE] |
                    m_bitboards[1][KNIGHT_TYPE] | m_bitboards[1][ROOK_TYPE] | m_bitboards[1][BISHOP_TYPE] | m_bitboards[1][QUEEN_TYPE];
         }
 
-        inline uint64_t pawns() {
+        inline Bitboard pawns() {
             return m_bitboards[0][PAWN_TYPE] | m_bitboards[1][PAWN_TYPE];
         }
 
         /**
          * @brief Get the queens bitboard
          */
-        inline uint64_t queens() {
+        inline Bitboard queens() {
             return m_bitboards[0][QUEEN_TYPE] | m_bitboards[1][QUEEN_TYPE];
         }
 
         /**
          * @brief Get the rooks bitboard
          */
-        inline uint64_t rooks() {
+        inline Bitboard rooks() {
             return m_bitboards[0][ROOK_TYPE] | m_bitboards[1][ROOK_TYPE];
         }
         
@@ -180,7 +204,7 @@ namespace chess{
 
         std::vector<int> findAll(int piece);
         
-
+        uint64_t m_hash;
         int board[64];
         bool m_in_check;
         int m_side;
@@ -189,7 +213,8 @@ namespace chess{
         int m_fullmove_counter;
         int m_captured_piece;
         int m_irreversible_index; // last irreversible move index
-        uint64_t m_bitboards[2][6]; // 0: white, 1: black, contains bitboards for each piece type
+        Bitboard m_bitboards[2][6]; // 0: white, 1: black, contains bitboards for each piece type
         CastlingRights m_castling_rights;
+        StateList m_history;
     };
 }

@@ -15,7 +15,8 @@ https://www.chessprogramming.org/Looking_for_Magics
 #include "threads.h"
 #include "types.h"
 #include "utils.h"
-#include "board.h" // for move mailbox move generation
+#include "mailbox.h" // for move mailbox move generation
+#include "pieces.h"
 
 // Magic bitboard struct, fancy magic bitboard stuff
 struct Magic {

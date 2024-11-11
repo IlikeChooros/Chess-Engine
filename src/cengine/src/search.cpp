@@ -3,7 +3,7 @@
 namespace chess
 {
     // Check the search parameters and see if the search should stop
-    bool keep_searching(SearchParams* params)
+    bool keep_searching(SearchLimits* params)
     {
         using namespace std::chrono;
 
@@ -51,7 +51,7 @@ namespace chess
 
 
     // Quiescence (no quiet) search, runs aplha beta on captures only and evaluates the position
-    int quiescence(Board* b, GameHistory* gh, SearchParams* params, int alpha, int beta)
+    int quiescence(Board* b, GameHistory* gh, SearchLimits* params, int alpha, int beta)
     {
         // return evaluate(b, nullptr, nullptr);
 
@@ -79,7 +79,7 @@ namespace chess
     }
 
     // Negamax with alpha-beta pruning
-    int negaAlphaBeta(Board* b, GameHistory* gh, SearchCache* sc, SearchParams* params, int alpha, int beta, int depth){
+    int negaAlphaBeta(Board* b, GameHistory* gh, SearchCache* sc, SearchLimits* params, int alpha, int beta, int depth){
         using namespace std::chrono;
 
         // Lookup transposition table and check for possible cutoffs
@@ -173,7 +173,7 @@ namespace chess
      *  - [x] Move ordering
      *  - [ ] SEE
      */
-    void search(Board* board, GameHistory* gh, SearchCache* sc, SearchParams* params, SearchResult* result)
+    void search(Board* board, GameHistory* gh, SearchCache* sc, SearchLimits* params, SearchResult* result)
     {
         
         if (!board || !gh || !sc || !result)

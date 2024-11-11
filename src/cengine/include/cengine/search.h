@@ -15,5 +15,5 @@
 
 namespace chess
 {
-    void search(Board* board, GameHistory* gh, SearchCache* sc, SearchParams* params, SearchResult* sr);
+    void search(Board* board, GameHistory* gh, SearchCache* sc, SearchLimits* params, SearchResult* sr);
 }

@@ -17,6 +17,10 @@ target_sources(cengine
         src/log.cpp
         src/pgn.cpp
         src/settings.cpp
+        src/engine.cpp
+        src/perft.cpp
+        src/mailbox.cpp
+        src/zobrist.cpp
 )
 
 target_include_directories(cengine PUBLIC include)

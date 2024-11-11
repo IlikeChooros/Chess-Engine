@@ -194,7 +194,7 @@ TEST_F(ManagerTest, testMoveGenPromotion)
 
 TEST_F(ManagerTest, testPreft)
 {
-    test::Perft perft(&board);
+    bench::Perft perft;
     constexpr uint64_t nodes_perft[6] = {20, 400, 8902, 197281, 4865609, 119060324};
     ASSERT_EQ(perft.run(6), nodes_perft[6 - 1]);
 }

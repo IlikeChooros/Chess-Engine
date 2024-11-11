@@ -2,12 +2,6 @@
 
 namespace chess
 {
-
-    static int hash_pieces[2][6][64] = {0};
-    static int hash_castling[16] = {0};
-    static int hash_turn = 0;
-    static int hash_enpassant[8] = {0};
-
     // Initialize the hashing tables
     void init_hashing()
     {
@@ -19,15 +13,15 @@ namespace chess
         for (int k = 0; k < 2; k++)
             for (int i = 0; i < 6; i++)
                 for (int j = 0; j < 64; j++)
-                    hash_pieces[k][i][j] = dist(gen);
+                    Zobrist::hash_pieces[k][i][j] = dist(gen);
 
         for (int i = 0; i < 16; i++)
-            hash_castling[i] = dist(gen);
+            Zobrist::hash_castling[i] = dist(gen);
         
-        hash_turn = dist(gen);
+        Zobrist::hash_turn = dist(gen);
 
         for (int i = 0; i < 8; i++)
-            hash_enpassant[i] = dist(gen);
+            Zobrist::hash_enpassant[i] = dist(gen);
     }
 
     // Generate a hash for a given board state
@@ -40,20 +34,20 @@ namespace chess
             uint64_t black = b->bitboards(false)[type];
 
             while(white){
-                hash ^= hash_pieces[0][type][pop_lsb1(white)];
+                hash ^= Zobrist::hash_pieces[0][type][pop_lsb1(white)];
             }
             while(black){
-                hash ^= hash_pieces[1][type][pop_lsb1(black)];
+                hash ^= Zobrist::hash_pieces[1][type][pop_lsb1(black)];
             }
         }
 
         if (b->getSide() == Piece::Black)
-            hash ^= hash_turn;
+            hash ^= Zobrist::hash_turn;
 
         if (b->enpassantTarget() != 0)
-            hash ^= hash_enpassant[b->enpassantTarget()];
+            hash ^= Zobrist::hash_enpassant[b->enpassantTarget()];
 
-        hash ^= hash_castling[b->castlingRights().get()];
+        hash ^= Zobrist::hash_castling[b->castlingRights().get()];
 
         return hash;
     }
@@ -67,10 +61,10 @@ namespace chess
         uint64_t black = board->bitboards(false)[Piece::Pawn];
 
         while(white){
-            hash ^= hash_pieces[0][Piece::Pawn - 1][pop_lsb1(white)];
+            hash ^= Zobrist::hash_pieces[0][Piece::Pawn - 1][pop_lsb1(white)];
         }
         while(black){
-            hash ^= hash_pieces[1][Piece::Pawn - 1][pop_lsb1(black)];
+            hash ^= Zobrist::hash_pieces[1][Piece::Pawn - 1][pop_lsb1(black)];
         }
 
         return hash;

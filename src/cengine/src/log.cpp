@@ -63,12 +63,12 @@ void Log::logBoardInfo(chess::Board* board)
     );
 }
 
-void Log::logPV(MoveList* pv)
+void Log::logPV(chess::MoveList* pv)
 {
     logf("PV: ");
     for (auto& move : *pv)
     {
-        logf("%s ", Move(move).notation().c_str());
+        logf("%s ", chess::Move(move).notation().c_str());
     }
     logf("\n");
 }
@@ -79,14 +79,14 @@ void Log::logGameHistory(chess::GameHistory* gh)
     for (auto& hist : gh->history)
     {
         logf("%s%c ", 
-            Move(hist.move).notation().c_str(),
+            chess::Move(hist.move).notation().c_str(),
             hist.side_to_move == chess::Piece::White ? 'W' : 'B'
         );
     }
     logf("\n");
 }
 
-void Log::printInfo(int depth, int score, bool cp, uint64_t nodes, uint64_t time, MoveList* pv)
+void Log::printInfo(int depth, int score, bool cp, uint64_t nodes, uint64_t time, chess::MoveList* pv)
 {
     time = std::max(time, 1UL);
 
@@ -103,7 +103,7 @@ void Log::printInfo(int depth, int score, bool cp, uint64_t nodes, uint64_t time
         str += " pv ";
         for (auto& move : *pv)
         {
-            str += Move(move).notation() + " ";
+            str += chess::Move(move).notation() + " ";
         }
     }
 

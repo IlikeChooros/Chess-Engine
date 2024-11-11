@@ -11,7 +11,7 @@ namespace chess{
         this->n_moves = 0;
         this->board = board;
         this->curr_move = Move();
-        this->search_params = SearchParams();
+        this->search_params = SearchLimits();
 
         if (board == nullptr)
             return;

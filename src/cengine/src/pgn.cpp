@@ -1,7 +1,10 @@
 #include <cengine/pgn.h>
 
 
-std::string PGN::get_move_notation(chess::Manager* m, chess::GameHistory *gh, Move move)
+/**
+ * @brief Get the move notation for a move
+ */
+std::string PGN::get_move_notation(chess::Manager* m, chess::GameHistory *gh, chess::Move move)
 {
     using namespace chess;
     int* iboard = m->board()->getBoard();
@@ -26,7 +29,7 @@ std::string PGN::get_move_notation(chess::Manager* m, chess::GameHistory *gh, Mo
         // Check if there are more than one piece that can move to the same square
         if (moves.size() > 1){
             for(auto i : moves){
-                Move m(i);
+                chess::Move m(i);
                 if (m.getFrom() == move.getFrom())
                     continue;
 
@@ -80,6 +83,9 @@ std::string PGN::get_move_notation(chess::Manager* m, chess::GameHistory *gh, Mo
     return notation + " ";
 }
 
+/**
+ * @brief Generate the PGN string from the game history
+ */
 std::string PGN::pgn(chess::GameHistory* gh, PGNFields& fields)
 {
     std::string pgn = "";

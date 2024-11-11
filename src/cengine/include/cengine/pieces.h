@@ -17,10 +17,7 @@ namespace chess
     */ 
     class Piece
     {
-        public:
-        static const int pieceMask = 0b00111;  // 0b00111
-        static const int colorMask = 0b11000; // 0b11000
-        static const int bits = 5;
+    public:
 
         // Piece types
         enum Type
@@ -43,6 +40,13 @@ namespace chess
             White = 8,  // 0b01000
             Black = 16, // 0b10000
         };
+
+        static const int pieceMask = 0b00111;  // 0b00111
+        static const int colorMask = 0b11000; // 0b11000
+        static const int bits = 5;
+
+        // Promotion pieces (without color), matching the `Move::getPromotionPiece()` method
+        static constexpr int promotionPieces[4] = { Knight, Bishop, Rook, Queen };
 
         /**
          * @brief Get the color of a piece

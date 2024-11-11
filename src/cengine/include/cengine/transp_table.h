@@ -23,7 +23,7 @@ struct TEntry
     int depth;
     int nodeType;
     int score;
-    Move bestMove;
+    chess::Move bestMove;
     int age;
 };
 

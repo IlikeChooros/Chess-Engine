@@ -5,7 +5,8 @@ namespace{
 
 using namespace chess;
 
-bool compareBoards(int piece, int expected, int index){
+bool compareBoards(int piece, int expected, int index)
+{
     return piece == expected;
 }
 
@@ -13,7 +14,8 @@ void testFen(
     const char* fen, int expected_board[64], 
     int expected_side, int expected_enpassant, 
     int expected_halfmove, int expected_fullmove
-){
+)
+{
     Board board;
     board.loadFen(fen);
     for(int i = 0; i < 64; i++){

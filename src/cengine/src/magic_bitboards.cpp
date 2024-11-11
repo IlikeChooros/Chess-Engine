@@ -11,7 +11,8 @@
 // 1 . . . . . . .
 // . 1 1 1 1 1 1 .
 // Total of 12 bits set to 1
-const int MagicBitboards::RBits[64] = {
+const int MagicBitboards::RBits[64] = 
+{
     12, 11, 11, 11, 11, 11, 11, 12,
     11, 10, 10, 10, 10, 10, 10, 11,
     11, 10, 10, 10, 10, 10, 10, 11,
@@ -22,7 +23,8 @@ const int MagicBitboards::RBits[64] = {
     12, 11, 11, 11, 11, 11, 11, 12,
 };
 
-const int MagicBitboards::BBits[64] = {
+const int MagicBitboards::BBits[64] = 
+{
     6, 5, 5, 5, 5, 5, 5, 6,
     5, 5, 5, 5, 5, 5, 5, 5,
     5, 5, 7, 7, 7, 7, 5, 5,
@@ -33,8 +35,9 @@ const int MagicBitboards::BBits[64] = {
     6, 5, 5, 5, 5, 5, 5, 6,
 };
 
-uint64_t MagicBitboards::bishopAttacks[64][512];
-uint64_t MagicBitboards::rookAttacks[64][4096];
+// Magic bitboards for bishop and rook attacks
+Bitboard MagicBitboards::bishopAttacks[64][512];
+Bitboard MagicBitboards::rookAttacks[64][4096];
 
 Magic MagicBitboards::bishopMagics[64] = {
         {0x40201008040200ULL, 0x836c04c6e7ec0101ULL, 58},
@@ -215,9 +218,9 @@ uint64_t genMailboxAttacks(int type, int square, uint64_t occupied)
 {
     using namespace chess;
     uint64_t attacks = 0;
-    for(int j = 0; j < Board::n_piece_rays[type]; j++){
+    for(int j = 0; j < Mailbox::n_piece_rays[type]; j++){
         for(int n = square;;){
-            n = Board::mailbox[Board::mailbox64[n] + Board::piece_move_offsets[type][j]];
+            n = Mailbox::mailbox[Mailbox::mailbox64[n] + Mailbox::piece_move_offsets[type][j]];
             if (n == -1){// outside of the board
                 break;
             }
@@ -234,14 +237,14 @@ uint64_t genMailboxAttacks(int type, int square, uint64_t occupied)
 uint64_t bAttacks(int sq, uint64_t blockers)
 {
     using namespace chess;
-    return genMailboxAttacks(Board::BISHOP_TYPE, sq, blockers);
+    return genMailboxAttacks(Piece::Bishop - 1, sq, blockers);
 }
 
 // Generate possible rook attacks for a given square
 uint64_t rAttacks(int sq, uint64_t blockers)
 {
     using namespace chess;
-    return genMailboxAttacks(Board::ROOK_TYPE, sq, blockers);
+    return genMailboxAttacks(Piece::Rook - 1, sq, blockers);
 }
 
 uint64_t index_occupied(int index, int bit, uint64_t mask)
@@ -353,7 +356,8 @@ void run_magics(bool bishop)
     vmagic.reserve(64);
 
     for (int i = 0; i < 64; i++){
-        pool.enqueue([i, &vmagic, &mutex, &bishop](){
+        pool.enqueue([i, &vmagic, &mutex, &bishop]()
+        {
             Magic m;
             m.shift = 64 - (bishop ? MagicBitboards::BBits[i] : MagicBitboards::RBits[i]);
             m.mask = bishop ? bishopMask(i) : rookMask(i);
@@ -396,7 +400,8 @@ void init_magics(bool recalculate)
 
     // Use precomputed magics, find the correct order of attacks
     uint64_t occ[4096], bishopAtt[512], rookAtt[4096];
-    for (int sq = 0; sq < 64; sq++){
+    for (int sq = 0; sq < 64; sq++)
+    {
         // For the bishop
         memset(bishopAtt, 0, sizeof(bishopAtt));
         memset(rookAtt, 0, sizeof(rookAtt));
@@ -405,7 +410,8 @@ void init_magics(bool recalculate)
         int bits = pop_count(mask);
         
         // Populate the attacks
-        for(int i = 0; i < (1 << bits); i++){
+        for(int i = 0; i < (1 << bits); i++)
+        {
             occ[i] = index_occupied(i, bits, mask);
             bishopAtt[i] = bAttacks(sq, occ[i]);
 
@@ -420,7 +426,8 @@ void init_magics(bool recalculate)
         bits = pop_count(mask);
 
         // Populate the attacks
-        for(int i = 0; i < (1 << bits); i++){
+        for(int i = 0; i < (1 << bits); i++)
+        {
             occ[i] = index_occupied(i, bits, mask);
             rookAtt[i] = rAttacks(sq, occ[i]);
 

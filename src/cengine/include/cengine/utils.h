@@ -5,16 +5,19 @@
 #include <string>
 #include <chrono>
 #include <vector>
-#include <set>
 #include <queue>
+
+#include "types.h"
 #include "settings.h"
 
 /**
  * @brief Converts a square index to a string representation
  */
-inline std::string square_to_str(int square, bool inverse = true){
+inline std::string square_to_str(Square square, bool inverse = true)
+{
     if(square < 0 || square > 63)
         return "??";
+
     std::string str(2, ' ');
     str[0] = 'a' + (square % 8);
     square = inverse ? 7 - square / 8 : square / 8;
@@ -26,11 +29,14 @@ inline std::string square_to_str(int square, bool inverse = true){
  * @brief Converts square as string to index format
  * @return -1 if the string is not a valid square
  */
-inline int str_to_square(std::string str, bool inverse = true){
+inline Square str_to_square(std::string str, bool inverse = true)
+{
     if (str.size() < 2)
         return -1;
+
     if ((str[0] < 'a' || str[0] > 'h') || (str[1] < '1' || str[1] > '8'))
         return -1;
+
     int row = str[1] - '1';
     row = inverse ? 7 - row : row;
     return row * 8 + str[0] - 'a';
@@ -40,7 +46,8 @@ inline int str_to_square(std::string str, bool inverse = true){
 /**
  * @brief Get the LSB1 index (the least significant bit that is 1)
  */
-inline int bitScanForward(uint64_t bb){
+inline int bitScanForward(Bitboard bb)
+{
     #if defined(__GNUC__) || defined(__clang__)
         return __builtin_ctzll(bb);
     #elif defined(_MSC_VER)
@@ -79,7 +86,8 @@ inline int pop_lsb1(uint64_t& b)
     return lsb1;
 }
 
-inline int pop_count(uint64_t b){
+inline int pop_count(uint64_t b)
+{
     #if defined(__GNUC__) || defined(__clang__)
         return __builtin_popcountll(b);
     #elif defined(_MSC_VER)
@@ -127,7 +135,8 @@ inline void end_timer(dtimer_t& start, const char* msg = "Total time"){return;}
 /**
  * @brief Prints a bitboard to the console
  */
-inline void dbitboard(uint64_t bitboard64){
+inline void dbitboard(uint64_t bitboard64)
+{
     std::bitset<64> bitboard(bitboard64);
     for(int i = 0; i < 64; i++){
         printf("%*d", 2, int(bitboard[i]));

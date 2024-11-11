@@ -80,7 +80,7 @@ inline void update_result(SearchResult* result, Move move, Score score, int dept
 }
 
 
-struct SearchParams
+struct SearchLimits
 {
     // Basic UCI options
     int depth = INT32_MAX; // In plies, that is max possible depth
@@ -101,14 +101,14 @@ struct SearchParams
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
     std::mutex mutex;
 
-    SearchParams() = default;
+    SearchLimits() = default;
 
-    SearchParams(const SearchParams& other)
+    SearchLimits(const SearchLimits& other)
     {
         *this = other;
     }
 
-    SearchParams& operator=(const SearchParams& other)
+    SearchLimits& operator=(const SearchLimits& other)
     {
         depth = other.depth;
         movetime = other.movetime;
@@ -159,59 +159,70 @@ public:
     {
     public:
         typedef int value_t;
-        typedef std::function<void(SearchParams&, value_t value)> Setter;
+        typedef std::function<void(SearchLimits&, value_t value)> Setter;
 
         // Default setters
-        static void defaultSetter(SearchParams&, value_t) {}
-        static void setDepth(SearchParams& params, value_t value) { params.depth = value; }
-        static void setNodes(SearchParams& params, value_t value) { params.nodes = value; }
-        static void setInfinite(SearchParams& params, value_t value) { params.infinite = bool(value); }
-        static void setPonder(SearchParams& params, value_t value) { params.ponder = bool(value); }
-        static void setMovetime(SearchParams& params, value_t value) { params.movetime = value; }
-        static void setWtime(SearchParams& params, value_t value) { params.wtime = value; }
-        static void setBtime(SearchParams& params, value_t value) { params.btime = value; }
+        static void defaultSetter(SearchLimits&, value_t) {}
+        static void setDepth(SearchLimits& params, value_t value) { params.depth = value; }
+        static void setNodes(SearchLimits& params, value_t value) { params.nodes = value; }
+        static void setInfinite(SearchLimits& params, value_t value) { params.infinite = bool(value); }
+        static void setPonder(SearchLimits& params, value_t value) { params.ponder = bool(value); }
+        static void setMovetime(SearchLimits& params, value_t value) { params.movetime = value; }
+        static void setWtime(SearchLimits& params, value_t value) { params.wtime = value; }
+        static void setBtime(SearchLimits& params, value_t value) { params.btime = value; }
+        static void setWinc(SearchLimits& params, value_t value) { params.winc = value; }
+        static void setBinc(SearchLimits& params, value_t value) { params.binc = value; }
 
         // Constructors
-        Option(Setter setter = defaultSetter) : m_setter(setter), m_params(nullptr) {}
-        Option(Setter setter, SearchParams* param): m_setter(setter), m_params(param) {}
-        Option(const Option& other): m_setter(other.m_setter), m_params(other.m_params) {}
+        Option(Setter setter = defaultSetter) : m_setter(setter), m_limits(nullptr) {}
+        Option(Setter setter, SearchLimits* param): m_setter(setter), m_limits(param) {}
+        Option(const Option& other): m_setter(other.m_setter), m_limits(other.m_limits) {}
 
         Option& operator=(const Option& other) 
         { 
+            m_limits = other.m_limits;
             m_setter = other.m_setter; 
             return *this; 
         }
 
+        // Set the setter
         Option& operator=(Setter setter) { m_setter = setter; return *this; }
+
+        // Calls the setter for given value
         void operator=(value_t value) const 
         { 
-            if(m_params)
-                m_setter(*m_params, value); 
+            if(m_limits)
+                m_setter(*m_limits, value); 
         }
         
         // Invoke the setter
         void operator()(value_t value) const
         {
-            if (m_params)
-                m_setter(*m_params, value);
+            if (m_limits)
+                m_setter(*m_limits, value);
         }
 
     private:
         Setter m_setter;
-        SearchParams *m_params;
+        SearchLimits *m_limits;
     };
 
     SearchOptions()
     {
-        m_options["depth"] = Option(Option::setDepth, &m_params);
-        m_options["nodes"] = Option(Option::setNodes, &m_params);
-        m_options["infinite"] = Option(Option::setInfinite, &m_params);
-        m_options["ponder"] = Option(Option::setPonder, &m_params);
-        m_options["movetime"] = Option(Option::setMovetime, &m_params);
-        m_options["wtime"] = Option(Option::setWtime, &m_params);
-        m_options["btime"] = Option(Option::setBtime, &m_params);
+        m_options["depth"] = Option(Option::setDepth, &m_limits);
+        m_options["nodes"] = Option(Option::setNodes, &m_limits);
+        m_options["infinite"] = Option(Option::setInfinite, &m_limits);
+        m_options["ponder"] = Option(Option::setPonder, &m_limits);
+        m_options["movetime"] = Option(Option::setMovetime, &m_limits);
+        m_options["wtime"] = Option(Option::setWtime, &m_limits);
+        m_options["btime"] = Option(Option::setBtime, &m_limits);
+        m_options["winc"] = Option(Option::setWinc, &m_limits);
+        m_options["binc"] = Option(Option::setBinc, &m_limits);
     }
 
+    /**
+     * @brief Set the value of an option
+     */
     void setOption(const std::string& name, Option::value_t value)
     {
         auto it = m_options.find(name);
@@ -219,13 +230,29 @@ public:
             it->second(value);
     }
 
+    /**
+     * @brief Get the `Option` object for a given name
+     */
     Option& operator[](const std::string& name)
     {
         return m_options[name];
     }
 
+    /**
+     * @brief Check if an option is a boolean
+     */
+    bool is_boolean(const std::string& name) const
+    {
+        return name == "infinite" || name == "ponder";
+    }
+
+    /**
+     * @brief Get the `SearchLimits` object
+     */
+    SearchLimits& limits() { return m_limits; }
+
 private:
-    SearchParams m_params;
+    SearchLimits m_limits;
     std::map<std::string, Option> m_options;
 };
 

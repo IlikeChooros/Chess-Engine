@@ -8,6 +8,16 @@
 #include <thread>
 #include <atomic>
 
+
+class Thread
+{
+public:
+    Thread();
+
+    void start_thinking();
+    void stop();
+};
+
 /**
  * @brief A simple task queue implementation
  */

@@ -14,14 +14,14 @@ namespace chess
     struct CHistory
     {
         uint64_t hash; // 64 bits for Zobrist hash
-        uint32_t move:Move::bits; // 16 bits
-        uint32_t side_to_move:Piece::bits; // 5 bit for side to move (Piece::Color)
-        uint32_t captured_piece:Piece::bits; // 5 bits for piece
-        uint32_t enpassant_target:6; // 6 bits for square (0 - 63)
-        uint32_t halfmove_clock:6; // 6 bits for halfmove clock (0 - 63 (max is 50))
-        uint32_t fullmove_counter:13; // 13 bits for fullmove counter (0 - 8192)
-        uint32_t castling_rights:CastlingRights::bits; // 3 bits for castling rights
-        uint32_t reserved:9;
+        uint64_t move:Move::bits; // 16 bits
+        uint64_t side_to_move:Piece::bits; // 5 bit for side to move (Piece::Color)
+        uint64_t captured_piece:Piece::bits; // 5 bits for piece
+        uint64_t enpassant_target:6; // 6 bits for square (0 - 63)
+        uint64_t halfmove_clock:6; // 6 bits for halfmove clock (0 - 63 (max is 50))
+        uint64_t fullmove_counter:13; // 13 bits for fullmove counter (0 - 8192)
+        uint64_t castling_rights:CastlingRights::bits; // 4 bits for castling rights
+        uint64_t reserved:9;
         // That gives total of 128 bits, instead of 6*32 + 64 = 256 bits
     };
 

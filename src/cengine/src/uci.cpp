@@ -121,7 +121,7 @@ namespace uci
     {
         using namespace chess;
         Board copy(*manager->impl()->board);
-        test::Perft perft(&copy);
+        bench::Perft perft;
         perft.setPrint(true);
         perft.run(depth, copy.getFen());
     }
@@ -161,45 +161,28 @@ namespace uci
 
     void go(chess::Manager* manager, std::istringstream& iss)
     {
-        // Reset search params
-        manager->impl()->search_params = chess::SearchParams();
+        chess::SearchOptions options;
         std::string command;
-        while (iss >> command){
-            if (command == "perft"){
+
+        while (iss >> command)
+        {
+            if (command == "perft")
+            {
                 perft(manager, readInt(iss, "(go): Perft depth not specified or invalid\n"));
                 return;
             }
-            if (command == "depth"){
-                manager->impl()->search_params.depth = readInt(iss, "(go): Depth not specified or invalid\n");
+
+            if (options.is_boolean(command))
+            {
+                options[command] = true;
+                continue;
             }
-            else if (command == "nodes"){
-                manager->impl()->search_params.nodes = readInt(iss, "(go): Nodes not specified or invalid\n");
-            }
-            else if (command == "movetime"){
-                manager->impl()->search_params.movetime = readInt(iss, "(go): Movetime not specified or invalid\n");
-            }
-            else if (command == "wtime"){
-                manager->impl()->search_params.wtime = readInt(iss, "(go): Wtime not specified or invalid\n");
-            }
-            else if (command == "btime"){
-                manager->impl()->search_params.btime = readInt(iss, "(go): Btime not specified or invalid\n");
-            }
-            else if (command == "winc"){
-                manager->impl()->search_params.winc = readInt(iss, "(go): Winc not specified or invalid\n");
-            }
-            else if (command == "binc"){
-                manager->impl()->search_params.binc = readInt(iss, "(go): Binc not specified or invalid\n");
-            }
-            else if (command == "ponder"){
-                manager->impl()->search_params.ponder = true;
-            }
-            else if (command == "infinite"){
-                manager->impl()->search_params.infinite = true;
-            } else {
-                fail("(go): Invalid command: %s\n", command.c_str());
-            }
+
+            options[command] = readInt(iss, "(go): Value not specified or invalid\n");
         }
+
         // Start the search
+        manager->impl()->setSearchLimits(options.limits());
         manager->asyncSearch();
     }
 

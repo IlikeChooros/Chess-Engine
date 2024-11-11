@@ -9,6 +9,7 @@
 #include "types.h"
 #include "board.h"
 #include "utils.h"
+#include "zobrist.h"
 
 namespace chess
 {

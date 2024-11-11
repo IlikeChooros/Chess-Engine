@@ -50,6 +50,20 @@ namespace chess
         void remove(int rights = ALL) {m_rights &= (~rights) & MASK;};
         uint32_t get() const {return m_rights;};
 
+        /**
+         * @brief Get the string representation of the castling rights
+         * @return The string representation
+         */
+        std::string str() const 
+        {
+            std::string str = "";
+            if (m_rights & WHITE_KING) str += "K";
+            if (m_rights & WHITE_QUEEN) str += "Q";
+            if (m_rights & BLACK_KING) str += "k";
+            if (m_rights & BLACK_QUEEN) str += "q";
+            return str;
+        }
+
         operator int() const {return m_rights & MASK;};
         operator bool() const {return !none();};
 

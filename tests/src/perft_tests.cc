@@ -3,14 +3,15 @@
 
 namespace 
 {
-    class PerftTest: public testing::Test{
-        protected:
-        test::Perft perft;
-        chess::Board board;
+    class PerftTest: public testing::Test
+    {
+    protected:
+        bench::Perft perft;
 
         void SetUp() override 
         {
-            perft = test::Perft(&board);
+            chess::init();
+            perft = bench::Perft();
         }
     };
 

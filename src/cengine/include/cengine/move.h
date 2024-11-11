@@ -7,6 +7,9 @@
 #include "types.h"
 
 // Class representing a move, has a from, to and flags. Internally stored as a 32 bit integer
+namespace chess
+{
+
 class Move
 {
     public:
@@ -51,6 +54,33 @@ class Move
         return (flags << 12) | (from << 6) | to;
     }
 
+    /**
+     * @brief Create a move from a string notation (e.g. e2e4, a7a8q),
+     * user should call `setFlags` to set the flags for the move
+     */
+    static Move fromUci(std::string move) 
+    {
+        if (move.size() < 4)
+            return Move(nullMove);
+        
+        int from = str_to_square(move.substr(0, 2));
+        int to = str_to_square(move.substr(2, 2));
+
+        if (from == -1 || to == -1)
+            return Move(nullMove);
+        
+        if (move.size() == 5)
+        {
+            int promotion = getPromotionPiece(move[4]);
+            if (promotion == -1)
+                return Move(nullMove);
+            
+            return Move(from, to, FLAG_PROMOTION | promotion);
+        }
+
+        return Move(from, to, FLAG_NONE);
+    }
+
     Move() : m_move(0) {};
     Move(uint32_t from, uint32_t to, uint32_t flags) :
         m_move(fmove(from, to, flags)) {}; // First 6 bits: to, next 6 bits: from, rest: flags (4 bits)
@@ -58,23 +88,9 @@ class Move
     Move(uint32_t move) : m_move(move) {};
     Move(const Move& other) : m_move(other.m_move) {};
 
-    /**
-     * @brief Create a move from a string notation (e.g. e2e4, a7a8q),
-     * user should call `setFlags` to set the flags for the move
-     */
+    // Same as `fromUci` 
     Move(std::string move) {
-        m_move = 0;
-        if (move.size() < 4){
-            return;
-        }
-
-        int from = str_to_square(move.substr(0, 2));
-        int to = str_to_square(move.substr(2, 2));
-
-        if (from == -1 || to == -1){
-            return;
-        }
-        m_move = (from << 6) | to;
+        (void)fromUci(move);
     }
 
     /**
@@ -105,7 +121,12 @@ class Move
     uint32_t getFrom() const {return (m_move >> 6) & MASK_MOVE;};
     uint32_t getTo() const {return m_move & MASK_MOVE;};
     uint32_t getFlags() const {return m_move >> 12;};
+    
+    // Get the move as a 16 bit integer
     uint16_t get() const {return m_move;};
+
+    // Get the move part of the move (from and to)
+    uint16_t movePart() const { return m_move & (MASK_MOVE << 6 | MASK_MOVE);};
 
     bool isCapture() const {return getFlags() & FLAG_CAPTURE;};
     bool isPromotion() const {return getFlags() & FLAG_PROMOTION;};
@@ -115,6 +136,7 @@ class Move
     bool isQueenCastle() const {return getFlags() == FLAG_QUEEN_CASTLE;};
     bool isKingCastle() const {return getFlags() == FLAG_KING_CASTLE;};
     bool isCastle() const {return isQueenCastle() || isKingCastle();};
+    bool isNull() const {return m_move == nullMove;};
 
     /**
      * @brief Get the promotion piece, if the move is a promotion
@@ -169,34 +191,40 @@ class Move
     /**
      * @brief Get the move in UCI notation, (e.g. e2e4, a7a8q)
      */
-    std::string notation() const {
+    std::string notation() const 
+    {
         std::string str = square_to_str(getFrom()) + square_to_str(getTo());
-        if (isPromotion()){
+        if (isPromotion())
             str += getPromotionChar();
-        }
+        
         return str;
     }
 
     operator int() const {return m_move;};
 
-    Move& operator=(const Move& other) {
+    Move& operator=(const Move& other) 
+    {
         m_move = other.m_move;
         return *this;
     };
 
-    bool operator==(uint32_t other) const {
+    bool operator==(uint32_t other) const 
+    {
         return m_move == other;
     };
 
-    bool operator!=(uint32_t other) const {
+    bool operator!=(uint32_t other) const 
+    {
         return m_move != other;
     };
 
-    bool operator==(const Move& other) const {
+    bool operator==(const Move& other) const 
+    {
         return m_move == other.m_move;
     };
 
-    bool operator!=(const Move& other) const {
+    bool operator!=(const Move& other) const 
+    {
         return m_move != other.m_move;
     };
     
@@ -285,7 +313,9 @@ class MoveList
     MoveList(const MoveList& other){
         *this = other;
     }
-    MoveList& operator=(const MoveList& other){
+
+    MoveList& operator=(const MoveList& other)
+    {
         n_moves = other.n_moves;
         memcpy(moves, other.moves, other.n_moves * sizeof(move_t));
         return *this;
@@ -306,3 +336,5 @@ class MoveList
     move_t moves[256];
     size_t n_moves;
 };
+
+} // namespace chess

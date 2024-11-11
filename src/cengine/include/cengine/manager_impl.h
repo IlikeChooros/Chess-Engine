@@ -167,14 +167,14 @@ namespace chess
         /**
          * @brief Sets the search parameters for the search function
          */
-        inline void setSearchParams(SearchParams params) { search_params = params; }
+        inline void setSearchLimits(SearchLimits params) { search_params = params; }
 
         inline std::mutex& getMutex() { return mutex; }
 
         std::mutex mutex;
         std::thread search_thread;
         SearchResult search_result;
-        SearchParams search_params;
+        SearchLimits search_params;
         CacheMoveGen cache;
         GameHistory history;
         MoveList move_list;

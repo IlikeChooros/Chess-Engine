@@ -25,5 +25,5 @@ class PGN
 public:
     static std::string pgn(chess::GameHistory* gh, PGNFields& fields);
     static std::string pgn_game_status(chess::GameStatus status, bool white = true);
-    static std::string get_move_notation(chess::Manager* m, chess::GameHistory *gh, Move move);
+    static std::string get_move_notation(chess::Manager* m, chess::GameHistory *gh, chess::Move move);
 };
