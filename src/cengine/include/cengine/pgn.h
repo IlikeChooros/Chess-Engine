@@ -5,6 +5,8 @@
 #include "history.h"
 #include "manager.h"
 
+// TODO: remove mangager from the pgn, use only the board
+
 struct PGNFields
 {
     std::string Event = "";

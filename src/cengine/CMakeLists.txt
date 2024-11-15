@@ -5,7 +5,6 @@ target_sources(cengine
         src/board.cpp
         src/manager.cpp
         src/manager_impl.cpp
-        src/test.cpp
         src/move_gen.cpp
         src/eval.cpp
         src/search.cpp

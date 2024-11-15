@@ -94,17 +94,17 @@ namespace uci
      * 
      * @param message The message to print
      */
-    void fail(const char* message, ...)
+    void fail(std::string message, ...)
     {
         char buffer[4096];
         va_list args;
         va_start(args, message);
-        vsnprintf(buffer, sizeof(buffer), message, args);
+        vsnprintf(buffer, sizeof(buffer), message.c_str(), args);
         va_end(args);
         throw std::runtime_error(buffer);
     }
 
-    int readInt(std::istringstream& iss, const char* message)
+    int readInt(std::istringstream& iss, std::string message)
     {
         int n;
         if (!(iss >> n)){
@@ -117,49 +117,61 @@ namespace uci
      * @brief Run perft test at given depth, board should be already initialized,
      * thread safe
      */
-    void perft(chess::Manager* manager, int depth)
+    void perft(chess::Engine* engine, int depth)
     {
-        using namespace chess;
-        Board copy(*manager->impl()->board);
-        bench::Perft perft;
-        perft.setPrint(true);
-        perft.run(depth, copy.getFen());
+        engine->perft(depth, true);
     }
 
     /**
      * @brief Parse the position command [startpos|fen <fen> [moves <move1> ... <moveN>]]
      */
-    void position(chess::Manager* manager, std::istringstream& iss)
+    void position(chess::Engine* engine, std::istringstream& iss)
     {
         std::string fen;
         std::string command;
         iss >> command;
-        if (command == "startpos"){
-            fen = chess::Board::startFen;
-            if ((iss >> command) && command != "moves"){
-                fail("(position): Invalid command after startpos: %s\n", command.c_str());
-            }
-            fen += " moves ";
-            while (iss >> command){ // parse moves
-                fen += command + " ";
-            }
+
+        if (command == "startpos")
+        {
+            fen = "startpos";
         }
-        else if (command == "fen"){
+        else if (command == "fen")
+        {
             int n_section = 0;
-            while (iss >> command){
+            while (iss >> command)
+            {
                 fen += command + " ";
                 n_section++;
             }
-            if (n_section < 6){
+
+            if (n_section < 6)
+            {
                 fail("(position): Not enough sections in FEN: %s\n", fen.c_str());
             }
-        } else {
+        }
+        else 
+        {
             fail("(position): Invalid command: %s\n", command.c_str());
         }
-        manager->loadFen(fen.c_str());
+
+        engine->setPosition(fen);
     }
 
-    void go(chess::Manager* manager, std::istringstream& iss)
+    /**
+     * Parse the go command, start the search or run perft 
+     * 
+     * Options:
+     * - depth <depth>: Search to the given depth
+     * - nodes <nodes>: Search the given number of nodes
+     * - movetime <time>: Search for the given time in milliseconds
+     * - wtime <time>: White time in milliseconds (not supprted yet)
+     * - btime <time>: Black time in milliseconds (not supprted yet)
+     * - winc <time>: White increment in milliseconds (not supprted yet)
+     * - binc <time>: Black increment in milliseconds (not supprted yet)
+     * - ponder: Ponder the best move (not supported yet)
+     * - infinite: Search indefinitely
+     */
+    void go(chess::Engine* engine, std::istringstream& iss)
     {
         chess::SearchOptions options;
         std::string command;
@@ -168,7 +180,7 @@ namespace uci
         {
             if (command == "perft")
             {
-                perft(manager, readInt(iss, "(go): Perft depth not specified or invalid\n"));
+                perft(engine, readInt(iss, "(go): Perft depth not specified or invalid\n"));
                 return;
             }
 
@@ -178,15 +190,14 @@ namespace uci
                 continue;
             }
 
-            options[command] = readInt(iss, "(go): Value not specified or invalid\n");
+            options[command] = readInt(iss, "(go): Invalid value for option: " + command);
         }
 
         // Start the search
-        manager->impl()->setSearchLimits(options.limits());
-        manager->asyncSearch();
+        engine->go(options);
     }
 
-    std::string uciReadCommImpl(chess::Manager* manager, std::string input)
+    std::string uciReadCommImpl(chess::Engine* engine, std::string input)
     {
         std::istringstream iss(input);
         std::string command, output;
@@ -206,7 +217,7 @@ namespace uci
                 break;
 
             case UciNewGame:
-                manager->reset();
+                engine->reset();
                 break;
 
             case IsReady:
@@ -214,27 +225,29 @@ namespace uci
                 break;
 
             case Position:
-                position(manager, iss);
+                position(engine, iss);
                 break;
 
             case Stop:
-                manager->impl()->stopSearchAsync();
+                engine->stop();
                 break;
 
             case Go:
-                go(manager, iss);
+                go(engine, iss);
                 break;
 
             case GetFen:
-                output = manager->impl()->board->getFen() + "\n";
+                output = engine->board().getFen() + "\n";
                 break;
             
             case MakeMove: {
                 std::string move;
-                if (iss >> move){
-                    if (!manager->makeMove(move)){
+                if (iss >> move)
+                {
+                    if (engine->board().isLegal(move))
+                        engine->board().makeMove(move);
+                    else
                         output = "Invalid move: " + move + "\n";
-                    }
                 }
             }
                 break;
@@ -266,12 +279,14 @@ namespace uci
         return output;
     }
 
-    std::string uciReadCommand(chess::Manager* manager, std::string input)
+    std::string uciReadCommand(chess::Engine* engine, std::string input)
     {
+        // Run the command in the engine, and catch any exceptions
         std::string output;
         try{
-            output = uciReadCommImpl(manager, input);
-        } catch(std::exception& e){
+            output = uciReadCommImpl(engine, input);
+        } 
+        catch(std::exception& e){
             output = e.what();
         }
         return output;
@@ -281,10 +296,8 @@ namespace uci
 
     UCI::UCI(): m_queue(1), m_ready(true)
     {
-        m_board.init();
-        m_manager = chess::Manager(&m_board);
-        m_manager.init();
-        m_manager.generateMoves();
+        chess::Engine::init();
+        m_engine = chess::Engine();
 
         std::ios_base::sync_with_stdio(false);
         std::cout.setf(std::ios::unitbuf);
@@ -292,8 +305,7 @@ namespace uci
 
     UCI& UCI::operator=(UCI&& other)
     {
-        m_manager = std::move(other.m_manager);
-        m_board = other.m_board;
+        m_engine = std::move(other.m_engine);
         return *this;
     }
 
@@ -326,7 +338,7 @@ namespace uci
     {
         // Send the command to the queue
         m_queue.enqueue([this, comm](){
-            std::cout << uciReadCommand(&this->m_manager, comm);
+            std::cout << uciReadCommand(&m_engine, comm);
         });
     }
 }

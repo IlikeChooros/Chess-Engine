@@ -1,5 +1,6 @@
 #pragma once
 
+#include <future>
 
 #include "search.h"
 #include "board.h"
@@ -9,30 +10,39 @@
 
 namespace chess
 {
+    /*
+    
+    ### Engine
+
+    Main class for interacting with the engine, setting the position and running the search
+    
+    
+    */
     class Engine
     {
     public:
 
         Engine();
+        Engine& operator=(Engine&& other);
+        ~Engine();
+
+        static void init();
+        void reset();
+        uint64_t perft(int depth, bool print = true);
+        std::future<Result> go(SearchOptions& options);
+        void join();
+        void stop();
+        void setPosition(const std::string& fen = Board::START_FEN);
+        void setPosition(const Board& board);
 
         /**
-         * @brief Run a perft test at the specified depth
-         * @return Total number of nodes
+         * @brief Get the board
          */
-        uint64_t perft(int depth);
-
-        /**
-         * @brief Start the search for the best move, position should be already set
-         * @return The best move found
-         */
-        Move go(SearchOptions& options);
-
-        /**
-         * @brief Set the position of the board
-         */
-        void setPosition(const std::string& fen = Board::startFen);
+        Board& board() { return m_board; }
 
     private:
         Board m_board;
+        Thread m_main_thread;
+        SearchCache m_search_cache;
     };
 }

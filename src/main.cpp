@@ -4,15 +4,15 @@ int main(int argc, char** argv)
 {
     global_settings.base_path = std::filesystem::path(argv[0]).parent_path();
 
-    // uci::UCI uci;
-    // uci.loop();
+    uci::UCI uci;
+    uci.loop();
 
-    using namespace chess;
+    // using namespace chess;
 
-    init();
+    // init();
 
-    Board board;
-    board.loadFen("6k1/5pp1/1Q2b2p/4P3/7P/8/3r2PK/3q4 w - - 1 34 moves b6b4 d1e2 b4f4 e2e5");
-    board.print();
+    // Board board;
+    // board.loadFen("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3");
+    // board.print();
     return 0;
 }

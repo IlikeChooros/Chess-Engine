@@ -20,8 +20,8 @@ https://www.chessprogramming.org/Looking_for_Magics
 
 // Magic bitboard struct, fancy magic bitboard stuff
 struct Magic {
-    uint64_t mask;
-    uint64_t magic;
+    Bitboard mask;
+    Bitboard magic;
     int shift;
 };
 
@@ -31,8 +31,8 @@ public:
     static const int RBits[64];
     static const int BBits[64];
 
-    static uint64_t bishopAttacks[64][512];
-    static uint64_t rookAttacks[64][4096];    
+    static Bitboard bishopAttacks[64][512];
+    static Bitboard rookAttacks[64][4096];    
     
     static Magic bishopMagics[64];
     static Magic rookMagics[64];

@@ -267,6 +267,32 @@ namespace chess
         return ONGOING;
     }
 
+    GameStatus get_status(Board* board, MoveList *ml)
+    {
+        if (board->halfmoveClock() >= 100){
+            return DRAW;
+        }
+
+        // Checkmate / stalemate
+        if (ml->size() == 0){
+            if (board->inCheck()){
+                return CHECKMATE;
+            }
+            return STALEMATE;
+        }
+
+        // Insufficient material
+        if ((board->pieces() | board->pawns()) == 0){
+            return DRAW;
+        }
+
+        if (board->isRepetition()){
+            return DRAW;
+        }
+
+        return ONGOING;
+    }
+
     /**
      * @brief Convert the game status to a string
      */

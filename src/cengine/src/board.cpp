@@ -9,23 +9,25 @@ namespace chess
     Bitboard Board::pawnAttacks[2][64]  = {0};
     Bitboard Board::pieceAttacks[6][64] = {0};
 
-
-    const char Board::startFen[57] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    // Starting position
+    const char Board::START_FEN[57] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     Board::Board()
     {
         memset(board, Piece::Empty, sizeof(board));
-        m_history.reserve(128);
+        for(int i = 0; i < 2; i++)
+            memset(m_bitboards[i], 0, sizeof(m_bitboards[i]));
+        
+        m_history.reserve(64);
 
-        m_side = Piece::White;
-        m_halfmove_clock = 0;
-        m_fullmove_counter = 1;  
-        m_enpassant_target = 0;
-        m_castling_rights = CastlingRights::ALL;
-        m_captured_piece = Piece::Empty;
-
+        m_side               = Piece::White;
+        m_halfmove_clock     = 0;
+        m_fullmove_counter   = 1;
+        m_enpassant_target   = 0;
+        m_castling_rights    = CastlingRights::ALL;
+        m_captured_piece     = Piece::Empty;
         m_irreversible_index = 0;
-        m_in_check = false;
+        m_in_check           = false;
     }
 
     Board::Board(const Board& other)
@@ -35,20 +37,25 @@ namespace chess
 
     Board& Board::operator=(const Board& other)
     {
-        m_history = other.m_history;
-        m_side = other.m_side;
-        m_halfmove_clock = other.m_halfmove_clock;
-        m_fullmove_counter = other.m_fullmove_counter;
-        m_enpassant_target = other.m_enpassant_target;
-        m_castling_rights = other.m_castling_rights;
-        m_captured_piece = other.m_captured_piece;
-        m_irreversible_index = other.m_irreversible_index;
-        m_in_check = other.m_in_check;
+        // Copy the board, field order is kept
 
-        for(int color = 0; color < 2; color++){
-            memcpy(m_bitboards[color], other.m_bitboards[color], 6 * sizeof(Bitboard));
-        }
+        m_hash              = other.m_hash;
         memcpy(board, other.board, sizeof(board));
+        m_in_check           = other.m_in_check;
+        m_side               = other.m_side;
+        m_enpassant_target   = other.m_enpassant_target;
+        m_halfmove_clock     = other.m_halfmove_clock;
+        m_fullmove_counter   = other.m_fullmove_counter;
+        m_captured_piece     = other.m_captured_piece;
+        m_history            = other.m_history;
+        m_irreversible_index = other.m_irreversible_index;
+
+        for(int i = 0; i < 2; i++)
+            memset(m_bitboards[i], 0, sizeof(m_bitboards[i]));
+        
+        m_castling_rights    = other.m_castling_rights;
+        m_history            = other.m_history;
+    
         return *this;
     }
 
@@ -57,7 +64,7 @@ namespace chess
      */
     Board& Board::init()
     {
-        loadFen(startFen);
+        loadFen(START_FEN);
         return *this;
     }
 
@@ -67,20 +74,17 @@ namespace chess
     void Board::updateBitboards()
     {
         for (int i = 0; i < 2; i++)
-        {
-            for (int j = 0; j < 6; j++){
-                m_bitboards[i][j] = 0;
-            }
-        }
+            memset(m_bitboards[i], 0, sizeof(m_bitboards[i]));
+        
 
         for (int i = 0; i < 64; i++)
         {
             int piece = board[i];
-            if (piece == Piece::Empty){
+            if (piece == Piece::Empty)
                 continue;
-            }
+            
             bool color = Piece::getColor(piece) == Piece::White;
-            int type = Piece::getType(piece);
+            int type   = Piece::getType(piece);
             m_bitboards[color][type - 1] |= 1ULL << i;
         }
     }
@@ -133,10 +137,13 @@ namespace chess
                     piece |= Piece::White;
                 }
                 board[pos++] = piece;
-            } else if(c == '/'){
-                // Skip / that's the end of the row
+            } 
+            // Skip / that's the end of the row
+            else if(c == '/'){
                 continue;
-            } else {
+            }
+            // Invalid character
+            else {
                 return;
             }
         }
@@ -199,6 +206,7 @@ namespace chess
         // Update bitboards
         updateBitboards();
         (void)hash();
+        verify_castling_rights();
 
         // Read the 'moves' part
         std::string moves;
@@ -319,39 +327,23 @@ namespace chess
      */
     Move Board::match(Move move)
     {
-        // If the flags are not empty, return the move
-        if (move.getFlags() != Move::FLAG_NONE)
-            return move;
-
         MoveList moves = generateLegalMoves();
 
         for(size_t i = 0; i < moves.size(); i++)
         {
             if (moves[i].movePart() == move.movePart())
+            {
+                // If the flags are not empty, return the move
+                if (move.getFlags() != Move::FLAG_NONE)
+                    return move;
+                
+                // If the flags are empty, return the move from the legal moves
                 return moves[i];
+            }
         }
         
         // If the move is not found, return a null move
         return Move();
-    }
-
-    /**
-     * @brief Find all the indices of a piece on the board
-     * 
-     * @param piece The piece to find (with color and special moves)
-     * @return vector<int> The indices of the piece
-     */
-    std::vector<int> Board::findAll(int piece)
-    {
-        std::vector<int> indices;
-        indices.reserve(16);
-
-        for (auto i=0; i < 64; i++)
-        {
-            if (board[i] == piece)
-                indices.push_back(i);
-        }
-        return indices;
     }
 
     /**
@@ -372,6 +364,25 @@ namespace chess
         }
         std::cout << "\n";
 
+        for (int color = 0; color < 2; color++)
+        {
+            for (int type = 0; type < 6; type++)
+            {
+                std::cout << "Bitboard for " << Piece::toChar(
+                    Piece::createPiece(type + 1, color == 1 ? Piece::White : Piece::Black
+                ), true) << ":\n";
+
+                Bitboard bb = m_bitboards[color][type];
+                for (int i = 0; i < 64; i++)
+                {
+                    std::cout << (bb & (1ULL << i) ? "1 " : "0 ");
+                    if (i % 8 == 7)
+                        std::cout << "\n";
+                }
+                std::cout << "\n";
+            }
+        }
+
         std::cout << "Side: " << (m_side == Piece::White ? "White" : "Black") << "\n";
         std::cout << "Enpassant target: " << square_to_str(m_enpassant_target) << "\n";
         std::cout << "Halfmove clock: " << m_halfmove_clock << "\n";
@@ -379,11 +390,57 @@ namespace chess
         std::cout << "Castling rights: " << m_castling_rights.str() << "\n";
         std::cout << "Captured piece: " << Piece::toChar(m_captured_piece) << "\n";
 
-        MoveList moves = generateLegalMoves();
+        MoveList moves = generateLegalCaptures();
         for (auto& move : moves)
         {
-            std::cout << Move(move).notation() << "\n";
+            std::cout << Move(move).uci() << "\n";
         }
+
+        std::cout << "Move stack:\n";
+        for (auto& state : m_history)
+        {
+            std::cout << Move(state.move).uci() << "\n";
+        }
+    }
+
+    bool Board::checkIntegrity()
+    {
+        // Check if the bitboards are correct (same as the board array)
+        for (int i = 0; i < 2; i++)
+        {
+            for (int j = 0; j < 6; j++)
+            {
+                Bitboard bb = m_bitboards[i][j];
+                for (int k = 0; k < 64; k++)
+                {
+                    int piece  = board[k];
+                    int type   = Piece::getType(piece);
+                    bool color = Piece::getColor(piece) == Piece::White;
+                    if (type == j + 1 && color == i)
+                    {
+                        if (!(bb & (1ULL << k)))
+                        {
+                            std::cout << "Missing bitboard for " << Piece::toChar(piece) << 
+                                " at " << square_to_str(k) << "\n";
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        if (bb & (1ULL << k))
+                        {
+                            std::cout << "Extra bitboard for " << Piece::toChar(j + 1) << 
+                                " at " << square_to_str(k) << "\n";
+                            // Print whole bitboard
+                            dbitboard(bb);
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -405,56 +462,16 @@ namespace chess
             }
         }
 
-        if (getSide() == Piece::Black)
+        if (m_side == Piece::Black)
             m_hash ^= Zobrist::hash_turn;
 
+        int rank = m_enpassant_target >> 3;
         if (m_enpassant_target != 0)
-            m_hash ^= Zobrist::hash_enpassant[m_enpassant_target];
+            m_hash ^= Zobrist::hash_enpassant[rank];
 
         m_hash ^= Zobrist::hash_castling[castlingRights().get()];
 
         return m_hash;
-    }
-
-    /**
-     * @brief Verify the castling rights, it may delete the castling rights 
-     * if the rooks or the king are not in the correct position
-     */
-    void Board::verify_castling_rights()
-    {
-        const int castling_data[2][3] = {
-            {4, 0, 7}, // black king data: starting position, rook positions
-            {60, 56, 63} // white king (same as above)
-        };
-        const int kings[2] = {
-            bitScanForward(m_bitboards[0][Piece::King - 1]),
-            bitScanForward(m_bitboards[1][Piece::King - 1])
-        };
-        const int castling_rights[2][2] = {
-            {CastlingRights::BLACK_QUEEN, CastlingRights::BLACK_KING},
-            {CastlingRights::WHITE_QUEEN, CastlingRights::WHITE_KING}
-        };
-
-        // Check if the rooks are in the correct position
-        for (int is_white = 0; is_white < 2; is_white++)
-        {
-            for(int i = 0; i < 2; i++)
-            {
-                int rook_target = castling_data[is_white][i + 1];
-                if (Piece::getType(board[rook_target]) != Piece::Rook){
-                    m_castling_rights.remove(castling_rights[is_white][i]);
-                }
-            }
-        }
-
-        // Check if the king is in the correct position
-        for (int is_white = 0; is_white < 2; is_white++)
-        {
-            if (kings[is_white] != castling_data[is_white][0]){
-                m_castling_rights.remove(castling_rights[is_white][0]);
-                m_castling_rights.remove(castling_rights[is_white][1]);
-            }
-        }
     }
 
     /**
@@ -510,17 +527,17 @@ namespace chess
 
     /**
      * @brief Make a move on the board, updates the board state (board array, bitboards, side to move, etc.)
-     * @warning Doesn't check if the move is legal
+     * @warning Doesn't check if the move is legal, technically you may make any move
      */
     void Board::makeMove(Move move)
     {
         // Push the current state to the history
         push_state(move);
 
-        int to = move.getTo();
-        int from = move.getFrom();
-        int type = Piece::getType(board[from]);
-        bool is_white = Piece::isWhite(board[from]);
+        Square to           = move.getTo();
+        Square from         = move.getFrom();
+        int type            = Piece::getType(board[from]);
+        bool is_white       = Piece::isWhite(board[from]);
         const int rights[2] = { CastlingRights::BLACK, CastlingRights::WHITE };
 
         // Update fullmove counter
@@ -544,17 +561,19 @@ namespace chess
         {
             // Set the irreversible index
             m_irreversible_index = m_history.size();
-            m_halfmove_clock = 0;
-            int offset = 0;
+            m_halfmove_clock     = 0;
+            Square offset        = 0;
 
             if(move.isEnPassant())
                 offset = is_white ? 8 : -8;
             
-            m_captured_piece = board[to + offset];
-            board[to + offset] = Piece::Empty;
+            // Capture the piece, remove it from the board
+            Square captured_pos = to + offset;
+            m_captured_piece    = board[captured_pos];
+            board[captured_pos] = Piece::Empty;
 
-            // Update the bitboard for the captured piece
-            m_bitboards[!is_white][Piece::getType(m_captured_piece) - 1] ^= 1ULL << (to + offset);
+            // Delete the captured piece from the bitboard
+            m_bitboards[!is_white][Piece::getType(m_captured_piece) - 1] &= ~(1ULL << (captured_pos));
         }
 
         // Reset the enpassant target
@@ -602,16 +621,19 @@ namespace chess
         {
             int promo_type = Piece::promotionPieces[move.getPromotionPiece()];
             board[from] = promo_type | m_side;
-            m_bitboards[is_white][Piece::Pawn - 1] ^= 1ULL << from; // remove the pawn
-            m_bitboards[is_white][promo_type] |= 1ULL << from; // add the promoted piece (not moved yet)
+            m_bitboards[is_white][Piece::Pawn - 1] &= ~(1ULL << from); // remove the pawn
+            m_bitboards[is_white][promo_type - 1]  |= 1ULL << from; // add the promoted piece (not moved)
             m_irreversible_index = m_history.size();
+            type = promo_type; // update this, since in the end we will update the bitboard, based on the type
         }
 
         // Update castling rights & king position
-        if (type == Piece::King){
+        if (type == Piece::King)
+        {
             m_castling_rights.remove(rights[is_white]);
         }
-        else if (type == Piece::Rook){
+        else if (type == Piece::Rook)
+        {
             // If the rook is moved from the starting position, remove the castling
             // rights for that side
             const int side_rights[2][2] = {
@@ -631,7 +653,16 @@ namespace chess
 
         // Update the bitboard for the moved piece
         updateBitboard(is_white, type - 1, from, to);
+        // m_bitboards[is_white][type - 1] &= ~(1ULL << from);
+        // m_bitboards[is_white][type - 1] |= 1ULL << to;
+
         m_side = Piece::opposite(m_side);
+
+        if (!checkIntegrity())
+        {
+            std::cout << "(make)Integrity check failed: " << move.uci() << "\n";
+            print();
+        }
     }
 
     /**
@@ -648,65 +679,139 @@ namespace chess
         State history = m_history.back();
         m_history.pop_back();
 
-        int to = move.getTo();
-        int from = move.getFrom();
-        bool is_white = history.side_to_move == Piece::White;
+        Square to           = move.getTo();
+        Square from         = move.getFrom();
+        int    type         = Piece::getType(board[to]);
+        bool   is_white     = Piece::isWhite(board[to]);
         const int colors[2] = { Piece::Black, Piece::White };
 
-        // Restore the captured piece
-        if (move.isCapture())
+
+        // Helper function to undo the move, moves the piece from 'to' to 'from'
+        // Update the bitboard, based on the type, and the color defined above
+        auto undo = [this, &type, &is_white](Square from, Square to){
+            board[from] = board[to];
+            board[to]   = Piece::Empty;
+            updateBitboard(is_white, type - 1, to, from);
+        };
+
+
+        // If promo capture, restore the captured piece + the promoted piece
+        if (move.isPromotionCapture())
         {
+            board[from] = Piece::Pawn | colors[is_white]; // restore the pawn
+            board[to]   = m_captured_piece; // restore the captured piece
+
+            // add the captured piece to the bitboard
+            m_bitboards[!is_white][Piece::getType(m_captured_piece) - 1] |= 1ULL << to;
+            // remove the promoted piece
+            m_bitboards[is_white][type - 1] &= ~(1ULL << to); 
+            // add the pawn to the bitboard
+            m_bitboards[is_white][Piece::Pawn - 1] |= 1ULL << from;
+        }
+        else if (move.isCapture())
+        {
+            // restore the captured piece
             int offset = 0;
-            
             if(move.isEnPassant())
                 offset = is_white ? 8 : -8;
             
-            // restore the captured piece in bitboards and on the board
-            int captured_pos = to + offset;
+            // Unmake the move, restore previous position of the piece
+            undo(from, to);
+            // Put the captured piece back
+            Square captured_pos = to + offset;
+            board[captured_pos] = m_captured_piece;
             m_bitboards[!is_white][Piece::getType(m_captured_piece) - 1] |= 1ULL << captured_pos;
-            board[captured_pos] = m_captured_piece; 
+        }
+        else if (move.isPromotion())
+        {
+            board[from] = Piece::Pawn | colors[is_white]; // restore the pawn
+            board[to]   = Piece::Empty; // remove the promoted piece
+            // Update the bitboards
+            m_bitboards[is_white][type - 1]        &= ~(1ULL << to); // remove the promoted piece
+            m_bitboards[is_white][Piece::Pawn - 1] |=  1ULL << from; // add the pawn to the bitboard
         }
         // Restore castling rights and rook positions
         else if (move.isCastle())
         {
-            const int rooks_to[2][2] = {
+            const int rooks_from[2][2] = {
                 {0, 56}, // queen castle
                 {7, 63} // king castle
             };
-            const int rooks_from[2][2] = {
+            const int rooks_to[2][2] = {
                 {3, 59}, // queen castle
                 {5, 61} // king castle
             };
 
             // Get rook starting position
             bool is_king_castle = move.isKingCastle();
-            int rook_from = rooks_from[is_king_castle][is_white];
-            int rook_to = rooks_to[is_king_castle][is_white];
-            board[rook_to] = board[rook_from]; // move the rook back
-            board[rook_from] = Piece::Empty; // empty the rook's previous position
-            updateBitboard(is_white, Piece::Rook - 1, rook_from, rook_to); // update the bitboard
+            Square rook_from    = rooks_from[is_king_castle][is_white];
+            Square rook_to      = rooks_to[is_king_castle][is_white];
+            board[rook_from]    = board[rook_to]; // move the rook back
+            board[rook_to]      = Piece::Empty; // empty the rook's previous position
+            updateBitboard(is_white, Piece::Rook - 1, rook_to, rook_from); // update the bitboard
+            undo(from, to); // move the king back
         }
-
-        // Restore promoted piece
-        if (move.isPromotion())
+        else 
         {
-            m_bitboards[is_white][Piece::getType(board[to]) - 1] ^= 1ULL << to; // remove the promoted piece
-            m_bitboards[is_white][Piece::Pawn - 1] |= 1ULL << to; // add the pawn to the bitboard (not moved yet)
-            board[to] = Piece::Pawn | colors[is_white]; // restore the pawn
+            // Quiet move, just move the piece back
+            undo(from, to);
         }
-
-        // Restore the moved piece
-        board[from] = board[to];
-        board[to] = Piece::Empty;
-        updateBitboard(is_white, Piece::getType(board[from]) - 1, to, from);
 
         // Restore other states
-        m_side = history.side_to_move;
-        m_halfmove_clock = history.halfmove_clock;
+        m_hash             = history.hash;
+        m_side             = history.side_to_move;
+        m_halfmove_clock   = history.halfmove_clock;
         m_enpassant_target = history.enpassant_target;
-        m_castling_rights = history.castling_rights;
+        m_castling_rights  = history.castling_rights;
         m_fullmove_counter = history.fullmove_counter;
-        m_captured_piece = history.captured_piece;
+        m_captured_piece   = history.captured_piece;
+
+        if (!checkIntegrity())
+        {
+            std::cout << "(unmake)Integrity check failed: " << move.uci() << "\n";
+            print();
+        }
+    }
+
+    /**
+     * @brief Verify the castling rights, it may delete the castling rights 
+     * if the rooks or the king are not in the correct position
+     */
+    void Board::verify_castling_rights()
+    {
+        const int castling_data[2][3] = {
+            {4, 0, 7}, // black king data: starting position, rook positions
+            {60, 56, 63} // white king (same as above)
+        };
+        const int kings[2] = {
+            bitScanForward(m_bitboards[0][Piece::King - 1]),
+            bitScanForward(m_bitboards[1][Piece::King - 1])
+        };
+        const int castling_rights[2][2] = {
+            {CastlingRights::BLACK_QUEEN, CastlingRights::BLACK_KING},
+            {CastlingRights::WHITE_QUEEN, CastlingRights::WHITE_KING}
+        };
+
+        // Check if the rooks are in the correct position
+        for (int is_white = 0; is_white < 2; is_white++)
+        {
+            for(int i = 0; i < 2; i++)
+            {
+                int rook_target = castling_data[is_white][i + 1];
+                if (Piece::getType(board[rook_target]) != Piece::Rook){
+                    m_castling_rights.remove(castling_rights[is_white][i]);
+                }
+            }
+        }
+
+        // Check if the king is in the correct position
+        for (int is_white = 0; is_white < 2; is_white++)
+        {
+            if (kings[is_white] != castling_data[is_white][0]){
+                m_castling_rights.remove(castling_rights[is_white][0]);
+                m_castling_rights.remove(castling_rights[is_white][1]);
+            }
+        }
     }
 
     // --------------------- Move generation ---------------------
@@ -768,9 +873,10 @@ namespace chess
      */
     inline int getPinner(uint64_t pinners, int sq, int king)
     {
-        uint64_t pinner = pinners;
-        uint64_t bitsq = 1ULL << sq;
-        int pinner_sq = 0;
+        Bitboard pinner  = pinners;
+        Bitboard bitsq   = 1ULL << sq;
+        Square pinner_sq = 0;
+
         while(pinner){
             pinner_sq = pop_lsb1(pinner);
             if (chess::Board::in_between[pinner_sq][king] & bitsq)
@@ -789,8 +895,9 @@ namespace chess
         attacks_func_t attackFunc
     )
     {
-        uint64_t bitboard = piece_bb;
-        uint64_t bmoves, captures;
+        Bitboard bitboard = piece_bb;
+        Bitboard bmoves, captures;
+
         while(bitboard)
         {
             int sq = pop_lsb1(bitboard);
@@ -821,13 +928,16 @@ namespace chess
         bool is_white, attacks_func_t attackFunc
     )
     {
-        uint64_t block_moves;
-        uint64_t bitboard = piece_bb & not_pinned;
+        Square   sq;
+        Bitboard block_moves;
+        Bitboard captures;
+        Bitboard bitboard = piece_bb & not_pinned;
+
         while(bitboard)
         {
-            int sq = pop_lsb1(bitboard);
-            block_moves = attackFunc(occupied, sq);
-            uint64_t captures = block_moves & attackers;
+            sq           = pop_lsb1(bitboard);
+            block_moves  = attackFunc(occupied, sq);
+            captures     = block_moves & attackers;
             block_moves &= ~occupied & block_path;
             // If that's a capture, add the move
             if (captures){
@@ -841,19 +951,19 @@ namespace chess
     }
 
     /**
+     * @brief Generate moves and apply the filter
+     */
+    MoveList Board::filterMoves(MoveFilter filter)
+    {
+        return generateLegalMoves().filter(filter);
+    }
+
+    /**
      * @brief Generate all legal captures for the current board
      */
     MoveList Board::generateLegalCaptures()
     {
-        MoveList moves = generateLegalMoves();
-        MoveList captures;
-
-        for (size_t i = 0; i < moves.size(); i++)
-        {
-            if (moves[i].isCapture())
-                captures.add(moves[i]);
-        }
-        return captures;
+        return generateLegalMoves().filter([](Move move){ return move.isCapture(); });
     }
 
     /**
@@ -863,14 +973,14 @@ namespace chess
     {
         MoveList moves;
 
-        bool is_white = Piece::isWhite(m_side);
-        bool is_enemy = !is_white;
-        Bitboard occupied = this->occupied();
+        bool is_white            = turn();
+        bool is_enemy            = !is_white;
+        Bitboard occupied        = this->occupied();
         Bitboard occupied_noking = occupied ^ m_bitboards[is_white][Piece::King - 1];
-        Bitboard enemy_pieces = this->occupied(is_enemy);
-        Bitboard allied_pieces = occupied ^ enemy_pieces;
-        Bitboard enemy_king = m_bitboards[is_enemy][Piece::King - 1];
-        int king = bitScanForward(m_bitboards[is_white][Piece::King - 1]);
+        Bitboard enemy_pieces    = this->occupied(is_enemy);
+        Bitboard allied_pieces   = occupied ^ enemy_pieces;
+        Bitboard enemy_king      = m_bitboards[is_enemy][Piece::King - 1];
+        Square king              = bitScanForward(m_bitboards[is_white][Piece::King - 1]);
 
         // Step 1: Generate attacks for enemy pieces (to check if the king is in check)
         Bitboard bitboard;
@@ -901,7 +1011,7 @@ namespace chess
         while(bitboard) danger |= Board::pawnAttacks[is_enemy][pop_lsb1(bitboard)];
         
         // Generate attacks for enemy king
-        danger |= Board::pieceAttacks[Board::KING_TYPE][bitScanForward(m_bitboards[is_enemy][Piece::King - 1])];
+        danger |= Board::pieceAttacks[Board::KING_TYPE][bitScanForward(enemy_king)];
 
         // Step 2: Generate pinned pieces
         // Source (modified): https://www.chessprogramming.org/Pinned_Pieces
@@ -1048,6 +1158,9 @@ namespace chess
                     }
                 }
             }
+
+            // Return the moves after generation
+            return moves;
         }
 
         // If the king is not in check, generate all possible moves
@@ -1226,17 +1339,19 @@ namespace chess
 
         // Generate castling moves, I assume that castling rights are correct
         // Hence I always verify the castling rights
-        verify_castling_rights();
+        // verify_castling_rights();
         const uint32_t colors[2] = { CastlingRights::BLACK, CastlingRights::WHITE };
 
         if (castlingRights().has(colors[is_white]))
         {
-            bool king_side = (castlingRights().getKing() & colors[is_white]) != 0;
-            bool queen_side = (castlingRights().getQueen() & colors[is_white]) != 0;
-            Bitboard queen_path = 0b00001100, king_path = 0b01100000;
+            bool king_side             = (castlingRights().getKing() & colors[is_white]) != 0;
+            bool queen_side            = (castlingRights().getQueen() & colors[is_white]) != 0;
+            Bitboard queen_path        = 0b00001100;
+            Bitboard king_path         = 0b01100000;
             Bitboard queen_path_no_occ = 0b00001110;
 
-            if(is_white){
+            if(is_white)
+            {
                 queen_path <<= 56;
                 king_path <<= 56;
                 queen_path_no_occ <<= 56;

@@ -6,6 +6,7 @@
 
 #include "move.h"
 #include "eval.h"
+#include "time_man.h"
 
 namespace chess
 {
@@ -24,7 +25,7 @@ struct Score{
     } type = cp;
 
     // Value of the score
-    int value = 0;
+    Value value = 0;
 };
 
 // Updates the score based on the given evaluation
@@ -64,6 +65,16 @@ struct SearchResult
     std::list<Move> pv = {};
 };
 
+
+// Search result
+struct Result
+{
+    Move bestmove = Move::nullMove;
+    Score score = {Score::cp, 0};
+    MoveList pv = {};
+    GameStatus status = ONGOING;
+};
+
 // Updates the search result with thread safety
 inline void update_result(SearchResult* result, Move move, Score score, int depth, uint64_t time, GameStatus status, MoveList& pv)
 {
@@ -79,7 +90,98 @@ inline void update_result(SearchResult* result, Move move, Score score, int dept
     }
 }
 
+// Contains search limits
+typedef struct
+{
+    // In plies
+    int depth = std::numeric_limits<int>::max();
+    // Maximum number of nodes to search
+    uint64_t nodes = std::numeric_limits<uint64_t>::max();
+    // Mate in moves
+    int mate = 0;
 
+    // Time limits
+    chess::TimeLimits time = {};
+
+    // Pondering
+    bool ponder = false;
+} Limits;
+
+// Class to handle interrupts (`stop` signal, time limit, etc.)
+class Interrupt
+{
+    std::atomic_bool m_stop;
+    std::atomic<uint64_t> m_nodes;
+    Limits m_limits;
+    chess::TimeMan m_time;
+public:
+
+    Interrupt() : 
+        m_stop(false), m_nodes(0), 
+        m_limits(), m_time() {}
+
+    Interrupt(const Limits& limits) :
+        m_stop(false), m_nodes(0), 
+        m_limits(limits), m_time(limits.time) {}
+
+    Interrupt(Interrupt&& other) 
+    {
+        *this = std::move(other);
+    }
+
+    Interrupt& operator=(Interrupt&& other)
+    {
+        m_stop   = other.m_stop.load();
+        m_limits = other.m_limits;
+        m_nodes  = other.m_nodes.load();
+        m_time   = other.m_time;
+        return *this;
+    }
+
+    // Set the stop signal
+    void stop() { m_stop = true; }
+
+    // Check if the stop signal is set
+    bool get() const
+    {
+        return m_stop.load();
+    }
+
+    // Update depth
+    void depth(int depth)
+    {
+        m_stop = (depth > m_limits.depth);
+    }
+
+    // Increment nodes by 1, and check if the search should stop (based on time)
+    void update(bool side)
+    {
+        add_nodes(1);
+        m_time.check(side);
+        m_stop = (m_stop.load() || m_time.get());
+    }
+
+    // Update nodes
+    void add_nodes(uint64_t nodes)
+    {
+        m_nodes += nodes;
+        m_stop = (m_nodes.load() > m_limits.nodes);
+    }
+
+    // Get the number of nodes searched
+    uint64_t nodes() const
+    {
+        return m_nodes.load();
+    }
+
+    // Get elapsed time
+    chess::TimeMan::Time time() const
+    {
+        return m_time.elapsed();
+    }
+};
+
+// Contains uci search limits
 struct SearchLimits
 {
     // Basic UCI options
@@ -87,10 +189,8 @@ struct SearchLimits
     uint64_t nodes = UINT64_MAX;
     int mate = 0;
     int64_t movetime = INT64_MAX; // In milliseconds
-    uint64_t wtime = 0;
-    uint64_t btime = 0;
-    uint64_t winc = 0;
-    uint64_t binc = 0;
+    uint64_t time[2] = {0, 0};
+    uint64_t inc[2] = {0, 0};
     bool infinite = false;
     bool ponder = false;
 
@@ -168,10 +268,10 @@ public:
         static void setInfinite(SearchLimits& params, value_t value) { params.infinite = bool(value); }
         static void setPonder(SearchLimits& params, value_t value) { params.ponder = bool(value); }
         static void setMovetime(SearchLimits& params, value_t value) { params.movetime = value; }
-        static void setWtime(SearchLimits& params, value_t value) { params.wtime = value; }
-        static void setBtime(SearchLimits& params, value_t value) { params.btime = value; }
-        static void setWinc(SearchLimits& params, value_t value) { params.winc = value; }
-        static void setBinc(SearchLimits& params, value_t value) { params.binc = value; }
+        static void setWtime(SearchLimits& params, value_t value) { params.time[1] = value; }
+        static void setBtime(SearchLimits& params, value_t value) { params.time[0] = value; }
+        static void setWinc(SearchLimits& params, value_t value) { params.inc[1] = value; }
+        static void setBinc(SearchLimits& params, value_t value) { params.inc[0] = value; }
 
         // Constructors
         Option(Setter setter = defaultSetter) : m_setter(setter), m_limits(nullptr) {}

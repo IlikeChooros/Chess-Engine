@@ -93,7 +93,8 @@ TEST(Board, loadFenDrawPosition){
     testFen(fen, expected_board, Piece::Black, 0, 99, 50);
 }
 
-TEST(Board, getFen){
+TEST(Board, getFen)
+{
     Board b;
     b.init();
     std::string fen = b.getFen();

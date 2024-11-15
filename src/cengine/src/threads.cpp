@@ -1,6 +1,8 @@
 #include <cengine/threads.h>
 
-TaskQueue::TaskQueue(size_t workers) {
+
+TaskQueue::TaskQueue(size_t workers) 
+{
     this->m_stop = false;
     m_tasks_left = 0;
     m_workers.reserve(workers);

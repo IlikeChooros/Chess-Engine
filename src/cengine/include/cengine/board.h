@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+#include <functional>
 #include <memory>
 #include <string.h>
 #include <sstream>
@@ -31,6 +33,7 @@ namespace chess{
         void verify_castling_rights();
 
     public:
+        typedef MoveList::move_filter_t MoveFilter;
 
         // Helper bitboards initialized in move_gen.cpp
         static Bitboard in_between[64][64];
@@ -38,7 +41,7 @@ namespace chess{
         static Bitboard pieceAttacks[6][64];
 
         // Starting position
-        static const char startFen[57];
+        static const char START_FEN[57];
 
         // Piece types
         static constexpr int PAWN_TYPE = Piece::Pawn - 1;
@@ -59,17 +62,28 @@ namespace chess{
         void makeMove(Move move);
         void undoMove(Move move);
         uint64_t hash();
+
+        // TODO: Make this a template function with
+        // type of repetition (3 fold, 5 fold)
         bool isRepetition();
         bool isLegal(Move move);
         Move match(Move move);
 
         MoveList generateLegalCaptures();
         MoveList generateLegalMoves();
+        MoveList filterMoves(MoveFilter filter);
 
         void print();
+        bool checkIntegrity();
 
         /**
          * @brief Get the side to move
+         * @return bool True if white, false if black
+         */
+        inline bool turn() const {return this->m_side == Piece::White; };
+
+        /**
+         * @brief Get the side to move (Piece::Color)
          */
         inline int& getSide() {return this->m_side; };
 
@@ -126,7 +140,8 @@ namespace chess{
         /**
          * @brief Get the occupied squares for a given color
          */
-        inline Bitboard occupied(bool is_white) {
+        inline Bitboard occupied(bool is_white) 
+        {
             Bitboard color = 0;
             for (int i = 0; i < 6; i++){
                 color |= this->m_bitboards[is_white][i];
@@ -137,7 +152,8 @@ namespace chess{
         /**
          * @brief Get the occupied squares on the board
          */
-        inline Bitboard occupied() {
+        inline Bitboard occupied() 
+        {
             Bitboard occ = 0;
             for (int i = 0; i < 6; i++){
                 occ |= this->m_bitboards[0][i] | this->m_bitboards[1][i];
@@ -162,7 +178,8 @@ namespace chess{
         /**
          * @brief Get the pieces bitboard
          */
-        inline Bitboard pieces() {
+        inline Bitboard pieces() 
+        {
             return m_bitboards[0][KNIGHT_TYPE] | m_bitboards[0][ROOK_TYPE] | m_bitboards[0][BISHOP_TYPE] | m_bitboards[0][QUEEN_TYPE] |
                    m_bitboards[1][KNIGHT_TYPE] | m_bitboards[1][ROOK_TYPE] | m_bitboards[1][BISHOP_TYPE] | m_bitboards[1][QUEEN_TYPE];
         }
@@ -189,20 +206,13 @@ namespace chess{
          * @brief Moves given piece from one square to another on the bitboard
          */
         inline void updateBitboard(int is_white, int type, int from, int to){
-            this->m_bitboards[is_white][type] ^= (1ULL << from) | (1ULL << to);
+            this->m_bitboards[is_white][type] ^= (1ULL << from | 1ULL << to);
         }
 
         /**
          * @brief Get the piece at a given index
          */
         inline int& operator[](int index) {return this->board[index]; };
-
-        /**
-         * @brief Get the piece at a given index
-         */
-        inline int& at(int from) {return this->board[from]; };
-
-        std::vector<int> findAll(int piece);
         
         uint64_t m_hash;
         int board[64];

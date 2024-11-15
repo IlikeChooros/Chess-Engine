@@ -4,9 +4,9 @@
 namespace bench
 {
 
-Perft::Perft()
+Perft::Perft(bool print)
 {
-    m_print = true;
+    m_print = print;
 }
 
 Perft& Perft::operator=(Perft&& other)
@@ -49,7 +49,7 @@ uint64_t Perft::perft(int depth)
         {
             for(size_t i = 0; i < moves; i++)
             {
-                std::cout << ml[i].notation() << ": " << 1UL << "\n";
+                std::cout << ml[i].uci() << ": " << 1UL << "\n";
             }
         }  
         return (uint64_t)moves;
@@ -66,7 +66,7 @@ uint64_t Perft::perft(int depth)
 
         if (root && m_print)
         {
-            std::cout << move.notation() << ": " << cnodes << "\n";
+            std::cout << move.uci() << ": " << cnodes << "\n";
         }
     }
     

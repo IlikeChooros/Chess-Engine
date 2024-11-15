@@ -25,11 +25,12 @@
 
 #include "settings.h"
 #include "manager.h"
+#include "perft.h"
 #include "move.h"
-#include "test.h"
 #include "move_gen.h"
 #include "uci.h"
 #include "magic_bitboards.h"
+#include "pgn.h"
 
 namespace chess
 {
@@ -51,7 +52,7 @@ namespace chess
      * 
      *   // Create a new `Engine` instance
      *   chess::Engine engine;
-     *   engine.position(chess::startFen);
+     *   engine.position(chess::START_FEN);
      *   
      *   // Search options
      *   SearchOptions options;
@@ -61,7 +62,7 @@ namespace chess
      *   // Start the search
      *   chess::Move best_move = engine.go(options);
      *   
-     *   std::cout << "Best move: " << best_move.notation() << "\n";
+     *   std::cout << "Best move: " << best_move.uci() << "\n";
      * 
      *  return 0;
      * }
@@ -70,9 +71,6 @@ namespace chess
      */
     inline void init()
     {    
-        init_board();
-        init_eval();
-        init_hashing();
-        init_magics(false);
+        Engine::init();
     }
 }

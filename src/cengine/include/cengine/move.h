@@ -89,7 +89,8 @@ class Move
     Move(const Move& other) : m_move(other.m_move) {};
 
     // Same as `fromUci` 
-    Move(std::string move) {
+    Move(std::string move)
+    {
         (void)fromUci(move);
     }
 
@@ -97,18 +98,18 @@ class Move
      * @brief Set the flags for the move use only if 
      * the move was created with the string notation constructor
      */
-    bool setFlags(std::string move, std::vector<uint32_t> flags) {
-        if (flags.empty()){
+    bool setFlags(std::string move, std::vector<uint32_t> flags) 
+    {
+        if (flags.empty())
             return false;
-        }
 
         uint32_t flag = flags[0];
-        if (move.size() == 5){
+        if (move.size() == 5)
+        {
             int promotion = getPromotionPiece(move[4]);
 
-            if (promotion == -1 || !(flag & FLAG_PROMOTION)){
+            if (promotion == -1 || !(flag & FLAG_PROMOTION))
                 return false;
-            }
             
             flag &= (FLAG_PROMOTION | FLAG_CAPTURE);
             flag |= promotion;
@@ -148,8 +149,10 @@ class Move
      * @brief Get the promotion character, if the move is a promotion
      * @return n - Knight, b - Bishop, r - Rook, q - Queen, 0 - Invalid
      */
-    char getPromotionChar() const {
-        switch(getPromotionPiece()){
+    char getPromotionChar() const 
+    {
+        switch(getPromotionPiece())
+        {
             case 0:
                 return 'n';
             case 1:
@@ -168,7 +171,8 @@ class Move
      * @param c The character representing the piece
      * @return 0 - Knight, 1 - Bishop, 2 - Rook, 3 - Queen, -1 - Invalid
      */
-    static int getPromotionPiece(char c) {
+    static int getPromotionPiece(char c)
+    {
         switch(c){
             case 'n':
                 return 0;
@@ -184,15 +188,19 @@ class Move
     };
 
     // Get the move in UCI notation, (e.g. e2e4) (no promotion info)
-    static std::string notation(int from, int to){
+    static std::string notation(int from, int to)
+    {
         return square_to_str(from) + square_to_str(to);
     }
 
     /**
      * @brief Get the move in UCI notation, (e.g. e2e4, a7a8q)
      */
-    std::string notation() const 
+    std::string uci() const 
     {
+        if (isNull())
+            return "0000";
+
         std::string str = square_to_str(getFrom()) + square_to_str(getTo());
         if (isPromotion())
             str += getPromotionChar();
@@ -207,6 +215,12 @@ class Move
         m_move = other.m_move;
         return *this;
     };
+
+    Move& operator=(int move)
+    {
+        m_move = move;
+        return *this;
+    }
 
     bool operator==(uint32_t other) const 
     {
@@ -235,8 +249,9 @@ class Move
 // Move list class, stores a list of moves
 class MoveList
 {
-    public:
+public:
     typedef uint16_t move_t;
+    static constexpr size_t MAX_MOVES = 256;
 
     // Iterator for the move list
     class MoveListIterator {
@@ -307,11 +322,16 @@ class MoveList
 
     typedef MoveListIterator iterator;
     typedef std::reverse_iterator<iterator> reverse_iterator;
-
+    typedef std::function<bool(Move)> move_filter_t;
 
     MoveList(): n_moves(0) {}
-    MoveList(const MoveList& other){
-        *this = other;
+    MoveList(const MoveList& other){ *this = other; }
+    MoveList(std::initializer_list<Move> moves)
+    {
+        for (auto it = moves.begin(); it != moves.end(); it++)
+        {
+            add(*it);
+        }
     }
 
     MoveList& operator=(const MoveList& other)
@@ -322,7 +342,7 @@ class MoveList
     }
 
     inline size_t size() const {return n_moves;}
-    inline static constexpr size_t capacity() {return 256;}
+    inline static constexpr size_t capacity() {return MAX_MOVES;}
     inline void add(move_t move) {moves[n_moves++] = move;}
     inline void add(const Move& move) {add(move.get());}
     inline void clear() {n_moves = 0;}
@@ -333,7 +353,42 @@ class MoveList
     inline reverse_iterator rend() {return reverse_iterator(begin());}
     inline const move_t* data() const {return moves;}
 
-    move_t moves[256];
+    /**
+     * @brief Get the moves in UCI notation
+     * @return std::vector<std::string> The moves in UCI notation
+     */
+    inline std::vector<std::string> uci() const 
+    {
+        std::vector<std::string> uci_moves;
+        uci_moves.reserve(n_moves);
+        for (size_t i = 0; i < n_moves; i++)
+        {
+            uci_moves.push_back(Move(moves[i]).uci());
+        }
+        return uci_moves;
+    }
+
+    /**
+     * @brief Filter the moves using the given filter function,
+     * modifies directly the current move list
+     * @param filter_fn The filter function, should return true if the move should be kept
+     * @return MoveList& *this
+     */
+    MoveList& filter(move_filter_t filter_fn)
+    {
+        size_t i = 0;
+        for (size_t j = 0; j < n_moves; j++)
+        {
+            if (filter_fn(Move(moves[j])))
+            {
+                moves[i++] = moves[j];
+            }
+        }
+        n_moves = i;
+        return *this;
+    }
+
+    move_t moves[MAX_MOVES];
     size_t n_moves;
 };
 
