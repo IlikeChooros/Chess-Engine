@@ -124,29 +124,13 @@ class Engine:
         Format an error message
         """
         return '[%s] %s' % (self.name, error)
-
-
-    def _send_command(self, command: str) -> None:
-        """
-        Send a command to the engine
-        """
-        if self.process.poll() is not None or self.killed:
-            raise EngineNotRunning(self._format_error('Engine is not ready'))
-        
-        if command == 'quit':
-            self.killed = True
-
-        print(command)
-        self.process.stdin.write(command + '\n')
-        self.process.stdin.flush()
-
     
     def _read_line(self) -> str:
         """
         Read a single line from the engine output
         """
         out = self.process.stdout.readline().strip()
-        print('[%s]: %s' % (self.name, out))
+        # print('[%s]: %s' % (self.name, out))
         return out
     
     def _try_read_line(self) -> str | None:
@@ -157,24 +141,38 @@ class Engine:
             return self._read_line()
         return None
     
-    def _read_until_bestmove(self) -> str:
+    def _read_until_bestmove(self) -> chess.Move | None:
         """
         Read the output of the engine until the bestmove command is found.
-        
-        May raise a ValueError if no move is found
+
+        This is used to get the best move after a search command
 
         :return: string containing the bestmove output, ex: 'bestmove e2e4'
         """
         while True:
             line = self._read_line()
             if line.startswith('bestmove'):
-                move = line.split()[1]
-                if move == '(none)':
-                    raise ValueError('No move found')
+                strmove = line.split()[1]
+                move: chess.Move | None = None
+                if strmove != '(none)':
+                    move = chess.Move.from_uci(strmove)
                 return move
             
 
     # Public methods
+
+    def send_command(self, command: str) -> None:
+        """
+        Send a command to the engine
+        """
+        if self.process.poll() is not None or self.killed:
+            raise EngineNotRunning(self._format_error('Engine is not ready'))
+        
+        if command == 'quit':
+            self.killed = True
+
+        self.process.stdin.write(command + '\n')
+        self.process.stdin.flush()
 
     @typing.overload
     def set_position(self, board: chess.Board) -> None: 
@@ -195,9 +193,9 @@ class Engine:
         # Implement the overloads
         if len(args) == 1:
             if isinstance(args[0], chess.Board):
-                self._send_command('position fen ' + args[0].fen())
+                self.send_command('position fen ' + args[0].fen())
             elif isinstance(args[0], list):
-                self._send_command(f'position fen {kwargs.get("fen", chess.STARTING_FEN)} moves ' + ' '.join(map(str, args[0])))
+                self.send_command(f'position fen {kwargs.get("fen", chess.STARTING_FEN)} moves ' + ' '.join(map(str, args[0])))
         else:
             raise ValueError('Invalid arguments')
 
@@ -220,7 +218,7 @@ class Engine:
         Run search and get the evaluation of the current position, in real-time,
         This is a generator that yields Evaluation objects
         """
-        self._send_command(f'go {str(self.search_options)}')
+        self.send_command(f'go {str(self.search_options)}')
         prev_evaluation = Evaluation()
 
         while True:
@@ -237,7 +235,7 @@ class Engine:
             prev_evaluation._from_string(line)
             yield prev_evaluation
 
-    def search(self) -> chess.Move:
+    def get_bestmove(self) -> chess.Move | None:
         """
         Search for the best move in the current position,
         waits for the engine to finish searching
@@ -245,15 +243,15 @@ class Engine:
         :param options: Search options
         :return: Best move found by the engine as a chess.Move object
         """
-        self._send_command(f"go {str(self.search_options)}")
-        return chess.Move.from_uci(self._read_until_bestmove())
+        self.send_command(f"go {str(self.search_options)}")
+        return self._read_until_bestmove()
     
 
     def isready(self) -> bool:
         """
         Check if the engine is ready
         """
-        self._send_command('isready')
+        self.send_command('isready')
         while self._read_line() != 'readyok':
             pass
         
@@ -264,14 +262,14 @@ class Engine:
         """
         Stop the engine from searching
         """
-        self._send_command('stop')
+        self.send_command('stop')
     
 
     def quit(self) -> None:
         """
         Quit the engine
         """
-        self._send_command('quit')
+        self.send_command('quit')
         self.process.wait()
         self.process.kill()
         self.killed = True

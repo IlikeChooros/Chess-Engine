@@ -41,6 +41,7 @@ namespace uci
         },
         {"uci", "uci - Print the UCI info\n\n"},
         {"ucinewgame", "ucinewgame - Start a new game, resets the search cache\n\n"},
+        {"debug", "debug - Toggle debug mode\n\n"},
         {"isready", "isready - Check if the engine is ready\n\n"},
         {"stop", "stop - Stop the search\n\n"},
         {"getfen", "getfen - Get the current FEN (unofficial)\n\n"},
@@ -73,11 +74,13 @@ namespace uci
         MakeMove,
         Help,
         Quit,
+        Debug,
     };
 
     std::map<std::string, Commands> command_map = {
         {"uci", Uci},
         {"ucinewgame", UciNewGame},
+        {"debug", Debug},
         {"isready", IsReady},
         {"position", Position},
         {"go", Go},
@@ -238,6 +241,11 @@ namespace uci
 
             case Stop:
                 engine->stop();
+                break;
+
+            case Debug:
+                // TODO: Implement debug
+                // Toggle debug mode
                 break;
 
             case Go:
