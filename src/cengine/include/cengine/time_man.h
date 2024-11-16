@@ -20,6 +20,13 @@ struct TimeLimits
     uint64_t inc[2] = {0, 0};
     // Infinite search, i.e. search until stop signal
     bool infinite = false;
+
+    // Copy operator
+    constexpr TimeLimits& operator=(const TimeLimits& other)
+    {
+        memcpy(this, &other, sizeof(TimeLimits));
+        return *this;
+    }
 };
 
 /*

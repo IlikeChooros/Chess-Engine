@@ -1,34 +1,46 @@
 #include <cengine/pgn.h>
 
+// PGN Fields
+const char* PGN::FIELDS_ORDER[] = {
+    "Event", "Site", "Date", "Round", "White", "Black", "Result", "FEN", "SetUp"
+};
 
 /**
  * @brief Get the move notation for a move
  */
-std::string PGN::get_move_notation(chess::Manager* m, chess::GameHistory *gh, chess::Move move)
+std::string PGN::get_move_notation(chess::Board& board, chess::Move move)
 {
     using namespace chess;
-    int* iboard = m->board()->getBoard();
-    std::string notation = "";
-    int piece = iboard[move.getFrom()];
-    char pieceChar = Piece::toChar(piece);
-    int type = Piece::getType(piece);
-    bool sameFile = false;
-    bool sameRank = false;
 
-    if (move.isCastle()){
+    std::string notation;
+    notation.reserve(10);
+    int piece            = board[move.getFrom()];
+    char pieceChar       = Piece::toChar(piece);
+    int type             = Piece::getType(piece);
+    bool sameFile        = false;
+    bool sameRank        = false;
+
+    if (move.isCastle())
+    {
         if (move.isKingCastle())
             notation += "O-O";
         else
             notation += "O-O-O";
-    } else {
+    }
+    else 
+    {
         if (type != Piece::Pawn)
             notation += pieceChar;
 
         // Disambiguation
-        auto moves = m->canMoveTo(move.getTo(), type);
+        auto moves = board.filterMoves([&move, &board, &type](Move m){
+            return m.getTo() == move.getTo() && Piece::getType(board[m.getFrom()]) == type;
+        });
+
         // Check if there are more than one piece that can move to the same square
         if (moves.size() > 1){
-            for(auto i : moves){
+            for(auto i : moves)
+            {
                 chess::Move m(i);
                 if (m.getFrom() == move.getFrom())
                     continue;
@@ -48,31 +60,33 @@ std::string PGN::get_move_notation(chess::Manager* m, chess::GameHistory *gh, ch
         }
     }
     
-    if (move.isCapture()){
+    if (move.isCapture())
+    {
         if (type == Piece::Pawn && !sameFile)
             notation += 'a' + move.getFrom() % 8;
 
         notation += "x";
     }
     
-    m->makeMove(move.getFrom(), move.getTo(), move.getFlags());
+    board.makeMove(move);
 
     // Check if the move is a check
-    auto status = m->getStatus();
+    auto status = get_status(board);
 
     // target square
-    if (!move.isCastle()){
+    if (!move.isCastle())
+    {
         notation += square_to_str(move.getTo());
     }
 
     // Promotion
-    if (move.isPromotion()){
-        const char promotion_piece[4] = { 'N', 'B', 'R', 'Q' };
+    if (move.isPromotion())
+    {
         notation += "=";
-        notation += promotion_piece[move.getPromotionPiece()];
+        notation += Piece::toChar(Piece::promotionPieces[move.getPromotionPiece()]);
     }
 
-    if (m->board()->inCheck()){
+    if (board.inCheck()){
         if (status != GameStatus::CHECKMATE)
             notation += "+";
     }
@@ -80,68 +94,95 @@ std::string PGN::get_move_notation(chess::Manager* m, chess::GameHistory *gh, ch
     if (status == GameStatus::CHECKMATE)
         notation += "#";
     
-    return notation + " ";
+    return notation;
+}
+
+/**
+ * @brief Generate the fields from the board
+ */
+void PGN::generate_fields(chess::Board board)
+{
+
+    fields["Event"]  = "A game";
+    fields["Site"]   = "Somewhere";
+    fields["Date"]   = std::chrono::system_clock::now();
+    fields["Round"]  = 1;
+    fields["White"]  = "Player 1";
+    fields["Black"]  = "Player 2";
+    fields["Result"] = pgn_game_status(chess::get_status(board), !board.turn());
+    fields["FEN"]    = "";
+    fields["SetUp"]  = "";
+
+
+    // Check if the board was setup 
+    // (meaning if we undo all the moves, we do not get the starting position)
+    auto history = board.history();
+    chess::Board copy = board;
+    for (auto it = history.rbegin(); it != history.rend(); it++)
+    {
+        copy.undoMove(it->move);
+    }
+
+    // If the board was setup, add the FEN
+    if (copy.fen() != chess::Board::START_FEN)
+    {
+        fields["FEN"] = copy.fen();
+        fields["SetUp"] = "1";
+    }
 }
 
 /**
  * @brief Generate the PGN string from the game history
  */
-std::string PGN::pgn(chess::GameHistory* gh, PGNFields& fields)
+std::string PGN::pgn(chess::Board board)
 {
     std::string pgn = "";
 
-    pgn += "\n[Event \"" + fields.Event + "\"]\n";
-    pgn += "[Site \"" + fields.Site + "\"]\n";
-    time_t t = std::chrono::system_clock::to_time_t(fields.Date);
-    char date[80];
-    std::strftime(date, sizeof(date), "%Y.%m.%d", std::localtime(&t));
-    pgn += "[Date \"" + std::string(date) + "\"]\n";
-    pgn += "[Round \"" + std::to_string(fields.Round) + "\"]\n";
-    pgn += "[White \"" + fields.White + "\"]\n";
-    pgn += "[Black \"" + fields.Black + "\"]\n";
-    pgn += "[Result \"" + pgn_game_status(fields.Result.status, fields.Result.colorWin == chess::Piece::White) + "\"]\n";
-
-    if (fields.FEN != ""){
-        pgn += "[FEN \"" + fields.FEN + "\"]\n";
-        pgn += "[SetUp \"1\"]\n";
-    }
+    // Get the fields
+    pgn = std::string(*this);
 
     pgn += "\n";
+    
+    chess::StateList& history = board.history();
+    chess::Board copy;
 
-    if (!gh || gh->history.size() <= 1)
+    if (history.size() == 0)
         return pgn;
-        
-    // Move list, the first move is a nullmove, so we skip it
-    auto it = gh->history.begin();
-    it++;
-    chess::Board board;
-    if (fields.FEN != "")
-        board.loadFen(fields.FEN);
+    
+    // Setup the copy
+    if (fields["FEN"] != "")
+        copy.loadFen(fields["FEN"]);
     else
-        board.init();
-    chess::Manager manager(&board);
-    manager.generateMoves();
+        copy.init();
 
-    if (board.getSide() == chess::Piece::Black){
-        pgn += std::to_string(board.fullmoveCounter()) + "... ";
-        pgn += get_move_notation(&manager, gh, it->move);
+    auto it = history.begin();
+
+    // If the game started with black (the position was setup and black is to move)
+    if (board.getSide() == chess::Piece::Black)
+    {
+        pgn += std::to_string(copy.fullmoveCounter()) + "... "; // skip for white
+        pgn += get_move_notation(copy, it->move); // black move
         it++;
     }
     
-    for(; it != gh->history.end();)
+    // Loop through the history and generate the PGN, starting with white
+    for(; it != history.end();)
     {
-        pgn += std::to_string(board.fullmoveCounter()) + ". ";
-        pgn += get_move_notation(&manager, gh, it->move);
+        // White move
+        pgn += std::to_string(copy.fullmoveCounter()) + ". ";
+        pgn += get_move_notation(copy, it->move) + " ";
         it++;
 
-        if (it == gh->history.end())
+        if (it == history.end())
             break;
 
-        pgn += get_move_notation(&manager, gh, it->move);
+        // Black move
+        pgn += get_move_notation(copy, it->move) + " ";
         it++;
     }
 
-    pgn += pgn_game_status(fields.Result.status, fields.Result.colorWin);
+    // Add the game result
+    pgn += fields["Result"];
 
     return pgn;
 }

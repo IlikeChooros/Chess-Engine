@@ -40,29 +40,27 @@ uint64_t Perft::run(int depth, std::string fen)
 template <bool root>
 uint64_t Perft::perft(int depth)
 {
-    chess::GameHistory gh(&m_board);
-    chess::MoveList ml;
-    size_t moves = gen_legal_moves(&ml, &m_board);
+    chess::MoveList moves = m_board.generateLegalMoves();
 
     if(depth == 1){
         if (root && m_print) 
         {
-            for(size_t i = 0; i < moves; i++)
+            for(size_t i = 0; i < moves.size(); i++)
             {
-                std::cout << ml[i].uci() << ": " << 1UL << "\n";
+                std::cout << moves[i].uci() << ": " << 1UL << "\n";
             }
         }  
-        return (uint64_t)moves;
+        return (uint64_t)moves.size();
     }
 
     uint64_t nodes = 0, cnodes = 0;
-    for(size_t i = 0; i < moves; i++)
+    for(size_t i = 0; i < moves.size(); i++)
     {
-        auto move = chess::Move(ml[i]);
-        make(move, &m_board, &gh);
+        auto move = moves[i];
+        m_board.makeMove(move);
         cnodes = perft<false>(depth - 1);
         nodes += cnodes;
-        unmake(move, &m_board, &gh);
+        m_board.undoMove(move);
 
         if (root && m_print)
         {

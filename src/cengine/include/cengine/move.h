@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <vector>
 #include <cstring>
 
@@ -246,21 +247,22 @@ class Move
     uint16_t m_move;
 };
 
-// Move list class, stores a list of moves
+// Move list class, stores a list of moves, supports the range based for loops
 class MoveList
 {
 public:
     typedef uint16_t move_t;
     static constexpr size_t MAX_MOVES = 256;
 
-    // Iterator for the move list
+    // Iterator for the move list, has all the necessary functions
+    // required for a forward iterator
     class MoveListIterator {
     public:
         using iterator_category = std::forward_iterator_tag;
-        using difference_type = std::ptrdiff_t;
-        using value_type = move_t;
-        using pointer = move_t*;
-        using reference = move_t&;
+        using difference_type   = std::ptrdiff_t;
+        using value_type        = move_t;
+        using pointer           = move_t*;
+        using reference         = move_t&;
 
         MoveListIterator(move_t* ptr): m_ptr(ptr) {}
 
@@ -343,10 +345,40 @@ public:
 
     inline size_t size() const {return n_moves;}
     inline static constexpr size_t capacity() {return MAX_MOVES;}
+
+    /**
+     * @brief Add a move to the list (move_t)
+     */
     inline void add(move_t move) {moves[n_moves++] = move;}
+
+    /**
+     * @brief Add a move to the list
+     */
     inline void add(const Move& move) {add(move.get());}
+
+    /**
+     * @brief Add the moves from another move list
+     */
+    inline void add(const MoveList& other)
+    {
+        if (n_moves + other.n_moves > MAX_MOVES)
+            return;
+        
+        memcpy(moves + n_moves, other.moves, other.n_moves * sizeof(move_t));
+        n_moves += other.n_moves;
+    }
+
+    /**
+     * @brief Clear the move list, just sets the number of moves to 0
+     */
     inline void clear() {n_moves = 0;}
+
+    /**
+     * @brief Get the move at the given index
+     */
     inline Move operator[](size_t i) {return Move(moves[i]);}
+
+    // Iterator functions
     inline iterator begin() {return iterator(moves);}
     inline iterator end() {return iterator(moves + n_moves);}
     inline reverse_iterator rbegin() {return reverse_iterator(end());}

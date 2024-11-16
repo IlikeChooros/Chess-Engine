@@ -6,13 +6,17 @@ int main(int argc, char** argv)
 
     uci::UCI uci;
     uci.loop();
-
-    // using namespace chess;
-
-    // init();
-
-    // Board board;
-    // board.loadFen("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3");
-    // board.print();
+    // uci.sendCommand("isready");
+    // uci.sendCommand("ucinewgame");
+    // uci.sendCommand("position fen r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2 moves h7h4");
+    // uci.sendCommand("go movetime 1000");
+    
+    // std::this_thread::sleep_for(std::chrono::seconds(1));
+    // uci.sendCommand("stop");
+    // uci.sendCommand("position fen r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2 moves h7h4 h1h4");
+    // uci.sendCommand("go movetime 1000");
+    // std::this_thread::sleep_for(std::chrono::seconds(1));
+    // uci.sendCommand("stop");
+    // uci.sendCommand("quit");
     return 0;
 }

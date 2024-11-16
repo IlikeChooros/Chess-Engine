@@ -58,4 +58,107 @@ namespace chess
     const int Mailbox::n_piece_rays[6] = {
         0, 8, 8, 4, 4, 8 // Empty (Pawn), Knight, King, Bishop, Rook, Queen
     };
+
+
+    /**
+     * @brief Generate attacks for a given piece type
+     * 
+     * @param type The type of the piece (Piece::Rook - 1, Piece::Bishop - 1, Piece::Queen - 1, Piece::Knight - 1, Piece::King - 1)
+     * @param occupied The bitboard of the occupied squares
+     * @param square The square of the piece
+     */
+    Bitboard Mailbox::mailboxAttacks(int type, Bitboard occupied, int square, bool is_sliding)
+    {
+        Bitboard attacks = 0;
+        for(int j = 0; j < n_piece_rays[type]; j++){
+            for(int n = square;;){
+                // mailbox64 has indexes for the 64 valid squares in mailbox.
+                // If, by moving the piece, we go outside of the valid squares (n == -1),
+                // we break the loop. Else, the n has the index of the next square.
+                n = mailbox[mailbox64[n] + piece_move_offsets[type][j]];
+                if (n == -1){// outside of the board
+                    break;
+                }
+                
+                // Attack = possible move 
+                attacks |= 1ULL << n;
+
+                // If the square is not empty
+                if (occupied & (1ULL << n) || !is_sliding)
+                    break;
+
+            }
+        }
+        return attacks;
+    }
+
+    /**
+     * @brief Generate pawn attacks for a given square
+     */
+    Bitboard Mailbox::mailboxPawnMoves(Bitboard occupied, int square, bool is_white)
+    {
+        const int ranks[2]   = {1, 6};
+        bool is_special_rank = (square >> 3) == ranks[is_white];
+        Bitboard moves       = 0;
+
+        for(int j = 0; j < 2; j++)
+        {
+            int n = mailbox[mailbox64[square] + pawn_move_offsets[is_white][j]];
+
+            // Check if the square is outside of the board or if it's occupied
+            if (n == -1 || occupied & (1ULL << n))
+                break;
+            
+            moves |= 1ULL << n;
+
+            // Break if the pawn is not on the 2nd (white) or 7th (black) rank
+            if(!is_special_rank)
+                break;
+        }
+        return moves;
+    }
+
+    /**
+     * @brief Generate bishop attacks for a given square
+     */
+    Bitboard Mailbox::mailboxBishop(int square, Bitboard occupied)
+    {
+        return mailboxAttacks(Piece::Bishop - 1, occupied, square, true);
+    }
+
+    /**
+     * @brief Generate rook attacks for a given square
+     */
+    Bitboard Mailbox::mailboxRook(int square, Bitboard occupied)
+    {
+        return mailboxAttacks(Piece::Rook - 1, occupied, square, true);
+    }
+
+    /**
+     * @brief Generate bishop mask for a given square
+     */
+    Bitboard Mailbox::bishopMask(int square)
+    {
+        Bitboard result = 0ULL;
+        int rk = square / 8, fl = square % 8, r, f;
+        for(r = rk + 1, f = fl + 1; r <= 6 && f <= 6; r++, f++) result |= (1ULL << (f + r * 8));
+        for(r = rk + 1, f = fl - 1; r <= 6 && f >= 1; r++, f--) result |= (1ULL << (f + r * 8));
+        for(r = rk - 1, f = fl + 1; r >= 1 && f <= 6; r--, f++) result |= (1ULL << (f + r * 8));
+        for(r = rk - 1, f = fl - 1; r >= 1 && f >= 1; r--, f--) result |= (1ULL << (f + r * 8));
+        return result;
+    }
+
+    /**
+     * @brief Generate rook mask for a given square
+     */
+    Bitboard Mailbox::rookMask(int square)
+    {
+        Bitboard result = 0ULL;
+        int rk = square / 8, fl = square % 8, r, f;
+        for(r = rk + 1; r <= 6; r++) result |= (1ULL << (fl + r * 8));
+        for(r = rk - 1; r >= 1; r--) result |= (1ULL << (fl + r * 8));
+        for(f = fl + 1; f <= 6; f++) result |= (1ULL << (f + rk * 8));
+        for(f = fl - 1; f >= 1; f--) result |= (1ULL << (f + rk * 8));
+        return result;
+    }
 };

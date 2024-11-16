@@ -3,8 +3,6 @@ add_library(cengine)
 target_sources(cengine
     PRIVATE
         src/board.cpp
-        src/manager.cpp
-        src/manager_impl.cpp
         src/move_gen.cpp
         src/eval.cpp
         src/search.cpp

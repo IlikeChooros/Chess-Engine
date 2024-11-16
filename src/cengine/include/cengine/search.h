@@ -36,12 +36,12 @@ namespace chess
     private:
 
         void iterative_deepening();
-        Value qsearch(Board board, Value alpha, Value beta, int depth);
+        Value qsearch(Board& board, Value alpha, Value beta, int depth);
 
         template <NodeType>
-        Value search(Board board, Value alpha, Value beta, int depth);
+        Value search(Board& board, Value alpha, Value beta, int depth);
 
-        MoveList get_pv(int max_depth = 10);        
+        MoveList get_pv(int max_depth = 10);
 
         Board m_board;
         SearchCache *m_search_cache;

@@ -9,7 +9,7 @@
 // Universal Chess Interface
 namespace uci
 {
-    std::string uciReadCommImpl(chess::Engine* manager, std::string input);
+    std::string uciReadCommImpl(chess::Engine* engine, std::string input);
 
     class UCI
     {

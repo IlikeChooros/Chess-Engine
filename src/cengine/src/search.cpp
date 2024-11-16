@@ -96,6 +96,7 @@ namespace chess
         Value beta            = MAX;
         int depth             = 1;
         m_result              = {};
+        int whotomove         = m_board.turn() ? 1 : -1;
 
         // Iterative deepening loop
         while(true)
@@ -118,9 +119,9 @@ namespace chess
 
             // Print info
             m_result.pv = get_pv(10);
-            update_score(m_result.score, besteval, m_board.turn(), m_result.pv); 
+            update_score(m_result.score, besteval, whotomove, m_result.pv); 
             glogger.printInfo(
-                depth, besteval, m_result.score.type == Score::cp, 
+                depth, m_result.score.value, m_result.score.type == Score::cp, 
                 m_interrupt.nodes(), m_interrupt.time(), &m_result.pv
             );
 
@@ -147,7 +148,7 @@ namespace chess
     /**
      * @brief Run quiescence search
      */
-    Value Thread::qsearch(Board board, Value alpha, Value beta, int depth)
+    Value Thread::qsearch(Board& board, Value alpha, Value beta, int depth)
     {   
         // Evaluate the position
         Value     eval = evaluate(&board, nullptr, nullptr);
@@ -199,7 +200,7 @@ namespace chess
      * @brief Priciple variation search
      */
     template <NodeType nType>
-    Value Thread::search(Board board, Value alpha, Value beta, int depth)
+    Value Thread::search(Board& board, Value alpha, Value beta, int depth)
     {
         constexpr bool isRoot = nType == Root;
 
@@ -223,6 +224,10 @@ namespace chess
                     return entry.score;
             }
         }
+
+        // Check if the search should stop
+        if (m_interrupt.get())
+            return 0;
 
         // Quiescence search
         if (depth == 0)
@@ -254,7 +259,6 @@ namespace chess
             MoveOrdering::sort(&moves, nullptr, &board, m_search_cache);
         }
         
-        
         // Loop through all the moves and evaluate them
         for (size_t i = 0; i < moves.size(); i++)
         {
@@ -266,15 +270,15 @@ namespace chess
             Value eval = -search<nonRoot>(board, -beta, -alpha, depth - 1);
             board.undoMove(m);
 
+            if (m_interrupt.get())
+                return 0;
+
             if (eval > best)
             {
                 best = eval;
                 alpha = std::max(alpha, best);
                 bestmove = m;
             }
-
-            if (m_interrupt.get())
-                return 0;
 
             if (best >= beta)
                 break;     

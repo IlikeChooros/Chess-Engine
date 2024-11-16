@@ -28,9 +28,11 @@ namespace chess{
      */
     class Board: public Mailbox
     {
+        friend class Engine;
 
         void push_state(Move move);
         void verify_castling_rights();
+        static void init_board();
 
     public:
         typedef MoveList::move_filter_t MoveFilter;
@@ -53,11 +55,12 @@ namespace chess{
 
         Board();
         Board(const Board& other);
+        Board(std::string fen);
         Board& operator=(const Board& other);
         
         Board& init();
         void loadFen(std::string fen);
-        std::string getFen();
+        std::string fen();
         void updateBitboards();
         void makeMove(Move move);
         void undoMove(Move move);
@@ -69,6 +72,8 @@ namespace chess{
         bool isLegal(Move move);
         Move match(Move move);
 
+        Bitboard generateDanger();
+        inline MoveList generateEvasions(Bitboard danger);
         MoveList generateLegalCaptures();
         MoveList generateLegalMoves();
         MoveList filterMoves(MoveFilter filter);

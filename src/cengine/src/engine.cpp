@@ -9,7 +9,7 @@ namespace chess
  */
 void Engine::init()
 {
-    init_board();
+    Board::init_board();
     init_eval();
     init_hashing();
     init_magics(false);
@@ -53,7 +53,7 @@ void Engine::reset()
  */
 uint64_t Engine::perft(int depth, bool print)
 {
-    return bench::Perft().run(depth, m_board.getFen());
+    return bench::Perft().run(depth, m_board.fen());
 }
 
 /**
@@ -62,7 +62,7 @@ uint64_t Engine::perft(int depth, bool print)
  */
 std::future<Result> Engine::go(SearchOptions& options)
 {
-    m_main_thread.join();
+    m_main_thread.stop();
     m_main_thread.start_thinking(m_board, m_search_cache, options.limits());
     return m_main_thread.get_future();
 }

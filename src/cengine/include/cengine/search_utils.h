@@ -150,7 +150,7 @@ public:
     // Update depth
     void depth(int depth)
     {
-        m_stop = (depth > m_limits.depth);
+        m_stop = (m_stop.load() || (depth > m_limits.depth));
     }
 
     // Increment nodes by 1, and check if the search should stop (based on time)
@@ -165,7 +165,7 @@ public:
     void add_nodes(uint64_t nodes)
     {
         m_nodes += nodes;
-        m_stop = (m_nodes.load() > m_limits.nodes);
+        m_stop = (m_stop.load() || (m_nodes.load() > m_limits.nodes));
     }
 
     // Get the number of nodes searched

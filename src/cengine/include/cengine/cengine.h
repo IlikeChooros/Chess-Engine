@@ -24,7 +24,6 @@
 */
 
 #include "settings.h"
-#include "manager.h"
 #include "perft.h"
 #include "move.h"
 #include "move_gen.h"

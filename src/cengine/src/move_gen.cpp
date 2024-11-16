@@ -5,60 +5,7 @@
  */
 void init_board()
 {
-    // Initialize the in_between array
-    // Taken from: https://www.chessprogramming.org/Square_Attacked_By
-    // This array gives the squares in-between two squares
-    // For example, in_between[0][8] gives the squares in-between f6 and c3:
-    // . . . . . . . . 8
-    // . . . . . . . . 7
-    // . . . . . . . . 6
-    // . . . . 1 . . . 5
-    // . . . 1 . . . . 4
-    // . . . . . . . . 3
-    // . . . . . . . . 2
-    // . . . . . . . . 1
-    // a b c d e f g h
 
-    using namespace chess;
-
-    const uint64_t m1   = (-1);
-    const uint64_t a2a7 = (0x0001010101010100);
-    const uint64_t b2g7 = (0x0040201008040200);
-    const uint64_t h1b7 = (0x0002040810204080); /* Thanks Dustin, g2b7 did not work for c1-a3 */
-    
-    for(int i = 0; i < 64; i++){
-        for(int j = 0; j < 64; j++){
-            uint64_t btwn, line, rank, file;
-            btwn  = (m1 << i) ^ (m1 << j);
-            file  =   (j & 7) - (i   & 7);
-            rank  =  ((j | 7) -  i) >> 3 ;
-            line  =      (   (file  &  7) - 1) & a2a7; /* a2a7 if same file */
-            line += 2 * ((   (rank  &  7) - 1) >> 58); /* b1g1 if same rank */
-            line += (((rank - file) & 15) - 1) & b2g7; /* b2g7 if same diagonal */
-            line += (((rank + file) & 15) - 1) & h1b7; /* h1b7 if same antidiag */
-            line *= btwn & -btwn; /* mul acts like shift by smaller square */
-            Board::in_between[i][j] = line & btwn;   /* return the bits on that line in-between */
-        }
-    }
-
-    // Init piece attacks
-    for(int i = 0; i < 64; i++){
-        Board::pieceAttacks[Board::KING_TYPE][i] = mailboxAttacks(Piece::King - 1, 0, i , false);
-        Board::pieceAttacks[Board::KNIGHT_TYPE][i] = mailboxAttacks(Piece::Knight - 1, 0, i , false);
-        Board::pieceAttacks[Board::BISHOP_TYPE][i] = mailboxAttacks(Piece::Bishop - 1, 0, i, true);
-        Board::pieceAttacks[Board::ROOK_TYPE][i] = mailboxAttacks(Piece::Rook - 1, 0, i, true);
-        Board::pieceAttacks[Board::QUEEN_TYPE][i] = mailboxAttacks(Piece::Queen - 1, 0, i, true);
-
-        // Pawn attacks
-        for(int j = 0; j < 2; j++){
-            for(int k = 0; k < 2; k++){
-                int n = Board::mailbox[Board::mailbox64[i] + Board::pawn_attack_offsets[j][k]];
-                if(n != -1){
-                    Board::pawnAttacks[j][i] |= 1ULL << n;
-                }
-            }
-        }
-    }
 }
 
 /**

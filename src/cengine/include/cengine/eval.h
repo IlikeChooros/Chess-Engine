@@ -22,6 +22,7 @@ namespace chess
     // TODO: delete this
     GameStatus get_status(Board* board, GameHistory* gh, MoveList *ml);
     GameStatus get_status(Board* board, MoveList *ml);
+    GameStatus get_status(Board& board);
     
     std::string game_status_to_string(GameStatus status);
 

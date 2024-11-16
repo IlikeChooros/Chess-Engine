@@ -97,7 +97,7 @@ TEST(Board, getFen)
 {
     Board b;
     b.init();
-    std::string fen = b.getFen();
+    std::string fen = b.fen();
     const char* target = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     EXPECT_STREQ(fen.c_str(), target);
 }
@@ -106,7 +106,7 @@ TEST(Board, loadGetFen){
     Board b;
     const char* fen = "8/5k2/3p4/1p1Pp2p/pP2Pp1P/P4P1K/8/8 b - - 99 50";
     b.loadFen(fen);
-    std::string getfen = b.getFen();
+    std::string getfen = b.fen();
     EXPECT_STREQ(fen, getfen.c_str());
 }
 

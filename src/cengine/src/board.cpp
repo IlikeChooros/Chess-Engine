@@ -12,6 +12,67 @@ namespace chess
     // Starting position
     const char Board::START_FEN[57] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
+
+    // Init board
+    void Board::init_board()
+    {
+        // Initialize the in_between array
+        // Taken from: https://www.chessprogramming.org/Square_Attacked_By
+        // This array gives the squares in-between two squares
+        // For example, in_between[0][8] gives the squares in-between f6 and c3:
+        // . . . . . . . . 8
+        // . . . . . . . . 7
+        // . . . . . . . . 6
+        // . . . . 1 . . . 5
+        // . . . 1 . . . . 4
+        // . . . . . . . . 3
+        // . . . . . . . . 2
+        // . . . . . . . . 1
+        // a b c d e f g h
+
+        const uint64_t m1   = (-1);
+        const uint64_t a2a7 = (0x0001010101010100);
+        const uint64_t b2g7 = (0x0040201008040200);
+        const uint64_t h1b7 = (0x0002040810204080); /* Thanks Dustin, g2b7 did not work for c1-a3 */
+        
+        for(int i = 0; i < 64; i++){
+            for(int j = 0; j < 64; j++){
+                uint64_t btwn, line, rank, file;
+                btwn  = (m1 << i) ^ (m1 << j);
+                file  =   (j & 7) - (i   & 7);
+                rank  =  ((j | 7) -  i) >> 3 ;
+                line  =      (   (file  &  7) - 1) & a2a7; /* a2a7 if same file */
+                line += 2 * ((   (rank  &  7) - 1) >> 58); /* b1g1 if same rank */
+                line += (((rank - file) & 15) - 1) & b2g7; /* b2g7 if same diagonal */
+                line += (((rank + file) & 15) - 1) & h1b7; /* h1b7 if same antidiag */
+                line *= btwn & -btwn; /* mul acts like shift by smaller square */
+                in_between[i][j] = line & btwn;   /* return the bits on that line in-between */
+            }
+        }
+
+        // Init piece attacks
+        for(int i = 0; i < 64; i++)
+        {
+            pieceAttacks[KING_TYPE][i]   = mailboxAttacks(Piece::King - 1, 0, i , false);
+            pieceAttacks[KNIGHT_TYPE][i] = mailboxAttacks(Piece::Knight - 1, 0, i , false);
+            pieceAttacks[BISHOP_TYPE][i] = mailboxAttacks(Piece::Bishop - 1, 0, i, true);
+            pieceAttacks[ROOK_TYPE][i]   = mailboxAttacks(Piece::Rook - 1, 0, i, true);
+            pieceAttacks[QUEEN_TYPE][i]  = mailboxAttacks(Piece::Queen - 1, 0, i, true);
+
+            // Pawn attacks
+            for(int j = 0; j < 2; j++){
+                for(int k = 0; k < 2; k++){
+                    int n = mailbox[mailbox64[i] + pawn_attack_offsets[j][k]];
+                    if(n != -1){
+                        pawnAttacks[j][i] |= 1ULL << n;
+                    }
+                }
+            }
+        }
+    }
+
+    // Constructors
+
     Board::Board()
     {
         memset(board, Piece::Empty, sizeof(board));
@@ -32,7 +93,13 @@ namespace chess
 
     Board::Board(const Board& other)
     {
-        *this = other;
+        void(*this = other);
+    }
+
+    Board::Board(std::string fen)
+    {
+        m_history.reserve(64);
+        loadFen(fen);
     }
 
     Board& Board::operator=(const Board& other)
@@ -51,8 +118,9 @@ namespace chess
         m_irreversible_index = other.m_irreversible_index;
 
         for(int i = 0; i < 2; i++)
-            memset(m_bitboards[i], 0, sizeof(m_bitboards[i]));
-        
+            for(int j = 0; j < 6; j++)
+                m_bitboards[i][j] = other.m_bitboards[i][j];
+            
         m_castling_rights    = other.m_castling_rights;
         m_history            = other.m_history;
     
@@ -229,7 +297,7 @@ namespace chess
     /**
      * @brief Get the fen string of the current board
      */
-    std::string Board::getFen()
+    std::string Board::fen()
     {
         std::string fen;
         fen.reserve(128);
@@ -390,7 +458,7 @@ namespace chess
         std::cout << "Castling rights: " << m_castling_rights.str() << "\n";
         std::cout << "Captured piece: " << Piece::toChar(m_captured_piece) << "\n";
 
-        MoveList moves = generateLegalCaptures();
+        MoveList moves = generateLegalMoves();
         for (auto& move : moves)
         {
             std::cout << Move(move).uci() << "\n";
@@ -657,12 +725,6 @@ namespace chess
         // m_bitboards[is_white][type - 1] |= 1ULL << to;
 
         m_side = Piece::opposite(m_side);
-
-        if (!checkIntegrity())
-        {
-            std::cout << "(make)Integrity check failed: " << move.uci() << "\n";
-            print();
-        }
     }
 
     /**
@@ -765,12 +827,6 @@ namespace chess
         m_castling_rights  = history.castling_rights;
         m_fullmove_counter = history.fullmove_counter;
         m_captured_piece   = history.captured_piece;
-
-        if (!checkIntegrity())
-        {
-            std::cout << "(unmake)Integrity check failed: " << move.uci() << "\n";
-            print();
-        }
     }
 
     /**
@@ -890,8 +946,8 @@ namespace chess
      */
     void _gen_sliding_moves_no_check(
         chess::MoveList* moves, Bitboard piece_bb,
-        uint64_t occupied, uint64_t enemy_king, uint64_t enemy_pieces, 
-        uint64_t pinned, uint64_t pinners, int king, bool is_white,
+        uint64_t occupied, uint64_t enemy_pieces, 
+        uint64_t pinned, uint64_t pinners, Square king,
         attacks_func_t attackFunc
     )
     {
@@ -924,8 +980,8 @@ namespace chess
     void _gen_pieces_moves_in_check(
         chess::MoveList* moves, Bitboard piece_bb,
         uint64_t occupied, uint64_t attackers, uint64_t not_pinned, 
-        uint64_t block_path, uint64_t enemy_king, int attackers_sq, 
-        bool is_white, attacks_func_t attackFunc
+        uint64_t block_path, int attackers_sq, 
+        attacks_func_t attackFunc
     )
     {
         Square   sq;
@@ -939,6 +995,7 @@ namespace chess
             block_moves  = attackFunc(occupied, sq);
             captures     = block_moves & attackers;
             block_moves &= ~occupied & block_path;
+
             // If that's a capture, add the move
             if (captures){
                 moves->add(Move::fmove(sq, attackers_sq, Move::FLAG_CAPTURE));
@@ -967,22 +1024,37 @@ namespace chess
     }
 
     /**
-     * @brief Generate all the moves for the current board
+     * @brief Generate evasion moves (for king only)
      */
-    MoveList Board::generateLegalMoves()
+    inline MoveList Board::generateEvasions(Bitboard danger)
     {
+        // Generate king moves
+        // King can only move to evade the check
         MoveList moves;
+        bool is_white         = turn();
+        Bitboard occupied     = this->occupied();
+        Bitboard enemy_pieces = this->occupied(!is_white);
+        Square   king         = bitScanForward(m_bitboards[is_white][Piece::King - 1]);
+        Bitboard kmoves       = Board::pieceAttacks[Board::KING_TYPE][king] & ~occupied & ~danger;
+        Bitboard captures     = Board::pieceAttacks[Board::KING_TYPE][king] & enemy_pieces & ~danger;
 
+        while(kmoves) moves.add(Move::fmove(king, pop_lsb1(kmoves), Move::FLAG_NONE));
+        while(captures) moves.add(Move::fmove(king, pop_lsb1(captures), Move::FLAG_CAPTURE));
+        
+        return moves;
+    }
+
+    /**
+     * @brief Generate all attacked squares by enemy pieces
+     */
+    Bitboard Board::generateDanger()
+    {
         bool is_white            = turn();
         bool is_enemy            = !is_white;
-        Bitboard occupied        = this->occupied();
-        Bitboard occupied_noking = occupied ^ m_bitboards[is_white][Piece::King - 1];
-        Bitboard enemy_pieces    = this->occupied(is_enemy);
-        Bitboard allied_pieces   = occupied ^ enemy_pieces;
+        Bitboard occupied_noking = occupied() ^ m_bitboards[is_white][Piece::King - 1];
         Bitboard enemy_king      = m_bitboards[is_enemy][Piece::King - 1];
-        Square king              = bitScanForward(m_bitboards[is_white][Piece::King - 1]);
 
-        // Step 1: Generate attacks for enemy pieces (to check if the king is in check)
+        // Generate attacks for enemy pieces (to check if the king is in check)
         Bitboard bitboard;
         Bitboard danger = 0;
 
@@ -1012,6 +1084,27 @@ namespace chess
         
         // Generate attacks for enemy king
         danger |= Board::pieceAttacks[Board::KING_TYPE][bitScanForward(enemy_king)];
+
+        return danger;
+    }
+
+    /**
+     * @brief Generate all the moves for the current board
+     */
+    MoveList Board::generateLegalMoves()
+    {
+        MoveList moves;
+
+        bool is_white            = turn();
+        bool is_enemy            = !is_white;
+        Bitboard occupied        = this->occupied();
+        Bitboard enemy_pieces    = this->occupied(is_enemy);
+        Bitboard allied_pieces   = occupied ^ enemy_pieces;
+        Square king              = bitScanForward(m_bitboards[is_white][Piece::King - 1]);
+
+        // Step 1: Generate attacks for enemy pieces (to check if the king is in check)
+        Bitboard bitboard;
+        Bitboard danger = generateDanger();
 
         // Step 2: Generate pinned pieces
         // Source (modified): https://www.chessprogramming.org/Pinned_Pieces
@@ -1046,19 +1139,10 @@ namespace chess
             attackers |= Board::pawnAttacks[is_white][king] & bitboards(is_enemy)[Piece::Pawn - 1];
 
             // If there are more than one attackers, the king is in double check, only king moves are allowed
-            if (attackers & (attackers - 1)){
-                // Generate king moves
-                // King can only move to evade the check
-                Bitboard kmoves = Board::pieceAttacks[Board::KING_TYPE][king] & ~occupied & ~danger;
-                Bitboard captures = Board::pieceAttacks[Board::KING_TYPE][king] & enemy_pieces & ~danger;
+            if (attackers & (attackers - 1))
+                return generateEvasions(danger);
 
-                while(kmoves) moves.add(Move::fmove(king, pop_lsb1(kmoves), Move::FLAG_NONE));
-                while(captures) moves.add(Move::fmove(king, pop_lsb1(captures), Move::FLAG_CAPTURE));
-                
-                return moves;
-            }
-
-             // Generate moves to block the check,
+            // Generate moves to block the check,
             // The things to look out for when generating moves:
             // - My pieces might be pinned:
             //   - pinned pieces cannot move when the king is in check (them moving would expose the king)
@@ -1074,29 +1158,25 @@ namespace chess
             // Generate moves for bishops
             _gen_pieces_moves_in_check(
                 &moves, m_bitboards[is_white][BISHOP_TYPE], occupied, attackers, 
-                not_pinned, block_path, enemy_king, attackers_sq, 
-                is_white, bishopAttacks
+                not_pinned, block_path, attackers_sq, bishopAttacks
             );
 
             // Generate moves for rooks
             _gen_pieces_moves_in_check(
                 &moves, m_bitboards[is_white][ROOK_TYPE], occupied, attackers, 
-                not_pinned, block_path, enemy_king, attackers_sq, 
-                is_white, rookAttacks
+                not_pinned, block_path, attackers_sq, rookAttacks
             );
 
             // Generate moves for queens
             _gen_pieces_moves_in_check(
                 &moves, m_bitboards[is_white][QUEEN_TYPE], occupied, attackers, 
-                not_pinned, block_path, enemy_king, attackers_sq, 
-                is_white, queenAttacks
+                not_pinned, block_path, attackers_sq, queenAttacks
             );
 
             // Generate moves for knights
             _gen_pieces_moves_in_check(
                 &moves, m_bitboards[is_white][KNIGHT_TYPE], occupied, attackers, 
-                not_pinned, block_path, enemy_king, attackers_sq, 
-                is_white, knightAttacks
+                not_pinned, block_path, attackers_sq, knightAttacks
             );
 
             // Generate moves for pawns
@@ -1107,10 +1187,10 @@ namespace chess
 
             while(bitboard)
             {
-                int sq = pop_lsb1(bitboard);
-                Bitboard captures = Board::pawnAttacks[is_white][sq] & attackers;
+                Square sq          = pop_lsb1(bitboard);
+                Bitboard captures  = Board::pawnAttacks[is_white][sq] & attackers;
                 Bitboard enpassant = m_enpassant_target ? Board::pawnAttacks[is_white][sq] & (1ULL << (m_enpassant_target)) : 0;
-                int rank = sq >> 3;
+                Square rank        = sq >> 3;
 
                 // If the enpassant is possible and the attacker is on a valid capture square, then add the move
                 if (enpassant && attackers & (1ULL << (m_enpassant_target + offset[is_white]))){
@@ -1130,8 +1210,8 @@ namespace chess
                 }
 
                 // Generate normal pawn moves
-                int n = Board::mailbox[Board::mailbox64[sq] + Board::pawn_move_offsets[is_white][0]];
-                Bitboard pmoves = (1ULL << n) & ~occupied;
+                Square   to     = Board::mailbox[Board::mailbox64[sq] + Board::pawn_move_offsets[is_white][0]];
+                Bitboard pmoves = (1ULL << to) & ~occupied;
 
                 // If the pawn push is blocked, stop here
                 if(!pmoves)
@@ -1139,25 +1219,29 @@ namespace chess
 
                 if (pmoves & block_path){
                     // If the pawn is on the 2nd (black) or 7th rank (white), generate promotion moves
-                    if (rank == ranks[!is_white]){
-                        int to = bitScanForward(pmoves);
+                    if (rank == ranks[!is_white])
+                    {
                         moves.add(Move::fmove(sq, to, Move::FLAG_ROOK_PROMOTION));
                         moves.add(Move::fmove(sq, to, Move::FLAG_BISHOP_PROMOTION));
                         moves.add(Move::fmove(sq, to, Move::FLAG_KNIGHT_PROMOTION));
                         moves.add(Move::fmove(sq, to, Move::FLAG_QUEEN_PROMOTION));
                         continue;
                     }      
-                    moves.add(Move::fmove(sq, n, Move::FLAG_NONE));
+                    moves.add(Move::fmove(sq, to, Move::FLAG_NONE));
                 }
 
                 // If the pawn is on the 2nd (white) or 7th rank (black), generate double pawn push
-                if (rank == ranks[is_white]){
-                    n = Board::mailbox[Board::mailbox64[sq] + Board::pawn_move_offsets[is_white][1]];
-                    if ((1ULL << n) & ~occupied & block_path){
-                        moves.add(Move::fmove(sq, n, Move::FLAG_DOUBLE_PAWN));
+                if (rank == ranks[is_white])
+                {
+                    to = Board::mailbox[Board::mailbox64[sq] + Board::pawn_move_offsets[is_white][1]];
+                    if ((1ULL << to) & ~occupied & block_path){
+                        moves.add(Move::fmove(sq, to, Move::FLAG_DOUBLE_PAWN));
                     }
                 }
             }
+
+            // Generate king moves
+            moves.add(generateEvasions(danger));
 
             // Return the moves after generation
             return moves;
@@ -1175,27 +1259,24 @@ namespace chess
 
         uint64_t bmoves, captures;
 
-        // Generate moves for bhisops
+        // Generate moves for bishops
         _gen_sliding_moves_no_check(
             &moves, m_bitboards[is_white][BISHOP_TYPE], 
-            occupied, enemy_king, enemy_pieces,
-            pinned, pinners, king, is_white, 
+            occupied, enemy_pieces, pinned, pinners, king,
             bishopAttacks
         );
 
         // Generate moves for rooks
         _gen_sliding_moves_no_check(
             &moves, m_bitboards[is_white][ROOK_TYPE], 
-            occupied, enemy_king, enemy_pieces,
-            pinned, pinners, king, is_white, 
+            occupied, enemy_pieces, pinned, pinners, king,
             rookAttacks
         );
 
         // Generate moves for queens
         _gen_sliding_moves_no_check(
             &moves, m_bitboards[is_white][QUEEN_TYPE], 
-            occupied, enemy_king, enemy_pieces,
-            pinned, pinners, king, is_white, 
+            occupied, enemy_pieces, pinned, pinners, king,
             queenAttacks
         );
 
@@ -1331,15 +1412,12 @@ namespace chess
         }
 
         // Generate moves for the king
-        bmoves = Board::pieceAttacks[Board::KING_TYPE][king] & ~occupied & ~danger;
-        captures = Board::pieceAttacks[Board::KING_TYPE][king] & enemy_pieces & ~danger;
-
-        while(bmoves) moves.add(Move::fmove(king, pop_lsb1(bmoves), Move::FLAG_NONE));
-        while(captures) moves.add(Move::fmove(king, pop_lsb1(captures), Move::FLAG_CAPTURE));
+        moves.add(generateEvasions(danger));
 
         // Generate castling moves, I assume that castling rights are correct
-        // Hence I always verify the castling rights
-        // verify_castling_rights();
+        // TODO: Fix this shit, without this line of code, castling generation doesn't work
+        // in some bizzare cases and fails `PerfTest`
+        verify_castling_rights();
         const uint32_t colors[2] = { CastlingRights::BLACK, CastlingRights::WHITE };
 
         if (castlingRights().has(colors[is_white]))

@@ -267,6 +267,9 @@ namespace chess
         return ONGOING;
     }
 
+    /**
+     * @brief Get the status of the game (ongoing, checkmate, stalemate, draw)
+     */
     GameStatus get_status(Board* board, MoveList *ml)
     {
         if (board->halfmoveClock() >= 100){
@@ -291,6 +294,15 @@ namespace chess
         }
 
         return ONGOING;
+    }
+
+    /**
+     * @brief Get the status of the game (ongoing, checkmate, stalemate, draw)
+     */
+    GameStatus get_status(Board& board)
+    {
+        MoveList ml = board.generateLegalMoves();
+        return get_status(&board, &ml);
     }
 
     /**

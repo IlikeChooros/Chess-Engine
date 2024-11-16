@@ -50,6 +50,9 @@ class Evaluation:
 
         # Read the principal variation
         self.pv.clear()
+        if 'pv' not in splitted:
+            return
+
         pv_index: int = splitted.index('pv')
         while True:
             try:
@@ -143,7 +146,7 @@ class Engine:
         Read a single line from the engine output
         """
         out = self.process.stdout.readline().strip()
-        print(out)
+        print('[%s]: %s' % (self.name, out))
         return out
     
     def _try_read_line(self) -> str | None:

@@ -55,7 +55,7 @@ void Log::logBoardInfo(chess::Board* board)
         "Fullmoves: %d, "
         "Halfmoves: %d, "
         "En passant: %s\n",
-        board->getFen().c_str(),
+        board->fen().c_str(),
         board->getSide() == chess::Piece::White ? "White" : "Black",
         board->fullmoveCounter(),
         board->halfmoveClock(),

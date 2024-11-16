@@ -21,7 +21,7 @@ namespace uci
             " - r: Rook\n"
             " - b: Bishop\n"
             " - n: Knight\n\n"
-            "Example: position startpos moves e2e4 e7e5 g1f3 b8c6 f1c4 g8f6 d2d3\n"
+            "Example: position startpos\n"
             "Another one: position fen rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8 moves d7c8q\n\n"
         },
         {"go", 
@@ -237,7 +237,7 @@ namespace uci
                 break;
 
             case GetFen:
-                output = engine->board().getFen() + "\n";
+                output = engine->board().fen() + "\n";
                 break;
             
             case MakeMove: {
