@@ -102,10 +102,12 @@ class Engine:
     killed: bool = False
     search_options: SearchOptions = SearchOptions()
     name: str = 'Engine'
+    should_print: bool = False
 
-    def __init__(self, engine_path: str) -> None:
+    def __init__(self, engine_path: str, should_print = False) -> None:
         self.engine_path = engine_path
         self.name = pathlib.Path(engine_path).stem
+        self.should_print = should_print
 
         self.process = subprocess.Popen(
             engine_path,
@@ -130,7 +132,9 @@ class Engine:
         Read a single line from the engine output
         """
         out = self.process.stdout.readline().strip()
-        # print('[%s]: %s' % (self.name, out))
+
+        if self.should_print:
+            print('[%s]: %s' % (self.name, out))
         return out
     
     def _try_read_line(self) -> str | None:
@@ -171,6 +175,9 @@ class Engine:
         if command == 'quit':
             self.killed = True
 
+        if self.should_print:
+            print(command)
+        
         self.process.stdin.write(command + '\n')
         self.process.stdin.flush()
 

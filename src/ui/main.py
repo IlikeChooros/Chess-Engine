@@ -16,14 +16,14 @@ window = pygame.display.set_mode(settings.WINDOW_SIZE)
 pygame.display.set_caption('Chess Engine')
 
 # Create the board
-STARTING_FEN: str = 'r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2'
+STARTING_FEN: str = chess.STARTING_FEN
 board = chess.Board()
 board.set_fen(STARTING_FEN)
 
 # Create the engine
-engine_ = engine.Engine(settings.ENGINE_PATH)
+engine_ = engine.Engine(settings.ENGINE_PATH, should_print=True)
 search_options = engine.SearchOptions(
-    movetime=3000
+    movetime=10000
 )
 engine_.set_search_options(search_options)
 engine_.set_position(board)
