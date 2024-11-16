@@ -10,7 +10,6 @@
 #include "board.h"
 #include "transp_table.h"
 #include "settings.h"
-#include "history.h"
 
 class Log
 {
@@ -26,7 +25,6 @@ public:
     void logTTableInfo(TTable<TEntry>* ttable);
     void logBoardInfo(chess::Board* board);
     void logPV(chess::MoveList* pv);
-    void logGameHistory(chess::GameHistory* gh);
     void printInfo(int depth, int score, bool cp, uint64_t nodes, uint64_t time, chess::MoveList* pv = nullptr);
     void printf(const char* format, ...);
 };

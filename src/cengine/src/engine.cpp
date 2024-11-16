@@ -58,7 +58,7 @@ uint64_t Engine::perft(int depth, bool print)
 
 /**
  * @brief Start the search in async mode, call `join()` to make this function synchronous
- * @return Atomic result object, use `get()` to get the result
+ * @return Atomic like result object, use `get()` to get the result
  */
 shared_data<Result>& Engine::go(SearchOptions& options)
 {

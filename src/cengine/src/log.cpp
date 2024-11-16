@@ -73,19 +73,6 @@ void Log::logPV(chess::MoveList* pv)
     logf("\n");
 }
 
-void Log::logGameHistory(chess::GameHistory* gh)
-{
-    logf("Game History: ");
-    for (auto& hist : gh->history)
-    {
-        logf("%s%c ", 
-            chess::Move(hist.move).uci().c_str(),
-            hist.side_to_move == chess::Piece::White ? 'W' : 'B'
-        );
-    }
-    logf("\n");
-}
-
 void Log::printInfo(int depth, int score, bool cp, uint64_t nodes, uint64_t time, chess::MoveList* pv)
 {
     time = std::max(time, 1UL);
