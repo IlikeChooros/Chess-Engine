@@ -133,7 +133,15 @@ namespace uci
 
         if (command == "startpos")
         {
-            fen = "startpos";
+            fen = chess::Board::START_FEN;
+            if(iss >> command && command == "moves")
+            {
+                fen += " moves ";
+                while (iss >> command)
+                {
+                    fen += command + " ";
+                }
+            }
         }
         else if (command == "fen")
         {

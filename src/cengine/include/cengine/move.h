@@ -55,6 +55,9 @@ class Move
         return (flags << 12) | (from << 6) | to;
     }
 
+    // Check if the move is a capture
+    static bool capture(Move move) {return move.getFlags() & FLAG_CAPTURE;};
+
     /**
      * @brief Create a move from a string notation (e.g. e2e4, a7a8q),
      * user should call `setFlags` to set the flags for the move

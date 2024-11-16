@@ -159,14 +159,19 @@ class Engine:
     
     def _read_until_bestmove(self) -> str:
         """
-        Read the output of the engine until the bestmove command is found
+        Read the output of the engine until the bestmove command is found.
+        
+        May raise a ValueError if no move is found
 
         :return: string containing the bestmove output, ex: 'bestmove e2e4'
         """
         while True:
             line = self._read_line()
             if line.startswith('bestmove'):
-                return line
+                move = line.split()[1]
+                if move == '(none)':
+                    raise ValueError('No move found')
+                return move
             
 
     # Public methods
@@ -241,7 +246,7 @@ class Engine:
         :return: Best move found by the engine as a chess.Move object
         """
         self._send_command(f"go {str(self.search_options)}")
-        return chess.Move.from_uci(self._read_until_bestmove().split()[1])
+        return chess.Move.from_uci(self._read_until_bestmove())
     
 
     def isready(self) -> bool:

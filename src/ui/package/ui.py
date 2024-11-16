@@ -240,43 +240,33 @@ class AnalysisWindow(BaseWindow):
         inputs.handle_inputs(event, board)
 
 
-class MainMenuWindow(BaseWindow):
+class VersusWindow(BaseWindow):
     """
-    Main menu window class
+    Versus window class
     """
 
-    def __init__(self) -> None:
-        self.surface = pygame.Surface(settings.PROMOTION_MENU_SIZE)
-        self.surface.fill(DARK_COLOR)
+    def __init__(self, board: chess.Board) -> None:
+        self.board_widget = BoardWidget(board)
+        self.fps_widget = FPSWidget(pygame.time.Clock())
 
-        text = FONT.render('Main Menu', True, WHITE_COLOR)
-        self.surface.blit(text, text.get_rect(center=(settings.PROMOTION_MENU_SIZE[0] // 2, settings.EVALUATION_FONT_SIZE // 2)))
-        self.buttons: list[Button] = []
-
-        for index, option in enumerate(zip(['Analysis', 'Exit'], [lambda: change_window_path(WindowPath.ANALYSIS), lambda: change_ui_running(False)])):
-            text_str, callback = option
-            text = FONT.render(text_str, True, WHITE_COLOR)
-            rect = text.get_rect(center=(settings.PROMOTION_MENU_SIZE[0] // 2, (index + 1) * settings.EVALUATION_FONT_SIZE))
-            
-            self.surface.blit(text, rect)
-            self.buttons.append(
-                Button(text_str, (rect.x, rect.y), rect.size, callback)
-            )
-
-    def input(self, event: pygame.event.Event, **kwargs) -> None:
+    def update(self, board: chess.Board) -> None:
         """
-        Handle the input event
+        Update the versus window
         """
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            for index, button in enumerate(self.buttons):
-                if button.collidepoint(event.pos):
-                    print(f'Button {index} clicked')
+        self.board_widget.update(board)
 
     def draw(self, window: pygame.Surface) -> None:
         """
-        Draw the main menu window
+        Draw the versus window
         """
-        window.blit(self.surface, (0, 0))
+        self.board_widget.draw(window)
+        self.fps_widget.draw(window)
+    
+    def input(self, event: pygame.event.Event, board: chess.Board) -> None:
+        """
+        Handle the input event
+        """
+        inputs.handle_inputs(event, board)
 
 
 # ----------------- Utility functions -----------------

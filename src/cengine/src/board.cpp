@@ -1035,7 +1035,7 @@ namespace chess
      */
     MoveList Board::generateLegalCaptures()
     {
-        return generateLegalMoves().filter([](Move move){ return move.isCapture(); });
+        return generateLegalMoves().filter(Move::capture);
     }
 
     /**

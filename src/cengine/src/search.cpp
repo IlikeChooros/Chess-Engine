@@ -91,6 +91,17 @@ namespace chess
         int depth             = 1;
         m_result              = {};
         int whotomove         = m_board.turn() ? 1 : -1;
+        auto status           = get_status(m_board);
+
+        // Check if the game is over
+        if (status != ONGOING)
+        {
+            m_result.status  = status;
+            m_best_result    = m_result;
+            m_thinking       = false;
+            glogger.printf("bestmove (none)\n");
+            return;
+        }
 
         // Iterative deepening loop
         while(true)
@@ -112,7 +123,7 @@ namespace chess
                 break;
 
             // Print info
-            m_result.pv = get_pv(10);
+            m_result.pv = get_pv(16);
             update_score(m_result.score, besteval, whotomove, m_result.pv); 
             glogger.printInfo(
                 depth, m_result.score.value, m_result.score.type == Score::cp, 
@@ -147,27 +158,26 @@ namespace chess
         // Evaluate the position
         Value     eval  = evaluate(board);
         bool      turn  = board.turn();
-        MoveList moves  = board.generateLegalMoves();
-        Value    best   = MIN;
+        MoveList moves  = board.generateLegalCaptures();
 
         // Check if the search should stop
-        auto status = get_status(&board, &moves);
-        if (status != ONGOING)
-        {
-            if (status == DRAW || status == STALEMATE)
-                best = 0;
-            return best;
-        }
+        // auto status = get_status(&board, &moves);
+        // if (status != ONGOING)
+        // {
+        //     if (status == DRAW || status == STALEMATE)
+        //         best = 0;
+        //     return best;
+        // }
 
-        best = eval;
+        // (void)moves.filter(Move::capture);
 
         // Alpha beta pruning, if the evaluation is greater or equal to beta
         // that means the position is 'too good' for the side to move
-        if (best >= beta)
-            return best;
+        if (eval >= beta)
+            return beta;
 
         // Update alpha & get the legal captures
-        alpha = std::max(alpha, best);
+        alpha = std::max(alpha, eval);
 
         // Loop through all the captures and evaluate them
         for (size_t i = 0; i < moves.size(); i++)
@@ -179,18 +189,14 @@ namespace chess
             eval = -qsearch(board, -beta, -alpha, depth - 1);
             board.undoMove(m);
 
-            if (eval >= best)
-            {
-                best = eval;
-                alpha = std::max(alpha, best);
-            }
+            if (alpha >= beta)
+                return beta;
 
-            if (best >= beta)
-                break;
+            alpha = std::max(alpha, eval);
         }
 
         // Return the best possible evaluation
-        return best;
+        return alpha;
     }
 
     /**
@@ -232,7 +238,7 @@ namespace chess
         
         // Generate legal moves, setup variables for the search
         MoveList moves     = board.generateLegalMoves();
-        Value best         = MIN;
+        Value best         = MATE - depth;
         Move  bestmove     = Move::nullMove;
         bool  turn         = board.turn();
 
