@@ -2,7 +2,6 @@
 
 #include "utils.h"
 #include "board.h"
-#include "history.h"
 #include "cache.h"
 
 namespace chess
@@ -17,10 +16,8 @@ namespace chess
 
     
     void init_eval();
-    int evaluate(Board* board, CacheMoveGen* c, MoveList* ml);
+    int evaluate(Board& board);
 
-    // TODO: delete this
-    GameStatus get_status(Board* board, GameHistory* gh, MoveList *ml);
     GameStatus get_status(Board* board, MoveList *ml);
     GameStatus get_status(Board& board);
     

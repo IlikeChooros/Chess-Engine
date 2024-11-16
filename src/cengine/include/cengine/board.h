@@ -37,7 +37,7 @@ namespace chess{
     public:
         typedef MoveList::move_filter_t MoveFilter;
 
-        // Helper bitboards initialized in move_gen.cpp
+        // Helper bitboards initialized by `init_board()`
         static Bitboard in_between[64][64];
         static Bitboard pawnAttacks[2][64];
         static Bitboard pieceAttacks[6][64];
@@ -64,7 +64,8 @@ namespace chess{
         void updateBitboards();
         void makeMove(Move move);
         void undoMove(Move move);
-        uint64_t hash();
+        Bitboard hash();
+        Bitboard pawnHash();
 
         // TODO: Make this a template function with
         // type of repetition (3 fold, 5 fold)

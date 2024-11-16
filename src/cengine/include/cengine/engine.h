@@ -16,7 +16,6 @@ namespace chess
 
     Main class for interacting with the engine, setting the position and running the search
     
-    
     */
     class Engine
     {
@@ -29,7 +28,7 @@ namespace chess
         static void init();
         void reset();
         uint64_t perft(int depth, bool print = true);
-        std::future<Result> go(SearchOptions& options);
+        shared_data<Result>& go(SearchOptions& options);
         void join();
         void stop();
         void setPosition(const std::string& fen = Board::START_FEN);

@@ -514,13 +514,13 @@ namespace chess
     /**
      * @brief Generate hash of the board
      */
-    uint64_t Board::hash()
+    Bitboard Board::hash()
     {
         m_hash = 0;
 
         for(int type = 0; type < 6; type++){
-            uint64_t white = m_bitboards[1][type];
-            uint64_t black = m_bitboards[0][type];
+            Bitboard white = m_bitboards[1][type];
+            Bitboard black = m_bitboards[0][type];
 
             while(white){
                 m_hash ^= Zobrist::hash_pieces[0][type][pop_lsb1(white)];
@@ -540,6 +540,21 @@ namespace chess
         m_hash ^= Zobrist::hash_castling[castlingRights().get()];
 
         return m_hash;
+    }
+
+    /**
+     * @brief Generate hash of the pawn structure
+     */
+    Bitboard Board::pawnHash()
+    {
+        Bitboard hash = 0;
+        Bitboard white = m_bitboards[1][Piece::Pawn - 1];
+        Bitboard black = m_bitboards[0][Piece::Pawn - 1];
+
+        while(white) hash ^= Zobrist::hash_pieces[0][Piece::Pawn - 1][pop_lsb1(white)];
+        while(black) hash ^= Zobrist::hash_pieces[1][Piece::Pawn - 1][pop_lsb1(black)];
+        
+        return hash;
     }
 
     /**

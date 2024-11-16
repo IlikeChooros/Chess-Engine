@@ -1,8 +1,6 @@
 #pragma once
 
 #include "board.h"
-#include "move_gen.h"
-#include "history.h"
 
 // Benchmarking namespace mainly for perft test
 namespace bench

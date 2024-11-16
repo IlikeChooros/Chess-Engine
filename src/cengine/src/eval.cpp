@@ -110,13 +110,13 @@ namespace chess
      * @brief Evaluation function for the board in centipawns
      * positive values are good for white, negative values are good for black
      */
-    int evaluate(Board* board, CacheMoveGen* c, MoveList* ml)
+    int evaluate(Board& board)
     {
         int eval = 0;
-        bool is_white = board->getSide() == Piece::White;
+        bool is_white = board.getSide() == Piece::White;
         bool is_enemy = !is_white;
-        int king_sq = bitScanForward(board->bitboards(is_white)[Piece::King - 1]);
-        int eking_sq = bitScanForward(board->bitboards(is_enemy)[Piece::King - 1]);
+        int king_sq = bitScanForward(board.bitboards(is_white)[Piece::King - 1]);
+        int eking_sq = bitScanForward(board.bitboards(is_enemy)[Piece::King - 1]);
 
         const uint64_t file_bitboards[8] = {
             0x0101010101010101ULL,
@@ -135,8 +135,8 @@ namespace chess
                 continue;
             }
 
-            uint64_t epieces = board->bitboards(is_enemy)[type];
-            uint64_t apieces = board->bitboards(is_white)[type];
+            uint64_t epieces = board.bitboards(is_enemy)[type];
+            uint64_t apieces = board.bitboards(is_white)[type];
 
             while(epieces){
                 int sq = pop_lsb1(epieces);
@@ -151,26 +151,26 @@ namespace chess
         }
         
         // Bonus for having the bishop pair
-        if (pop_count(board->bitboards(is_white)[Piece::Bishop - 1]) >= 2){
+        if (pop_count(board.bitboards(is_white)[Piece::Bishop - 1]) >= 2){
             eval += 50;
         }
-        if (pop_count(board->bitboards(is_enemy)[Piece::Bishop - 1]) >= 2){
+        if (pop_count(board.bitboards(is_enemy)[Piece::Bishop - 1]) >= 2){
             eval -= 50;
         }
 
         // Pawn structure
         // Try to get hashed pawn structure (already calculated)
-        uint64_t pawn_hash = get_pawn_hash(board);
+        Bitboard pawn_hash = board.pawnHash();
         if (pawn_table.contains(pawn_hash)){
             eval += pawn_table.get(pawn_hash);
         } else {
             int pawn_eval = 0;
 
             // Doubled pawns
-            uint64_t pawns = board->bitboards(is_white)[Piece::Pawn - 1];
-            uint64_t epawns = board->bitboards(is_enemy)[Piece::Pawn - 1];
+            Bitboard pawns = board.bitboards(is_white)[Piece::Pawn - 1];
+            Bitboard epawns = board.bitboards(is_enemy)[Piece::Pawn - 1];
             for (int i = 0; i < 8; i++){
-                uint64_t file = file_bitboards[i];
+                Bitboard file = file_bitboards[i];
                 if (pawns & file && pop_count(pawns & file) > 1){
                     pawn_eval -= 10;
                 }
@@ -181,7 +181,7 @@ namespace chess
 
             // Isolated pawns
             for (int i = 0; i < 8; i++){
-                uint64_t file = file_bitboards[i];
+                Bitboard file = file_bitboards[i];
                 if (pawns & file){
                     if (!(pawns & (file >> 1)) && !(pawns & (file << 1))){
                         pawn_eval -= 10;
@@ -196,7 +196,7 @@ namespace chess
 
             // Connected pawns
             for (int i = 0; i < 8; i++){
-                uint64_t file = file_bitboards[i];
+                Bitboard file = file_bitboards[i];
                 if (pawns & file){
                     if (pawns & (file >> 8) || pawns & (file << 8)){
                         pawn_eval += 10;
@@ -228,7 +228,7 @@ namespace chess
         // King square tables
         bool is_endgame = false;
 
-        if (pop_count(board->pieces()) <= 6 || ((pop_count(board->queens()) == 0) && (pop_count(board->rooks()) == 0))){
+        if (pop_count(board.pieces()) <= 6 || ((pop_count(board.queens()) == 0) && (pop_count(board.rooks()) == 0))){
             is_endgame = true;
         }
 
@@ -236,35 +236,6 @@ namespace chess
         eval -= king_square_tables[is_enemy][is_endgame][eking_sq];
 
         return eval;
-    }
-
-    /**
-     * @brief Get the status of the game (ongoing, checkmate, stalemate, draw)
-     */
-    GameStatus get_status(Board* b, GameHistory* gh, MoveList* ml)
-    {
-        if (b->halfmoveClock() >= 100){
-            return DRAW;
-        }
-
-        // Checkmate / stalemate
-        if (ml->size() == 0){
-            if (b->inCheck()){
-                return CHECKMATE;
-            }
-            return STALEMATE;
-        }
-
-        // Insufficient material
-        if ((b->pieces() | b->pawns()) == 0){
-            return DRAW;
-        }
-
-        if (gh->repetitions(b, gh->back().hash) >= 3){
-            return DRAW;
-        }
-
-        return ONGOING;
     }
 
     /**

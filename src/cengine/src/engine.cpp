@@ -58,13 +58,13 @@ uint64_t Engine::perft(int depth, bool print)
 
 /**
  * @brief Start the search in async mode, call `join()` to make this function synchronous
- * @return Future with `Result` object, has the best move found, score and other info
+ * @return Atomic result object, use `get()` to get the result
  */
-std::future<Result> Engine::go(SearchOptions& options)
+shared_data<Result>& Engine::go(SearchOptions& options)
 {
     m_main_thread.stop();
     m_main_thread.start_thinking(m_board, m_search_cache, options.limits());
-    return m_main_thread.get_future();
+    return m_main_thread.get_result();
 }
 
 /**

@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "types.h"
 #include "move.h"
 #include "types.h"
 #include "pieces.h"

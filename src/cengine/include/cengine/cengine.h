@@ -26,7 +26,6 @@
 #include "settings.h"
 #include "perft.h"
 #include "move.h"
-#include "move_gen.h"
 #include "uci.h"
 #include "magic_bitboards.h"
 #include "pgn.h"
