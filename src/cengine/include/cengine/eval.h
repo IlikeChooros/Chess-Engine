@@ -23,5 +23,5 @@ namespace chess
     
     std::string game_status_to_string(GameStatus status);
 
-    extern const int piece_values[6];
+    static constexpr int piece_values[6] = {100, 320, 20000, 330, 500, 900};
 }

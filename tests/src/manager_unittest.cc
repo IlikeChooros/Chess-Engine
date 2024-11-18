@@ -45,7 +45,7 @@ class ManagerTest : public ::testing::Test
         auto moves = board.generateLegalMoves();
         for(auto& move : moves)
         {
-            if(Move(move).uci() == uci_move)
+            if(chess::Move(move).uci() == uci_move)
             {
                 found = true;
                 break;

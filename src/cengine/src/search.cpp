@@ -81,7 +81,7 @@ namespace chess
         // Unmake the moves
         for (auto it = pv.rbegin(); it != pv.rend(); it++)
         {
-            m_board.undoMove(*it);
+            m_board.undoMove((*it));
         }
 
         return pv;

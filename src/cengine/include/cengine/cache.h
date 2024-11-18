@@ -20,7 +20,7 @@ namespace chess
     class HistoryHeuristic
     {
         public:
-            HistoryHeuristic() = default;
+            HistoryHeuristic() { clear(); }
 
             /**
              * @brief Update the history heuristic table

@@ -461,7 +461,7 @@ namespace chess
         MoveList moves = generateLegalMoves();
         for (auto& move : moves)
         {
-            std::cout << Move(move).uci() << "\n";
+            std::cout << chess::Move(move).uci() << "\n";
         }
 
         std::cout << "Move stack:\n";
@@ -1035,7 +1035,7 @@ namespace chess
      */
     MoveList Board::generateLegalCaptures()
     {
-        return generateLegalMoves().filter(Move::capture);
+        return generateLegalMoves().captures();
     }
 
     /**

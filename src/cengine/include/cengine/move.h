@@ -261,6 +261,7 @@ class MoveList
 {
 public:
     typedef uint16_t move_t;
+
     static constexpr size_t MAX_MOVES = 256;
 
     // Iterator for the move list, has all the necessary functions
@@ -348,7 +349,7 @@ public:
     MoveList& operator=(const MoveList& other)
     {
         n_moves = other.n_moves;
-        memcpy(moves, other.moves, other.n_moves * sizeof(move_t));
+        memcpy(moves, other.moves, n_moves * sizeof(move_t));
         return *this;
     }
 
@@ -363,7 +364,7 @@ public:
     /**
      * @brief Add a move to the list
      */
-    inline void add(const Move& move) {add(move.get());}
+    inline void add(const Move& move) { moves[n_moves++] = move_t(move); }
 
     /**
      * @brief Add the moves from another move list
@@ -417,34 +418,27 @@ public:
      */
     MoveList& filter(move_filter_t filter_fn)
     {
-        size_t i = 0;
-        for (size_t j = 0; j < n_moves; j++)
-        {
-            if (filter_fn(Move(moves[j])))
-            {
-                moves[i++] = moves[j];
-            }
-        }
-        n_moves = i;
+        auto new_end = std::copy_if(begin(), end(), begin(), filter_fn);
+        n_moves      = std::distance(begin(), new_end);
         return *this;
     }
 
     /**
-     * @brief Filter moves by captures, modifes the list
+     * @brief Filter moves by captures, modifes the list, optimized for speed
      */
     MoveList& captures()
     {
-        move_t* new_list = moves;
-        move_t* move     = moves;
-        for (size_t j = 0; j < n_moves; j++, move++)
+        move_t* new_end = moves;
+        move_t* start   = moves;
+        for (size_t i = 0; i < n_moves; i++, start++)
         {
-            if (Move::fcapture(*move))
+            if (Move::fcapture((*start)))
             {
-                *new_list = *move;
-                new_list++;
+                *new_end = *start;
+                new_end++;
             }
         }
-        n_moves = new_list - moves;
+        n_moves = new_end - moves;
         return *this;
     }
 

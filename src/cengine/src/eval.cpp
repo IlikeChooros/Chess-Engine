@@ -4,7 +4,6 @@
 namespace chess
 {
     // Source: https://www.chessprogramming.org/Simplified_Evaluation_Function
-    const int piece_values[6] = {100, 320, 20000, 330, 500, 900};
     int white_piece_square_table[6][64] = {
         // for white
         // pawn

@@ -15,6 +15,7 @@ namespace chess
     class MoveOrdering
     {
     public:
+        MoveOrdering() = default;
 
         // Class to give value to moves, giving priority to PV moves, captures and history heuristic
         class OrderedMove
@@ -24,7 +25,9 @@ namespace chess
                 if (m.isCapture())
                 {
                     // The value of the captured piece
-                    return 1024 + piece_values[Piece::getType(b->board[m.getTo()])] - piece_values[Piece::getType(b->board[m.getFrom()])];
+                    return 1024 
+                        + piece_values[Piece::getType(b->board[m.getTo()]) - 1] 
+                        - piece_values[Piece::getType(b->board[m.getFrom()]) - 1];
                 }
                 return 0;
             }
@@ -44,21 +47,12 @@ namespace chess
                 value += captured_value(m, b); // Most valuable victim, least valuable attacker
                 value += sc->getHH().get(b->getSide() == Piece::White, m) * 25; // History heuristic
             }
-
-            // Compare two moves
-            inline bool operator<(const OrderedMove& other) const
-            {
-                return value < other.value;
-            }
-
-            // Compare two moves by their value
-            inline bool operator>(const OrderedMove& other) const
-            {
-                return value > other.value;
-            }
         };
 
-        MoveOrdering() = default;
+        static constexpr bool greater(const OrderedMove& __x, const OrderedMove& __y)
+        {
+            return __x.value > __y.value;
+        }
 
         /**
          * @brief Order the moves in the move list, modifies the list in place
