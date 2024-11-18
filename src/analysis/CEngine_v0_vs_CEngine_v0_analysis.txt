@@ -1,0 +1,12 @@
+Total games:  256
+Win / Loss / Draw ratio:  {'win': 80, 'loss': 74, 'draw': 102}
+Average game length: 52.31
+Average evaluation of the moves: 23.46
+Losses / Wins / Draws:
+	Opening:  {'loss': 1, 'win': 0, 'draw': 2, 'average_cpl': 1.6197678743173443}
+	Middle game:  {'loss': 8, 'win': 7, 'draw': 22, 'average_cpl': 0.42172373522632206}
+	End game:  {'loss': 65, 'win': 73, 'draw': 78, 'average_cpl': 0.5529636535952127}
+Average centipawn loss:
+	Opening: 1.62
+	Middle game: 0.42
+	End game: 0.55

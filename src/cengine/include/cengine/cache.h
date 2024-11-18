@@ -57,7 +57,10 @@ namespace chess
     class SearchCache
     {
     public:
-        SearchCache(): tt(64) {}
+        // Default hash size, in MB
+        static constexpr size_t DEFAULT_HASH_SIZE = 16;
+
+        SearchCache(): tt(DEFAULT_HASH_SIZE) {}
         
         /**
          * @brief Get the history heuristic object

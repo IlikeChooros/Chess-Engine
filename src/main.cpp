@@ -6,17 +6,15 @@ int main(int argc, char** argv)
 
     uci::UCI uci;
     uci.loop();
-    // uci.sendCommand("isready");
-    // uci.sendCommand("ucinewgame");
-    // uci.sendCommand("position fen r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2 moves h7h4");
-    // uci.sendCommand("go movetime 1000");
-    
-    // std::this_thread::sleep_for(std::chrono::seconds(1));
-    // uci.sendCommand("stop");
-    // uci.sendCommand("position fen r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2 moves h7h4 h1h4");
-    // uci.sendCommand("go movetime 1000");
-    // std::this_thread::sleep_for(std::chrono::seconds(1));
-    // uci.sendCommand("stop");
-    // uci.sendCommand("quit");
+
+    // chess::init();
+    // chess::Engine engine;
+    // engine.setPosition("r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2 moves h7h4");
+    // chess::SearchOptions options;
+    // options["movetime"] = 5000;
+
+    // engine.m_main_thread.setup(engine.m_board, engine.m_search_cache, options.limits());
+    // engine.m_main_thread.iterative_deepening();
+
     return 0;
 }

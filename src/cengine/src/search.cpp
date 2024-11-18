@@ -14,16 +14,28 @@ namespace chess
     }
 
     /**
-     * @brief Launch the search thread
+     * @brief Setup the search parameters, prepare for iterative deepening
      */
-    void Thread::start_thinking(Board& board, SearchCache& search_cache, Limits& limits)
+    void Thread::setup(Board& board, SearchCache& search_cache, Limits& limits)
     {
+        m_bestmove     = Move();
         m_best_result  = Result{};
         m_interrupt    = Interrupt(limits);
         m_board        = board;
         m_search_cache = &search_cache;
         m_limits       = limits;
-        m_thread       = std::thread(&Thread::iterative_deepening, this);
+    }
+
+    /**
+     * @brief Launch the search thread
+     */
+    void Thread::start_thinking(Board& board, SearchCache& search_cache, Limits& limits)
+    {
+        if (m_thinking)
+            stop();
+        
+        setup(board, search_cache, limits);
+        m_thread = std::thread(&Thread::iterative_deepening, this);
     }
 
     /**
@@ -108,6 +120,12 @@ namespace chess
         {
             eval = search<Root>(m_board, alpha, beta, depth);
 
+            // Update the result
+            m_result.pv       = get_pv(16);
+            m_result.bestmove = m_result.pv.size() > 0 ? m_result.pv[0] : m_bestmove;
+            update_score(m_result.score, besteval, whotomove, m_result.pv); 
+            m_best_result     = m_result;
+
             // Check if the search should stop
             if (m_interrupt.get())
                 break;
@@ -123,15 +141,10 @@ namespace chess
                 break;
 
             // Print info
-            m_result.pv = get_pv(16);
-            update_score(m_result.score, besteval, whotomove, m_result.pv); 
             glogger.printInfo(
                 depth, m_result.score.value, m_result.score.type == Score::cp, 
                 m_interrupt.nodes(), m_interrupt.time(), &m_result.pv
             );
-
-            // Update the result
-            m_best_result = m_result;
 
             // Update depth & alpha beta
             depth += 1;
@@ -142,7 +155,6 @@ namespace chess
         }
 
         // Print the best move
-        m_result.bestmove = m_result.pv.size() > 0 ? m_result.pv[0] : Move();
         glogger.printf("bestmove %s\n", m_result.bestmove.uci().c_str());
         glogger.logBoardInfo(&m_board);
         glogger.logTTableInfo(&m_search_cache->getTT());
@@ -157,7 +169,6 @@ namespace chess
     {   
         // Evaluate the position
         Value     eval  = evaluate(board);
-        bool      turn  = board.turn();
         MoveList moves  = board.generateLegalCaptures();
 
         // Check if the search should stop
@@ -182,7 +193,7 @@ namespace chess
         // Loop through all the captures and evaluate them
         for (size_t i = 0; i < moves.size(); i++)
         {
-            m_interrupt.update(turn);
+            m_interrupt.update();
             Move m = moves[i];
 
             board.makeMove(m);
@@ -266,22 +277,28 @@ namespace chess
         for (size_t i = 0; i < moves.size(); i++)
         {
             // Update interrupt
-            m_interrupt.update(turn);
+            m_interrupt.update();
 
             Move m = moves[i];
             board.makeMove(m);
             Value eval = -search<nonRoot>(board, -beta, -alpha, depth - 1);
             board.undoMove(m);
 
-            if (m_interrupt.get())
-                return 0;
-
             if (eval > best)
             {
                 best = eval;
                 alpha = std::max(alpha, best);
                 bestmove = m;
+
+                // Store the best move, since pv may not be available yet
+                if constexpr (isRoot)
+                {
+                    m_bestmove = bestmove;
+                };
             }
+
+            if (m_interrupt.get())
+                return 0;
 
             if (best >= beta)
                 break;     

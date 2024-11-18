@@ -55,8 +55,14 @@ class Move
         return (flags << 12) | (from << 6) | to;
     }
 
+    // Fast capture check
+    static constexpr bool fcapture(uint16_t move){
+        return (move >> 12) & FLAG_CAPTURE;
+    }
+
     // Check if the move is a capture
-    static bool capture(Move move) {return move.getFlags() & FLAG_CAPTURE;};
+    static bool capture(Move move) {return fcapture(move.m_move);};
+
 
     /**
      * @brief Create a move from a string notation (e.g. e2e4, a7a8q),
@@ -420,6 +426,25 @@ public:
             }
         }
         n_moves = i;
+        return *this;
+    }
+
+    /**
+     * @brief Filter moves by captures, modifes the list
+     */
+    MoveList& captures()
+    {
+        move_t* new_list = moves;
+        move_t* move     = moves;
+        for (size_t j = 0; j < n_moves; j++, move++)
+        {
+            if (Move::fcapture(*move))
+            {
+                *new_list = *move;
+                new_list++;
+            }
+        }
+        n_moves = new_list - moves;
         return *this;
     }
 

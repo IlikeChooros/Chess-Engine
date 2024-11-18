@@ -17,16 +17,9 @@ struct TimeLimits
     // Time for white and black [black, white]
     uint64_t time[2] = {0, 0};
     // Increment for white and black [black, white]
-    uint64_t inc[2] = {0, 0};
+    uint64_t inc[2]  = {0, 0};
     // Infinite search, i.e. search until stop signal
-    bool infinite = false;
-
-    // Copy operator
-    constexpr TimeLimits& operator=(const TimeLimits& other)
-    {
-        memcpy(this, &other, sizeof(TimeLimits));
-        return *this;
-    }
+    bool infinite    = false;
 };
 
 /*
@@ -87,7 +80,7 @@ public:
     bool get() { return m_stop.load(); }
 
     // Check if the game should stop, updates the stop flag
-    void check(bool side)
+    void check()
     {
         if (m_limits.infinite)
             return;
@@ -102,7 +95,7 @@ public:
     }
 
     // Update the time, increment the time (if any)
-    void update(bool side)
+    void update()
     {
         // if (m_limits.infinite)
         //     return;

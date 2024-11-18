@@ -204,9 +204,16 @@ uint64_t index_occupied(int index, int bit, uint64_t mask)
     return occ;
 }
 
-void populateAttacks(int sq, int bits, uint64_t mask, uint64_t* attacks, uint64_t *occ, bool bishop)
+template <bool bishop>
+void populateAttacks(int sq, int bits, uint64_t mask, uint64_t* attacks, uint64_t *occ)
 {
-    uint64_t (*attackFunc)(int, uint64_t) = bishop ? chess::Mailbox::mailboxBishop : chess::Mailbox::mailboxRook;
+    uint64_t (*attackFunc)(int, uint64_t);
+
+    if constexpr (bishop)
+        attackFunc = chess::Mailbox::mailboxBishop;
+    else
+        attackFunc = chess::Mailbox::mailboxRook;
+
     int max_count = 1 << bits;
     for (int i = 0; i < max_count; i++){
         occ[i] = index_occupied(i, bits, mask);
@@ -219,7 +226,8 @@ Find the magic number for a given square
 Heavily referenced from:
 https://www.chessprogramming.org/Looking_for_Magics
 */
-uint64_t findMagic(int sq, int shift, bool bishop)
+template <bool bishop>
+uint64_t findMagic(int sq, int shift)
 {
     // How it works:
     // 1. First precompute all possible occupancy bitboards for the given square
@@ -233,14 +241,13 @@ uint64_t findMagic(int sq, int shift, bool bishop)
     //          - check if the attacks at `index` are the same as the precomputed ones for given occupancy
     // 5. If the magic number is valid, return it
     // 6. If not, repeat the process
-
-    int size = bishop ? 512 : 4096;
+    constexpr size_t size = bishop ? 512 : 4096;
     uint64_t attacks[size], occ[size], used[size]; // 4096 = 2^12 (max number of occupancy combinations)
     uint64_t mask = bishop ? chess::Mailbox::bishopMask(sq) : chess::Mailbox::rookMask(sq); // get the mask
     int bits = pop_count(mask); // number of bits set in mask
     
     // Precompute all possible occupancy bitboards for the given square
-    populateAttacks(sq, bits, mask, attacks, occ, bishop);
+    populateAttacks<bishop>(sq, bits, mask, attacks, occ);
 
     uint64_t magic = 0;
     for (uint64_t tries = 0; tries < 1000000000UL; tries++)
@@ -286,7 +293,8 @@ uint64_t findMagic(int sq, int shift, bool bishop)
 
 
 // Run the magic bitboard generation in parallel
-void run_magics(bool bishop)
+template <bool bishop>
+void run_magics()
 {
     struct M {
         int index;
@@ -300,12 +308,12 @@ void run_magics(bool bishop)
     vmagic.reserve(64);
 
     for (int i = 0; i < 64; i++){
-        pool.enqueue([i, &vmagic, &mutex, &bishop]()
+        pool.enqueue([i, &vmagic, &mutex]()
         {
             Magic m;
             m.shift = 64 - (bishop ? MagicBitboards::BBits[i] : MagicBitboards::RBits[i]);
             m.mask = bishop ? chess::Mailbox::bishopMask(i) : chess::Mailbox::rookMask(i);
-            m.magic = findMagic(i, m.shift, bishop);
+            m.magic = findMagic<bishop>(i, m.shift);
 
             // After we found the magic, we can print the progress & save the result
             std::lock_guard<std::mutex> lock(mutex);
@@ -338,8 +346,8 @@ void init_magics(bool recalculate)
     if (recalculate)
     {
         std::cout << "Recalculating magics...\n";
-        run_magics(true);
-        run_magics(false);
+        run_magics<true>();
+        run_magics<false>();
     }
 
     // Use precomputed magics, find the correct order of attacks

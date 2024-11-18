@@ -23,6 +23,7 @@ namespace chess
 
         Engine();
         Engine& operator=(Engine&& other);
+        Engine(const Engine&) = delete;
         ~Engine();
 
         static void init();
@@ -34,14 +35,18 @@ namespace chess
         void setPosition(const std::string& fen = Board::START_FEN);
         void setPosition(const Board& board);
 
+        // uci options
+
+        void setHash(size_t hash);
+        void setLogFile(const std::string& file);
+
         /**
          * @brief Get the board
          */
         Board& board() { return m_board; }
 
-    private:
-        Board m_board;
         Thread m_main_thread;
+        Board m_board;
         SearchCache m_search_cache;
     };
 }

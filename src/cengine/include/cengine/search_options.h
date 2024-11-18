@@ -134,15 +134,15 @@ public:
 
     SearchOptions()
     {
-        m_options["depth"] = Option(Option::setDepth, &m_limits);
-        m_options["nodes"] = Option(Option::setNodes, &m_limits);
+        m_options["depth"]    = Option(Option::setDepth, &m_limits);
+        m_options["nodes"]    = Option(Option::setNodes, &m_limits);
         m_options["infinite"] = Option(Option::setInfinite, &m_limits);
-        m_options["ponder"] = Option(Option::setPonder, &m_limits);
+        m_options["ponder"]   = Option(Option::setPonder, &m_limits);
         m_options["movetime"] = Option(Option::setMovetime, &m_limits);
-        m_options["wtime"] = Option(Option::setWtime, &m_limits);
-        m_options["btime"] = Option(Option::setBtime, &m_limits);
-        m_options["winc"] = Option(Option::setWinc, &m_limits);
-        m_options["binc"] = Option(Option::setBinc, &m_limits);
+        m_options["wtime"]    = Option(Option::setWtime, &m_limits);
+        m_options["btime"]    = Option(Option::setBtime, &m_limits);
+        m_options["winc"]     = Option(Option::setWinc, &m_limits);
+        m_options["binc"]     = Option(Option::setBinc, &m_limits);
     }
 
     /**

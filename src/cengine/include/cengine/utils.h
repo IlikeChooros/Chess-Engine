@@ -104,34 +104,6 @@ inline int pop_count(uint64_t b)
     #endif
 }
 
-typedef std::chrono::time_point<std::chrono::high_resolution_clock> dtimer_t;
-
-#if DEBUG_PERFORMANCE
-
-/**
- * @brief Starts a timer
- */
-inline void start_timer(dtimer_t& start){
-    start = std::chrono::high_resolution_clock::now();
-}
-
-/**
- * @brief Ends a timer and prints the duration
- */
-inline void end_timer(dtimer_t& start, const char* msg = "Total time"){
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    printf("%s: %ldus\n", msg, duration.count());
-}
-
-#else
-inline void start_timer(dtimer_t& start){return;}
-inline void end_timer(dtimer_t& start, const char* msg = "Total time"){return;}
-#endif
-
-
-#if DEBUG_DETAILS
-
 /**
  * @brief Prints a bitboard to the console
  */
@@ -147,7 +119,3 @@ inline void dbitboard(uint64_t bitboard64)
         printf("%*c", 2, 'a' + i);
     printf("\n\n");
 }
-
-#else
-inline void dbitboard(uint64_t bitboard64){return;}
-#endif

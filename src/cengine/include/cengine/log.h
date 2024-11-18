@@ -11,16 +11,21 @@
 #include "transp_table.h"
 #include "settings.h"
 
+// Logging class, every log message is written to a file
 class Log
 {
+    bool m_log_enabled;
     std::string m_log_file;
     std::ofstream m_log_stream;
 
     void log(std::string& str);
 public:
-    Log(std::string logfile = "log.txt");
+    static constexpr const char* LOG_FILE = "log.txt";
+
+    Log(std::string logfile = LOG_FILE);
     ~Log();
 
+    void setLogFile(std::string logfile);
     void logf(const char* format, ...);
     void logTTableInfo(TTable<TEntry>* ttable);
     void logBoardInfo(chess::Board* board);

@@ -4,7 +4,8 @@ Log glogger = Log((global_settings.base_path / "log.txt").string());
 
 Log::Log(std::string logfile)
 {
-    m_log_file = logfile;
+    m_log_enabled = true;
+    m_log_file    = logfile;
     m_log_stream.open(m_log_file, std::ios::out | std::ios::app);
 }
 
@@ -13,12 +14,34 @@ Log::~Log()
     m_log_stream.close();
 }
 
+/**
+ * @brief Log a string to the log file
+ */
 void Log::log(std::string& str)
 {
+    if (!m_log_enabled)
+        return;
+    
     m_log_stream << str;
     m_log_stream.flush();
 }
 
+/**
+ * @brief Set the log file, if the filename is empty, logging is disabled
+ */
+void Log::setLogFile(std::string logfile)
+{
+    m_log_file = logfile;
+    m_log_stream.close();
+    m_log_enabled = logfile != ""; // Disable logging if the file is empty
+    
+    if (m_log_enabled)
+        m_log_stream.open(m_log_file, std::ios::out | std::ios::app);
+}
+
+/**
+ * @brief Log a formatted string
+ */
 void Log::logf(const char* format, ...)
 {
     va_list args;
@@ -31,6 +54,9 @@ void Log::logf(const char* format, ...)
     log(str);
 }
 
+/**
+ * @brief Log transposition table information
+ */
 void Log::logTTableInfo(TTable<TEntry>* ttable)
 {
     logf("Transposition Table Info: "
@@ -47,6 +73,9 @@ void Log::logTTableInfo(TTable<TEntry>* ttable)
     );
 }
 
+/**
+ * @brief Log board information
+ */
 void Log::logBoardInfo(chess::Board* board)
 {
     logf("Board Info: "
@@ -63,6 +92,9 @@ void Log::logBoardInfo(chess::Board* board)
     );
 }
 
+/**
+ * @brief Log the principal variation
+ */
 void Log::logPV(chess::MoveList* pv)
 {
     logf("PV: ");
@@ -73,6 +105,9 @@ void Log::logPV(chess::MoveList* pv)
     logf("\n");
 }
 
+/**
+ * @brief Print search info
+ */
 void Log::printInfo(int depth, int score, bool cp, uint64_t nodes, uint64_t time, chess::MoveList* pv)
 {
     time = std::max(time, 1UL);
@@ -99,6 +134,9 @@ void Log::printInfo(int depth, int score, bool cp, uint64_t nodes, uint64_t time
     log(str);
 }
 
+/**
+ * @brief Print a formatted string
+ */
 void Log::printf(const char* str, ...)
 {
     va_list args;

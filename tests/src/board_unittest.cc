@@ -5,7 +5,7 @@ namespace{
 
 using namespace chess;
 
-bool compareBoards(int piece, int expected, int index)
+bool compareBoards(int piece, int expected)
 {
     return piece == expected;
 }
@@ -19,7 +19,7 @@ void testFen(
     Board board;
     board.loadFen(fen);
     for(int i = 0; i < 64; i++){
-        EXPECT_PRED3(compareBoards, board[i], expected_board[i], i);
+        EXPECT_PRED2(compareBoards, board[i], expected_board[i]) << " at index " << i;
     }
     EXPECT_EQ(board.getSide(), expected_side);
     EXPECT_EQ(board.enpassantTarget(), expected_enpassant);

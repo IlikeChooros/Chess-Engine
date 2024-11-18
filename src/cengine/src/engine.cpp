@@ -53,7 +53,7 @@ void Engine::reset()
  */
 uint64_t Engine::perft(int depth, bool print)
 {
-    return bench::Perft().run(depth, m_board.fen());
+    return bench::Perft(print).run(depth, m_board.fen());
 }
 
 /**
@@ -99,6 +99,26 @@ void Engine::setPosition(const std::string& fen)
 void Engine::setPosition(const Board& board)
 {
     m_board = board;
+}
+
+// UCI options
+
+/**
+ * @brief Set the hash size
+ * @param hash Size of the hash table in MB
+ */
+void Engine::setHash(size_t hash)
+{
+    m_search_cache.getTT() = TTable<TEntry>(hash);
+}
+
+/**
+ * @brief Set the log file
+ * @param file Path to the log file, if empty no log will be written
+ */
+void Engine::setLogFile(const std::string& file)
+{
+    glogger.setLogFile(file);
 }
 
 }// namespace chess

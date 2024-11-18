@@ -16,18 +16,17 @@
 
 namespace chess
 {
-
     // Helper class to store results of the search, since 
     // atomic<Result> is not copyable
     template <class T = Result>
     class shared_data
     {
-        T m_data;
+        std::unique_ptr<T> m_data;
         std::mutex m_mutex;
     public:
         // Constructors
         shared_data() = default;
-        shared_data(const T& data): m_data(data) {}
+        shared_data(const T& data): m_data(new T(data)) {}
         shared_data(shared_data&& other)
         {
             *this = std::move(other);
@@ -35,7 +34,7 @@ namespace chess
 
         shared_data& operator=(shared_data&& other)
         {
-            m_data = other.m_data;
+            m_data = std::move(other.m_data);
             return *this;
         }
 
@@ -50,15 +49,21 @@ namespace chess
         void set(const T& data)
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            m_data = data;
+            m_data.reset(new T(data));
         }
 
-        // Get stored data, thread safe
+        // Check if data is empty
+        bool empty() const
+        {
+            return !m_data;
+        }
+
+        // Get stored data, thread safe, may cause undefined behavior if data is empty
         T& get()
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            return m_data;
-        }
+            return *m_data;
+        }        
     };
 
 
@@ -69,7 +74,9 @@ namespace chess
         Thread();
         ~Thread();
 
+        void setup(Board& board, SearchCache& search_cache, Limits& limits);
         void start_thinking(Board& board, SearchCache& search_cache, Limits& limits);
+        void iterative_deepening();
         void stop();
         void join();
 
@@ -81,7 +88,6 @@ namespace chess
 
     private:
 
-        void iterative_deepening();
         Value qsearch(Board& board, Value alpha, Value beta, int depth);
 
         template <NodeType>
@@ -94,6 +100,7 @@ namespace chess
         Limits m_limits;
         Interrupt m_interrupt;
         Result m_result;
+        Move m_bestmove;
 
         std::thread m_thread;
         std::atomic<bool> m_thinking;

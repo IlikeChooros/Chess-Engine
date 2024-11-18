@@ -1,8 +1,8 @@
 #include <cengine/settings.h>
 
 Settings global_settings = {
-    .debug_level = DEBUG_LEVEL,
-    .debug_performance = DEBUG_PERFORMANCE,
-    .base_path = std::filesystem::current_path(),
-    .version = "1.0"
+    DEBUG_LEVEL,
+    DEBUG_PERFORMANCE,
+    std::filesystem::current_path(),
+    "1.0"
 }; 

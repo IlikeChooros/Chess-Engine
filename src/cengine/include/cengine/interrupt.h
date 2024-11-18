@@ -55,10 +55,10 @@ public:
     }
 
     // Increment nodes by 1, and check if the search should stop (based on time)
-    void update(bool side)
+    void update()
     {
         add_nodes(1);
-        m_time.check(side);
+        m_time.check();
         m_stop = (m_stop.load() || m_time.get());
     }
 

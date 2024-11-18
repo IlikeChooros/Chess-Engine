@@ -10,31 +10,32 @@
     - [x] Game over detection
     - [x] 50 move rule detection
     - [x] Threefold repetition detection
-  - [x] UCI basic commands
-    - [x] `uci`
-    - [x] `isready`
-    - [x] `ucinewgame`
-    - [x] `position` (fen, startpos)
-    - [x] `go` (perft, search)
-    - [x] `stop`
-    - [x] `quit`
-  - [ ] Search
-    - [x] Quiescence search
-    - [x] Move ordering
-      - [x] History heuristic (for quiet moves)
-      - [x] For captures: MVV/LVA
-    - [x] Iterative deepening
-    - [x] Time management
-    - [x] Engine badly detects treefold repetition (user may force a draw in a winning position for the engine)
-    - [ ] Engine can't win winning endgames:
-      - [ ] KQ vs k
-      - [ ] KR vs k
-    - [x] BUG: King sometimes can be captured:
-      - 6k1/5pp1/1Q2b2p/4P3/7P/8/3r2PK/3q4 w - - 1 34
-      - r4rk1/pppb1p2/3bq2p/3NN2Q/2B3p1/8/PP1R2PP/4R2K b - - 0 23
-  - [ ] Evaluation
-    - [ ] Pawn structure (phalanx) 
-
+- [x] UCI basic commands
+  - [x] `uci`
+  - [x] `isready`
+  - [x] `ucinewgame`
+  - [x] `position` (fen, startpos)
+  - [x] `go` (perft, search)
+  - [x] `stop`
+  - [x] `quit`
+- [ ] Search
+  - [x] Quiescence search
+  - [x] Move ordering
+    - [x] History heuristic (for quiet moves)
+    - [x] For captures: MVV/LVA
+  - [x] Iterative deepening
+  - [x] Time management
+  - [x] Engine badly detects treefold repetition (user may force a draw in a winning position for the engine)
+  - [ ] Engine can't win winning endgames:
+    - [ ] KQ vs k
+    - [ ] KR vs k
+  - [x] BUG: King sometimes can be captured:
+    - 6k1/5pp1/1Q2b2p/4P3/7P/8/3r2PK/3q4 w - - 1 34
+    - r4rk1/pppb1p2/3bq2p/3NN2Q/2B3p1/8/PP1R2PP/4R2K b - - 0 23
+- [ ] Evaluation
+  - [ ] Pawn structure (phalanx) 
 
 Code related:
-- refactor `search` function, it's a mess
+- [x] refactor `search` function, it's a mess
+- [x] refactor ALL of the code
+

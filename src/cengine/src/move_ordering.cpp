@@ -6,7 +6,7 @@ namespace chess
     {
         Move pvm = pv && pv->size() > 0 ? Move(*pv->begin()) : Move();
         
-        OrderedMove om[ml->size()];
+        OrderedMove om[ml->capacity()];
 
         for(size_t i = 0; i < ml->size(); i++)
         {

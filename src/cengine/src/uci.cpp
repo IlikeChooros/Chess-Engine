@@ -40,6 +40,12 @@ namespace uci
             "\t Example: go infinite (run search indefinitely, until 'stop' command is given)\n\n"
         },
         {"uci", "uci - Print the UCI info\n\n"},
+        {"setoption", 
+            "setoption name <id> [value <x>]\n"
+            " - Set value of 'id' option to 'x'\n"
+            " - Example: setoption name Hash value 128\n"
+            "See 'uci' command for a list of available options\n\n"
+        },
         {"ucinewgame", "ucinewgame - Start a new game, resets the search cache\n\n"},
         {"debug", "debug - Toggle debug mode\n\n"},
         {"isready", "isready - Check if the engine is ready\n\n"},
@@ -75,10 +81,12 @@ namespace uci
         Help,
         Quit,
         Debug,
+        SetOption,
     };
 
     std::map<std::string, Commands> command_map = {
         {"uci", Uci},
+        {"setoption", SetOption},
         {"ucinewgame", UciNewGame},
         {"debug", Debug},
         {"isready", IsReady},
@@ -117,18 +125,40 @@ namespace uci
     }
 
     /**
-     * @brief Run perft test at given depth, board should be already initialized,
-     * thread safe
+     * @brief Parse the setoption command
      */
-    void perft(chess::Engine* engine, int depth)
+    void UCI::setoption(std::istringstream& iss)
     {
-        engine->perft(depth, true);
+        std::string command;
+        std::string name;
+        std::string value;
+        // Read the command and the field name
+        iss >> command >> name;
+
+        if (command != "name")
+            fail("(setoption): Invalid command: %s\n", command.c_str());
+
+        // Name might have spaces, read until 'value' is found
+        while (iss >> command && command != "value")
+            name += " " + command;
+
+        if (command != "value")
+            fail("(setoption): 'value' not found\n");
+        
+        // Read the value
+        iss >> value;
+        if (value == "<empty>")
+            value = ""; // Empty string
+
+        // Apply the option
+        m_options.set(name, value);
+        m_options.apply(m_engine);
     }
 
     /**
      * @brief Parse the position command [startpos|fen <fen> [moves <move1> ... <moveN>]]
      */
-    void position(chess::Engine* engine, std::istringstream& iss)
+    void UCI::position(std::istringstream& iss)
     {
         std::string fen;
         std::string command;
@@ -136,14 +166,13 @@ namespace uci
 
         if (command == "startpos")
         {
+            // Start from the initial position and possibly parse 'moves'
             fen = chess::Board::START_FEN;
             if(iss >> command && command == "moves")
             {
                 fen += " moves ";
                 while (iss >> command)
-                {
                     fen += command + " ";
-                }
             }
         }
         else if (command == "fen")
@@ -156,16 +185,14 @@ namespace uci
             }
 
             if (n_section < 6)
-            {
                 fail("(position): Not enough sections in FEN: %s\n", fen.c_str());
-            }
         }
         else 
         {
             fail("(position): Invalid command: %s\n", command.c_str());
         }
 
-        engine->setPosition(fen);
+        m_engine.setPosition(fen);
     }
 
     /**
@@ -182,7 +209,7 @@ namespace uci
      * - ponder: Ponder the best move (not supported yet)
      * - infinite: Search indefinitely
      */
-    void go(chess::Engine* engine, std::istringstream& iss)
+    void UCI::go(std::istringstream& iss)
     {
         chess::SearchOptions options;
         std::string command;
@@ -191,7 +218,7 @@ namespace uci
         {
             if (command == "perft")
             {
-                perft(engine, readInt(iss, "(go): Perft depth not specified or invalid\n"));
+                m_engine.perft(readInt(iss, "(go): Perft depth not specified or invalid\n"));
                 return;
             }
 
@@ -205,10 +232,16 @@ namespace uci
         }
 
         // Start the search
-        engine->go(options);
+        m_engine.go(options);
     }
 
-    std::string uciReadCommImpl(chess::Engine* engine, std::string input)
+    /**
+     * @brief Process the given command
+     * 
+     * @param input The command to process
+     * @return The output of the command
+     */
+    std::string UCI::processCommand(std::string input)
     {
         std::istringstream iss(input);
         std::string command, output;
@@ -224,11 +257,16 @@ namespace uci
             case Uci:
                 output = "id name CEngine\n";
                 output += "id author IlikeChooros\n";
+                output += m_options.toString();
                 output += "uciok\n";
                 break;
 
             case UciNewGame:
-                engine->reset();
+                m_engine.reset();
+                break;
+
+            case SetOption:
+                setoption(iss);
                 break;
 
             case IsReady:
@@ -236,11 +274,11 @@ namespace uci
                 break;
 
             case Position:
-                position(engine, iss);
+                position(iss);
                 break;
 
             case Stop:
-                engine->stop();
+                m_engine.stop();
                 break;
 
             case Debug:
@@ -249,19 +287,19 @@ namespace uci
                 break;
 
             case Go:
-                go(engine, iss);
+                go(iss);
                 break;
 
             case GetFen:
-                output = engine->board().fen() + "\n";
+                output = m_engine.board().fen() + "\n";
                 break;
             
             case MakeMove: {
                 std::string move;
                 if (iss >> move)
                 {
-                    if (engine->board().isLegal(move))
-                        engine->board().makeMove(move);
+                    if (m_engine.board().isLegal(move))
+                        m_engine.board().makeMove(move);
                     else
                         output = "Invalid move: " + move + "\n";
                 }
@@ -291,19 +329,6 @@ namespace uci
             default:
                 output = "Unknown command: '" + command + "', type 'help' for a list of commands\n";
                 break;
-        }
-        return output;
-    }
-
-    std::string uciReadCommand(chess::Engine* engine, std::string input)
-    {
-        // Run the command in the engine, and catch any exceptions
-        std::string output;
-        try{
-            output = uciReadCommImpl(engine, input);
-        } 
-        catch(std::exception& e){
-            output = e.what();
         }
         return output;
     }
@@ -354,7 +379,17 @@ namespace uci
     {
         // Send the command to the queue
         m_queue.enqueue([this, comm](){
-            std::cout << uciReadCommand(&m_engine, comm);
+            // Run the command in the engine, and catch any exceptions
+            std::string output;
+            try{
+                output = processCommand(comm);
+            } 
+            catch(std::exception& e){
+                output = e.what();
+            }
+            
+            // Print the output
+            std::cout << output;
         });
     }
 }
