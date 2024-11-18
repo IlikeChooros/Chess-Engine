@@ -219,7 +219,7 @@ namespace chess
         constexpr bool isRoot = nType == Root;
 
         // Lookup transposition table and check for possible cutoffs
-        uint64_t hash = board.hash();
+        uint64_t hash = board.getHash();
         int old_alpha = alpha;
         
         if (m_search_cache->getTT().contains(hash))

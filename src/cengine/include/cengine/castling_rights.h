@@ -40,15 +40,16 @@ namespace chess
         };
 
         bool none() const {return (m_rights & MASK) == NONE;};
-        bool has(int rights) const {return m_rights & rights;};
+        bool has(int rights) const {return (m_rights & rights )!= 0;};
         bool hasKing() const {return (m_rights & KING_CASTLE_MASK) != 0;};
         bool hasQueen() const {return (m_rights & QUEEN_CASTLE_MASK) != 0;};
         uint32_t getKing() const {return m_rights & KING_CASTLE_MASK;};
         uint32_t getQueen() const {return m_rights & QUEEN_CASTLE_MASK;};
         bool hasColor(bool is_white) const {return m_rights & (is_white ? WHITE : BLACK);};
+        uint32_t getColor(bool is_white) const {return m_rights & (is_white ? WHITE : BLACK);};
         void add(int rights) {m_rights |= (rights & MASK);};
         void remove(int rights = ALL) {m_rights &= (~rights) & MASK;};
-        uint32_t get() const {return m_rights;};
+        uint32_t get() const {return m_rights & ALL;};
 
         /**
          * @brief Get the string representation of the castling rights

@@ -273,8 +273,8 @@ namespace chess
 
         // Update bitboards
         updateBitboards();
-        (void)hash();
         verify_castling_rights();
+        (void)hash();
 
         // Read the 'moves' part
         std::string moves;
@@ -399,6 +399,7 @@ namespace chess
 
         for(size_t i = 0; i < moves.size(); i++)
         {
+
             if (moves[i].movePart() == move.movePart())
             {
                 // If the flags are not empty, return the move
@@ -514,30 +515,24 @@ namespace chess
     /**
      * @brief Generate hash of the board
      */
-    Bitboard Board::hash()
+    Hash Board::hash()
     {
         m_hash = 0;
 
-        for(int type = 0; type < 6; type++){
-            Bitboard white = m_bitboards[1][type];
-            Bitboard black = m_bitboards[0][type];
-
-            while(white){
-                m_hash ^= Zobrist::hash_pieces[0][type][pop_lsb1(white)];
+        for(int turn = 0; turn < 2; turn++)
+            for (int type = 0; type < 6; type++)
+            {
+                Bitboard bb = m_bitboards[turn][type];
+                while(bb) m_hash ^= Zobrist::hash_pieces[turn][type][pop_lsb1(bb)];
             }
-            while(black){
-                m_hash ^= Zobrist::hash_pieces[1][type][pop_lsb1(black)];
-            }
-        }
 
         if (m_side == Piece::Black)
             m_hash ^= Zobrist::hash_turn;
 
-        int rank = m_enpassant_target >> 3;
         if (m_enpassant_target != 0)
-            m_hash ^= Zobrist::hash_enpassant[rank];
+            m_hash ^= Zobrist::hash_enpassant[m_enpassant_target % 8];
 
-        m_hash ^= Zobrist::hash_castling[castlingRights().get()];
+        m_hash ^= Zobrist::hash_castling[m_castling_rights.get()];
 
         return m_hash;
     }
@@ -545,14 +540,14 @@ namespace chess
     /**
      * @brief Generate hash of the pawn structure
      */
-    Bitboard Board::pawnHash()
+    Hash Board::pawnHash()
     {
-        Bitboard hash = 0;
+        Hash hash = 0;
         Bitboard white = m_bitboards[1][Piece::Pawn - 1];
         Bitboard black = m_bitboards[0][Piece::Pawn - 1];
 
-        while(white) hash ^= Zobrist::hash_pieces[0][Piece::Pawn - 1][pop_lsb1(white)];
-        while(black) hash ^= Zobrist::hash_pieces[1][Piece::Pawn - 1][pop_lsb1(black)];
+        while(white) hash ^= Zobrist::hash_pieces[1][Piece::Pawn - 1][pop_lsb1(white)];
+        while(black) hash ^= Zobrist::hash_pieces[0][Piece::Pawn - 1][pop_lsb1(black)];
         
         return hash;
     }
@@ -563,14 +558,15 @@ namespace chess
     void Board::push_state(Move move)
     {
         State state;
-        state.hash = hash();
-        state.side_to_move = m_side;
-        state.captured_piece = m_captured_piece;
-        state.castling_rights = m_castling_rights.get();
-        state.enpassant_target = m_enpassant_target;
-        state.halfmove_clock = m_halfmove_clock;
-        state.fullmove_counter = m_fullmove_counter;
-        state.move = move;
+        state.hash               = m_hash;
+        state.side_to_move       = m_side;
+        state.captured_piece     = m_captured_piece;
+        state.castling_rights    = m_castling_rights.get();
+        state.enpassant_target   = m_enpassant_target;
+        state.halfmove_clock     = m_halfmove_clock;
+        state.fullmove_counter   = m_fullmove_counter;
+        state.move               = move;
+        state.irreverisble_index = m_irreversible_index;
 
         m_history.push_back(state);
     }
@@ -606,6 +602,30 @@ namespace chess
                 count++;
         }
         return count >= 3;
+    }
+
+    /**
+     * @brief Make a null move on the board, just change the side to move
+     */
+    void Board::makeNullMove()
+    {
+        // Push the current state to the history
+        push_state(Move());
+
+        // Change the side to move
+        m_side = Piece::opposite(m_side);
+        m_hash ^= Zobrist::hash_turn;
+
+        // Reset the enpassant target square
+        if (m_enpassant_target != 0)
+        {
+            int file = m_enpassant_target % 8;
+            m_hash ^= Zobrist::hash_enpassant[file];
+            m_enpassant_target = 0;
+        }
+
+        // Set the captured piece to empty
+        m_captured_piece = Piece::Empty;
     }
 
     /**
@@ -654,12 +674,22 @@ namespace chess
             Square captured_pos = to + offset;
             m_captured_piece    = board[captured_pos];
             board[captured_pos] = Piece::Empty;
+            auto captured_type  = Piece::getType(m_captured_piece) - 1;
 
             // Delete the captured piece from the bitboard
-            m_bitboards[!is_white][Piece::getType(m_captured_piece) - 1] &= ~(1ULL << (captured_pos));
+            m_bitboards[!is_white][captured_type] &= ~(1ULL << (captured_pos));
+
+            // Update zobrist hash, remove the captured piece
+            m_hash ^= Zobrist::hash_pieces[!is_white][captured_type][captured_pos];
         }
 
-        // Reset the enpassant target
+        // Reset the enpassant target square
+        // But first, remove the hash for the enpassant target square
+        if (m_enpassant_target != 0)
+        {
+            Square file = m_enpassant_target % 8;
+            m_hash ^= Zobrist::hash_enpassant[file];
+        }
         m_enpassant_target = 0;
 
         if(move.isCastle())
@@ -679,16 +709,26 @@ namespace chess
 
             int rook_from = castling_pos[is_king_castle][is_white],
                 rook_to   = rooks_to[is_king_castle][is_white];
-            
-            // Update castling rights
+
+            // Remove castling rights from the hash
+            m_hash ^= Zobrist::hash_castling[m_castling_rights.get()];
+
+            // Remove the castling rights
             m_castling_rights.remove(rights[is_white]);
 
+            // Set new castling rights
+            m_hash ^= Zobrist::hash_castling[m_castling_rights.get()];
+
             // Move the rook (king will be handled outside of this block)
-            board[rook_to] = board[rook_from];
+            board[rook_to]   = board[rook_from];
             board[rook_from] = Piece::Empty;
 
             // Update the bitboard for the rook
             updateBitboard(is_white, Piece::Rook - 1, rook_from, rook_to);
+
+            // Update zobrist hash, remove the rook from the old position and add it to the new position
+            m_hash ^= Zobrist::hash_pieces[is_white][Piece::Rook - 1][rook_from];
+            m_hash ^= Zobrist::hash_pieces[is_white][Piece::Rook - 1][rook_to];
         }
 
         // If it's double move, set the enpassant target
@@ -697,6 +737,9 @@ namespace chess
             const int dir[2] = {-8, 8};
             m_enpassant_target = to + dir[is_white];
             m_irreversible_index = m_history.size();
+
+            // Update zobrist hash, set the enpassant target
+            m_hash ^= Zobrist::hash_enpassant[m_enpassant_target % 8];
         }
 
         // Update the bitboard for the moved piece
@@ -708,42 +751,105 @@ namespace chess
             m_bitboards[is_white][promo_type - 1]  |= 1ULL << from; // add the promoted piece (not moved)
             m_irreversible_index = m_history.size();
             type = promo_type; // update this, since in the end we will update the bitboard, based on the type
+
+            // Update zobrist hash by removing the pawn and adding the promoted piece
+            m_hash ^= Zobrist::hash_pieces[is_white][Piece::Pawn - 1][from];
+            m_hash ^= Zobrist::hash_pieces[is_white][promo_type - 1][from];
         }
 
-        // Update castling rights & king position
-        if (type == Piece::King)
-        {
-            m_castling_rights.remove(rights[is_white]);
-        }
-        else if (type == Piece::Rook)
-        {
-            // If the rook is moved from the starting position, remove the castling
-            // rights for that side
-            const int side_rights[2][2] = {
-                {CastlingRights::BLACK_QUEEN, CastlingRights::BLACK_KING}, 
-                {CastlingRights::WHITE_QUEEN, CastlingRights::WHITE_KING}
-            };
+        // Update castling rights
+        bool king_moved = type == Piece::King;
+        if (m_castling_rights.has(rights[is_white]) && (king_moved || type == Piece::Rook))
+        {   
+            // Delete the castling rights for the side
+            m_hash ^= Zobrist::hash_castling[m_castling_rights.get()];
 
-            if (from == 0 || from == 56)
-                m_castling_rights.remove(side_rights[is_white][0]);
-            else if (from == 7 || from == 63)
-                m_castling_rights.remove(side_rights[is_white][1]);
+            if (king_moved)
+            {
+                // If the king is moved, remove the castling rights for that side
+                m_castling_rights.remove(rights[is_white]);
+            }
+            else
+            {
+                // If the rook is moved from the starting position, remove the castling
+                // rights for that side
+                const int side_rights[2][2] = {
+                    {CastlingRights::BLACK_QUEEN, CastlingRights::BLACK_KING}, 
+                    {CastlingRights::WHITE_QUEEN, CastlingRights::WHITE_KING}
+                };
+                if ((from == 0 || from == 56))
+                    m_castling_rights.remove(side_rights[is_white][0]);
+                
+                else if ((from == 7 || from == 63))
+                    m_castling_rights.remove(side_rights[is_white][1]);
+            }
+
+            // Set new castling rights
+            m_hash ^= Zobrist::hash_castling[m_castling_rights.get()];
         }
 
         // Move the piece
-        board[to] = board[from];
+        board[to]   = board[from];
         board[from] = Piece::Empty;
 
         // Update the bitboard for the moved piece
-        updateBitboard(is_white, type - 1, from, to);
-        // m_bitboards[is_white][type - 1] &= ~(1ULL << from);
-        // m_bitboards[is_white][type - 1] |= 1ULL << to;
+        m_bitboards[is_white][type - 1] &= ~(1ULL << from);
+        m_bitboards[is_white][type - 1] |= 1ULL << to;
+
+        // Update zobrist hash, remove the piece from the old position and add it to the new position
+        m_hash ^= Zobrist::hash_pieces[is_white][type - 1][from];
+        m_hash ^= Zobrist::hash_pieces[is_white][type - 1][to];
 
         m_side = Piece::opposite(m_side);
+
+        // Update zobrist hash, change the side to move
+        m_hash ^= Zobrist::hash_turn;
     }
 
     /**
-     * @brief Undo the last move
+     * @brief Undo the null move
+     */
+    void Board::undoNullMove()
+    {
+        if (m_history.empty())
+            return;
+        
+        State state = m_history.back();
+        m_history.pop_back();
+
+        restore_state(state);
+    }
+    
+    /**
+     * @brief Restore the state of the board from history
+     */
+    inline void Board::restore_state(State& history)
+    {
+        m_hash             = history.hash;
+        m_side             = history.side_to_move;
+        m_halfmove_clock   = history.halfmove_clock;
+        m_enpassant_target = history.enpassant_target;
+        m_castling_rights  = history.castling_rights;
+        m_fullmove_counter = history.fullmove_counter;
+        m_captured_piece   = history.captured_piece;
+        m_irreversible_index = history.irreverisble_index;
+    }
+
+    /**
+     * @brief Helper function to undo the move, moves the piece from 'to' to 'from'
+     * updates the bitboard, based on the type, and the color
+     */
+    inline void Board::undo(Square from, Square to, bool is_white, int type)
+    {
+        board[from] = board[to];
+        board[to]   = Piece::Empty;
+
+        m_bitboards[is_white][type - 1] &= ~(1ULL << to);
+        m_bitboards[is_white][type - 1] |= 1ULL << from;
+    }
+
+    /**
+     * @brief Undo the last move, doesn't support null moves, use `undoNullMove` for that
      * @warning Doesn't check if the move is legal
      */
     void Board::undoMove(Move move)
@@ -761,16 +867,6 @@ namespace chess
         int    type         = Piece::getType(board[to]);
         bool   is_white     = Piece::isWhite(board[to]);
         const int colors[2] = { Piece::Black, Piece::White };
-
-
-        // Helper function to undo the move, moves the piece from 'to' to 'from'
-        // Update the bitboard, based on the type, and the color defined above
-        auto undo = [this, &type, &is_white](Square from, Square to){
-            board[from] = board[to];
-            board[to]   = Piece::Empty;
-            updateBitboard(is_white, type - 1, to, from);
-        };
-
 
         // If promo capture, restore the captured piece + the promoted piece
         if (move.isPromotionCapture())
@@ -793,7 +889,7 @@ namespace chess
                 offset = is_white ? 8 : -8;
             
             // Unmake the move, restore previous position of the piece
-            undo(from, to);
+            undo(from, to, is_white, type);
             // Put the captured piece back
             Square captured_pos = to + offset;
             board[captured_pos] = m_captured_piece;
@@ -826,22 +922,16 @@ namespace chess
             board[rook_from]    = board[rook_to]; // move the rook back
             board[rook_to]      = Piece::Empty; // empty the rook's previous position
             updateBitboard(is_white, Piece::Rook - 1, rook_to, rook_from); // update the bitboard
-            undo(from, to); // move the king back
+            undo(from, to, is_white, type); // move the king back
         }
         else 
         {
             // Quiet move, just move the piece back
-            undo(from, to);
+            undo(from, to, is_white, type);
         }
 
         // Restore other states
-        m_hash             = history.hash;
-        m_side             = history.side_to_move;
-        m_halfmove_clock   = history.halfmove_clock;
-        m_enpassant_target = history.enpassant_target;
-        m_castling_rights  = history.castling_rights;
-        m_fullmove_counter = history.fullmove_counter;
-        m_captured_piece   = history.captured_piece;
+        restore_state(history);
     }
 
     /**

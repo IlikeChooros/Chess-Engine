@@ -30,6 +30,8 @@ namespace chess{
     {
         friend class Engine;
 
+        inline void restore_state(State& state);
+        inline void undo(Square from, Square to, bool is_white, int type);
         void push_state(Move move);
         void verify_castling_rights();
         static void init_board();
@@ -62,10 +64,17 @@ namespace chess{
         void loadFen(std::string fen);
         std::string fen();
         void updateBitboards();
+        void makeNullMove();
+        void undoNullMove();
         void makeMove(Move move);
         void undoMove(Move move);
-        Bitboard hash();
-        Bitboard pawnHash();
+        Hash hash();
+        Hash pawnHash();
+
+        /**
+         * @brief Get the hash of the board, doesn't calculate it
+         */
+        Hash getHash() const {return this->m_hash; };
 
         // TODO: Make this a template function with
         // type of repetition (3 fold, 5 fold)
@@ -220,7 +229,7 @@ namespace chess{
          */
         inline int& operator[](int index) {return this->board[index]; };
         
-        uint64_t m_hash;
+        Hash m_hash;
         int board[64];
         bool m_in_check;
         int m_side;

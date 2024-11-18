@@ -6,7 +6,6 @@
 #include "threads.h"
 #include "log.h"
 #include "eval.h"
-#include "hash.h"
 #include "cache.h"
 #include "transp_table.h"
 #include "move_ordering.h"

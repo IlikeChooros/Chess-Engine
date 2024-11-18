@@ -5,7 +5,6 @@ target_sources(cengine
         src/board.cpp
         src/eval.cpp
         src/search.cpp
-        src/hash.cpp
         src/threads.cpp
         src/move_ordering.cpp
         src/magic_bitboards.cpp

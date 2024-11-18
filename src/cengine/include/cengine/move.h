@@ -74,7 +74,7 @@ class Move
             return Move(nullMove);
         
         int from = str_to_square(move.substr(0, 2));
-        int to = str_to_square(move.substr(2, 2));
+        int to   = str_to_square(move.substr(2, 2));
 
         if (from == -1 || to == -1)
             return Move(nullMove);
@@ -87,7 +87,6 @@ class Move
             
             return Move(from, to, FLAG_PROMOTION | promotion);
         }
-
         return Move(from, to, FLAG_NONE);
     }
 
@@ -101,7 +100,7 @@ class Move
     // Same as `fromUci` 
     Move(std::string move)
     {
-        (void)fromUci(move);
+        *this = fromUci(move);
     }
 
     /**
@@ -146,7 +145,10 @@ class Move
     bool isEnPassant() const {return getFlags() == FLAG_ENPASSANT_CAPTURE;};
     bool isQueenCastle() const {return getFlags() == FLAG_QUEEN_CASTLE;};
     bool isKingCastle() const {return getFlags() == FLAG_KING_CASTLE;};
-    bool isCastle() const {return isQueenCastle() || isKingCastle();};
+    bool isCastle() const {
+        auto flags = getFlags();
+        return flags == FLAG_QUEEN_CASTLE || flags == FLAG_KING_CASTLE;
+    };
     bool isNull() const {return m_move == nullMove;};
 
     /**
