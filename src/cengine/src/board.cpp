@@ -393,7 +393,7 @@ namespace chess
      * This is usefull if you don't know the flags of the move
      * @return Valid move if found in legal moves, otherwise a null move
      */
-    Move Board::match(Move move)
+  Move Board::match(Move move)
     {
         MoveList moves = generateLegalMoves();
 
@@ -401,12 +401,17 @@ namespace chess
         {
             if (moves[i].movePart() == move.movePart())
             {
-                // If the flags are not empty, return the move
-                if (move.getFlags() != Move::FLAG_NONE)
-                    return move;
-                
-                // If the flags are empty, return the move from the legal moves
-                return moves[i];
+                if (moves[i].isPromotion())
+                {
+                    // If the move is a promotion, check if the promotion piece is the same
+                    if (moves[i].getPromotionPiece() == move.getPromotionPiece())
+                        return moves[i];
+                }
+                else
+                {
+                    // If the move is not a promotion, return the move
+                    return moves[i];
+                }
             }
         }
         
