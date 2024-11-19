@@ -33,4 +33,4 @@ EVALUATION_FONT_SIZE = 24
 import os
 
 BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-ENGINE_PATH = os.path.join(BASE_PATH, 'engines', 'CEngine_v0')
+ENGINE_PATH = os.path.join(BASE_PATH, 'engines', 'CEngine_v2')
