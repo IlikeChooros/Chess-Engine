@@ -220,6 +220,7 @@ namespace chess
     int Eval::evaluate(Board& board)
     {
         int eval           = 0;
+        int material       = 0;
         bool is_white      = board.getSide() == Piece::White;
         bool is_enemy      = !is_white;
         int endgame_factor = 0;
@@ -237,8 +238,10 @@ namespace chess
             endgame_factor += (ENDGAME_FACTOR_PIECES[type] * (my_count + enemy_count));
 
             // Update the evaluation
-            eval += piece_values[type] * (my_count - enemy_count);
+            material += piece_values[type] * (my_count - enemy_count);
         }
+
+        eval += material;
 
         // Clamp the value from 0 to MAX_ENDGAME_FACTOR
         endgame_factor = std::min(endgame_factor, MAX_ENDGAME_FACTOR);
@@ -297,6 +300,18 @@ namespace chess
             // Store the pawn hash
             pawn_table.store(pawn_hash, pawn_eval);
             eval += pawn_eval;
+        }
+
+        // if the endgame factor is high and one side has a significant advantage
+        // then the winning side's king should be more active and 
+        // try to get closer to the enemy king
+        if (endgame_factor > (MAX_ENDGAME_FACTOR * 7 / 10) && abs(material) >= piece_values[Piece::Rook - 1])
+        {
+            int whoiswinning  = material > 0 ? 1 : -1;
+            Square king       = bitScanForward(board.m_bitboards[is_white][Piece::King - 1]);
+            Square enemy_king = bitScanForward(board.m_bitboards[is_enemy][Piece::King - 1]);
+
+            eval += 13 * whoiswinning * (manhattan_distance[king] - manhattan_distance[enemy_king]);
         }
 
         return eval;
