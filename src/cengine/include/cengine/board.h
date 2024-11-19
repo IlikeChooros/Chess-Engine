@@ -17,7 +17,27 @@
 #include "mailbox.h"
 #include "magic_bitboards.h"
 
-namespace chess{
+namespace chess
+{
+
+    enum Termination
+    {
+        NONE = 0,
+        CHECKMATE,
+        STALEMATE,
+        DRAW,
+        INSUFFICIENT_MATERIAL,
+        FIFTY_MOVES,
+        THREEFOLD_REPETITION,
+        FIVEFOLD_REPETITION,
+        SEVENTYFIVE_MOVES,
+        SEVENTYFIVE_MOVES_NO_CAPTURE,
+        SEVENTYFIVE_MOVES_NO_PAWN_MOVE,
+        SEVENTYFIVE_MOVES_NO_CAPTURE_NO_PAWN_MOVE,
+        TIME,
+        RESIGNATION,
+        UNKNOWN
+    };
 
     /**
      * ## Board
@@ -48,11 +68,11 @@ namespace chess{
         static const char START_FEN[57];
 
         // Piece types
-        static constexpr int PAWN_TYPE = Piece::Pawn - 1;
-        static constexpr int ROOK_TYPE = Piece::Rook - 1;
+        static constexpr int PAWN_TYPE   = Piece::Pawn - 1;
+        static constexpr int ROOK_TYPE   = Piece::Rook - 1;
         static constexpr int BISHOP_TYPE = Piece::Bishop - 1;
-        static constexpr int QUEEN_TYPE = Piece::Queen - 1;
-        static constexpr int KING_TYPE = Piece::King - 1;
+        static constexpr int QUEEN_TYPE  = Piece::Queen - 1;
+        static constexpr int KING_TYPE   = Piece::King - 1;
         static constexpr int KNIGHT_TYPE = Piece::Knight - 1;
 
         Board();
@@ -72,13 +92,25 @@ namespace chess{
         Hash pawnHash();
 
         /**
+         * @brief Get the termination of the game, it doesn't calculate it
+         */
+        Termination getTermination() const {return this->m_termination; };
+
+        /**
          * @brief Get the hash of the board, doesn't calculate it
          */
         Hash getHash() const {return this->m_hash; };
 
-        // TODO: Make this a template function with
-        // type of repetition (3 fold, 5 fold)
+        bool isTerminated();
+        bool isTerminated(MoveList* ml);
+        template <RepetitionType type = Threefold>
         bool isRepetition();
+        bool isInsufficientMaterial();
+        bool isDraw();
+        bool isCheckmate(MoveList* ml);
+        bool isStalemate(MoveList* ml);
+
+
         bool isLegal(Move move);
         Move match(Move move);
 
@@ -241,5 +273,6 @@ namespace chess{
         Bitboard m_bitboards[2][6]; // 0: white, 1: black, contains bitboards for each piece type
         CastlingRights m_castling_rights;
         StateList m_history;
+        Termination m_termination;
     };
 }

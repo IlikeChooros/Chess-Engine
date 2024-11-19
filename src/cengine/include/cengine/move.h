@@ -386,6 +386,11 @@ public:
     inline void clear() {n_moves = 0;}
 
     /**
+     * @brief Check if the move list is empty
+     */
+    inline bool empty() const {return n_moves == 0;}
+
+    /**
      * @brief Get the move at the given index
      */
     inline Move operator[](size_t i) {return Move(moves[i]);}

@@ -26,8 +26,8 @@ namespace chess
                 {
                     // The value of the captured piece
                     return 1024 
-                        + piece_values[Piece::getType(b->board[m.getTo()]) - 1] 
-                        - piece_values[Piece::getType(b->board[m.getFrom()]) - 1];
+                        + Eval::piece_values[Piece::getType(b->board[m.getTo()]) - 1] 
+                        - Eval::piece_values[Piece::getType(b->board[m.getFrom()]) - 1];
                 }
                 return 0;
             }

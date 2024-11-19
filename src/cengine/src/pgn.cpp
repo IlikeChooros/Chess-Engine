@@ -70,9 +70,6 @@ std::string PGN::get_move_notation(chess::Board& board, chess::Move move)
     
     board.makeMove(move);
 
-    // Check if the move is a check
-    auto status = get_status(board);
-
     // target square
     if (!move.isCastle())
     {
@@ -86,13 +83,16 @@ std::string PGN::get_move_notation(chess::Board& board, chess::Move move)
         notation += Piece::toChar(Piece::promotionPieces[move.getPromotionPiece()]);
     }
 
-    if (board.inCheck()){
-        if (status != GameStatus::CHECKMATE)
-            notation += "+";
+    if (board.isTerminated())
+    {
+        auto termination = board.getTermination();
+        if (termination == Termination::CHECKMATE)
+            notation += "#";
     }
-
-    if (status == GameStatus::CHECKMATE)
-        notation += "#";
+    else if (board.inCheck())
+    {
+        notation += "+";
+    }
     
     return notation;
 }
@@ -102,14 +102,14 @@ std::string PGN::get_move_notation(chess::Board& board, chess::Move move)
  */
 void PGN::generate_fields(chess::Board board)
 {
-
+    board.isTerminated();
     fields["Event"]  = "A game";
     fields["Site"]   = "Somewhere";
     fields["Date"]   = std::chrono::system_clock::now();
     fields["Round"]  = 1;
     fields["White"]  = "Player 1";
     fields["Black"]  = "Player 2";
-    fields["Result"] = pgn_game_status(chess::get_status(board), !board.turn());
+    fields["Result"] = pgn_game_status(board.getTermination(), !board.turn());
     fields["FEN"]    = "";
     fields["SetUp"]  = "";
 
@@ -187,17 +187,13 @@ std::string PGN::pgn(chess::Board board)
     return pgn;
 }
 
-std::string PGN::pgn_game_status(chess::GameStatus status, bool white)
+std::string PGN::pgn_game_status(chess::Termination status, bool white)
 {
-    switch (status)
-    {
-    case chess::GameStatus::CHECKMATE:
-        return white ? "1-0" : "0-1";
-    case chess::GameStatus::STALEMATE:
-        return "1/2-1/2";
-    case chess::GameStatus::DRAW:
-        return "1/2-1/2";
-    default:
+    if (status == chess::Termination::NONE)
         return "*";
-    }
+    
+    if (status == chess::Termination::CHECKMATE)
+        return white ? "1-0" : "0-1";
+    
+    return "1/2-1/2";
 }

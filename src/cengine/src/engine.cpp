@@ -10,7 +10,7 @@ namespace chess
 void Engine::init()
 {
     Board::init_board();
-    init_eval();
+    Eval::init();
     init_hashing();
     init_magics(false);
 }

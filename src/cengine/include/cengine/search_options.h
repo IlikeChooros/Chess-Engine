@@ -49,10 +49,10 @@ inline void update_score(Score& score, int eval, int whotomove, MoveList& pv)
 // Search result
 struct Result
 {
-    Move bestmove     = Move::nullMove;
-    Score score       = {Score::cp, 0};
-    MoveList pv       = {};
-    GameStatus status = ONGOING;
+    Move bestmove      = Move::nullMove;
+    Score score        = {Score::cp, 0};
+    MoveList pv        = {};
+    Termination status = NONE;
 };
 
 // Contains search limits

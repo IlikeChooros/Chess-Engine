@@ -9,5 +9,8 @@ typedef int16_t IScore;
 typedef int Value;
 typedef uint64_t Hash;
 
-typedef int NodeType;
-static constexpr int Root = 1, nonRoot = 0;
+typedef bool RepetitionType;
+static constexpr RepetitionType Threefold = 0, Fivefold = 1;
+
+typedef bool NodeType;
+static constexpr NodeType Root = 1, nonRoot = 0;

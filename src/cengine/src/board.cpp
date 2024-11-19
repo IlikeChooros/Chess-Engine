@@ -89,6 +89,7 @@ namespace chess
         m_captured_piece     = Piece::Empty;
         m_irreversible_index = 0;
         m_in_check           = false;
+        m_termination        = Termination::NONE;
     }
 
     Board::Board(const Board& other)
@@ -123,6 +124,7 @@ namespace chess
             
         m_castling_rights    = other.m_castling_rights;
         m_history            = other.m_history;
+        m_termination        = other.m_termination;
     
         return *this;
     }
@@ -270,6 +272,7 @@ namespace chess
         m_fullmove_counter = std::stoi(full_move);
 
         m_captured_piece = Piece::Empty;
+        m_termination    = Termination::NONE;
 
         // Update bitboards
         updateBitboards();
@@ -399,15 +402,19 @@ namespace chess
 
         for(size_t i = 0; i < moves.size(); i++)
         {
-
             if (moves[i].movePart() == move.movePart())
             {
-                // If the flags are not empty, return the move
-                if (move.getFlags() != Move::FLAG_NONE)
-                    return move;
-                
-                // If the flags are empty, return the move from the legal moves
-                return moves[i];
+                if (moves[i].isPromotion())
+                {
+                    // If the move is a promotion, check if the promotion piece is the same
+                    if (moves[i].getPromotionPiece() == move.getPromotionPiece())
+                        return moves[i];
+                }
+                else
+                {
+                    // If the move is not a promotion, return the move
+                    return moves[i];
+                }
             }
         }
         
@@ -590,9 +597,42 @@ namespace chess
         return false;
     }
 
+    // ------------- TERMINATION CHECKS -------------
+
+    /**
+     * @brief Check if the board is terminated
+     */
+    bool Board::isTerminated()
+    {
+        MoveList moves = generateLegalMoves();
+        return isTerminated(&moves);
+    }
+
+    /**
+     * @brief Check if the board is terminated
+     */
+    bool Board::isTerminated(MoveList* ml)
+    {
+        // Check if that's a draw
+        if (m_halfmove_clock >= 100)
+            m_termination = Termination::FIFTY_MOVES;
+        
+        // Check if the board is in a checkmate
+        if (m_in_check && ml->empty())
+            m_termination = Termination::CHECKMATE;
+        
+        // Check if the board is in a stalemate
+        if (!m_in_check && ml->empty())
+            m_termination = Termination::STALEMATE;
+
+        return (m_termination != Termination::NONE) || isRepetition<Threefold>() || isInsufficientMaterial();
+    }
+
     /**
      * @brief Check if the board is in a threefold repetition
+     * @tparam type Repetition type (Threefold or Fivefold)
      */
+    template <RepetitionType type>
     bool Board::isRepetition()
     {
         int count = 0;
@@ -601,7 +641,89 @@ namespace chess
             if (m_history[i].hash == m_hash)
                 count++;
         }
+        
+        if constexpr (type == Threefold)
+        {
+            if (count >= 3)
+                m_termination = Termination::THREEFOLD_REPETITION;
+        }
+        else
+        {
+            if (count >= 5)
+                m_termination = Termination::FIVEFOLD_REPETITION;
+        }
+        
         return count >= 3;
+    }
+
+
+    /**
+     * @brief Check if the board is in a draw by insufficient material
+     */
+    bool Board::isInsufficientMaterial()
+    {
+        // If there are rooks, queens or pawns on the board, the game is not yet terminated
+        if (m_bitboards[0][Piece::Rook - 1] || m_bitboards[1][Piece::Rook - 1] ||
+            m_bitboards[0][Piece::Queen - 1] || m_bitboards[1][Piece::Queen - 1] ||
+            m_bitboards[0][Piece::Pawn - 1] || m_bitboards[1][Piece::Pawn - 1])
+            return false;
+
+        // If there are only kings and one knight or one bishop on the board, the game is a draw
+        constexpr int pieces[2] = {Piece::Knight - 1, Piece::Bishop - 1};
+        constexpr int size = sizeof(pieces) / sizeof(pieces[0]);
+        int count[2] = {0};
+        
+        for (int i = 0; i < 2; i++)
+            for (int j = 0; j < size; j++)
+                if (m_bitboards[i][pieces[j]])
+                    count[i]++;
+        
+        if (count[0] <= 1 && count[1] <= 1)
+        {
+            m_termination = Termination::INSUFFICIENT_MATERIAL;
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * @brief Check if the board is in a draw by fifty move rule
+     */
+    bool Board::isDraw()
+    {
+        if (m_halfmove_clock >= 100)
+        {
+            m_termination = Termination::FIFTY_MOVES;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Check if the board is in a checkmate
+     */
+    bool Board::isCheckmate(MoveList* moves)
+    {
+        if (m_in_check && moves->empty())
+        {
+            m_termination = Termination::CHECKMATE;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief Check if the board is in a stalemate
+     */
+    bool Board::isStalemate(MoveList* moves)
+    {
+        if (!m_in_check && moves->empty())
+        {
+            m_termination = Termination::STALEMATE;
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -825,14 +947,15 @@ namespace chess
      */
     inline void Board::restore_state(State& history)
     {
-        m_hash             = history.hash;
-        m_side             = history.side_to_move;
-        m_halfmove_clock   = history.halfmove_clock;
-        m_enpassant_target = history.enpassant_target;
-        m_castling_rights  = history.castling_rights;
-        m_fullmove_counter = history.fullmove_counter;
-        m_captured_piece   = history.captured_piece;
+        m_hash               = history.hash;
+        m_side               = history.side_to_move;
+        m_halfmove_clock     = history.halfmove_clock;
+        m_enpassant_target   = history.enpassant_target;
+        m_castling_rights    = history.castling_rights;
+        m_fullmove_counter   = history.fullmove_counter;
+        m_captured_piece     = history.captured_piece;
         m_irreversible_index = history.irreverisble_index;
+        m_termination        = Termination::NONE;
     }
 
     /**

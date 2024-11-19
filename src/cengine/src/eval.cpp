@@ -4,151 +4,270 @@
 namespace chess
 {
     // Source: https://www.chessprogramming.org/Simplified_Evaluation_Function
-    int white_piece_square_table[6][64] = {
-        // for white
-        // pawn
-        {0,  0,  0,  0,  0,  0,  0,  0,
-        50, 50, 50, 50, 50, 50, 50, 50,
-        10, 10, 20, 30, 30, 20, 10, 10,
-        5,  5, 10, 25, 25, 10,  5,  5,
-        0,  0,  0, 20, 20,  0,  0,  0,
-        5, -5,-10,  0,  0,-10, -5,  5,
-        5, 10, 10,-20,-20, 10, 10,  5,
-        0,  0,  0,  0,  0,  0,  0,  0,},
-        // knight
-        {-50,-40,-30,-30,-30,-30,-40,-50,
-        -40,-20,  0,  0,  0,  0,-20,-40,
-        -30,  0, 10, 15, 15, 10,  0,-30,
-        -30,  5, 15, 20, 20, 15,  5,-30,
-        -30,  0, 15, 20, 20, 15,  0,-30,
-        -30,  5, 10, 15, 15, 10,  5,-30,
-        -40,-20,  0,  5,  5,  0,-20,-40,
-        -50,-40,-30,-30,-30,-30,-40,-50,},
-        // king empty here, because more defined version is used
-        {0},
-        // bishop
-        {-20,-10,-10,-10,-10,-10,-10,-20,
-        -10,  0,  0,  0,  0,  0,  0,-10,
-        -10,  0,  5, 10, 10,  5,  0,-10,
-        -10,  5,  5, 10, 10,  5,  5,-10,
-        -10,  0, 10, 10, 10, 10,  0,-10,
-        -10, 10, 10, 10, 10, 10, 10,-10,
-        -10,  5,  0,  0,  0,  0,  5,-10,
-        -20,-10,-10,-10,-10,-10,-10,-20,},
-        // rook
-        {0,  0,  0,  0,  0,  0,  0,  0,
-        5, 10, 10, 10, 10, 10, 10,  5,
-        -5,  0,  0,  0,  0,  0,  0, -5,
-        -5,  0,  0,  0,  0,  0,  0, -5,
-        -5,  0,  0,  0,  0,  0,  0, -5,
-        -5,  0,  0,  0,  0,  0,  0, -5,
-        -5,  0,  0,  0,  0,  0,  0, -5,
-        0,  0,  0,  5,  5,  0,  0,  0},
-        // queen
-        {-20,-10,-10, -5, -5,-10,-10,-20,
-        -10,  0,  0,  0,  0,  0,  0,-10,
-        -10,  0,  5,  5,  5,  5,  0,-10,
-        -5,  0,  5,  5,  5,  5,  0, -5,
-        0,  0,  5,  5,  5,  5,  0, -5,
-        -10,  5,  5,  5,  5,  5,  0,-10,
-        -10,  0,  5,  0,  0,  0,  0,-10,
-        -20,-10,-10, -5, -5,-10,-10,-20},
+    // Added [0] -> middle game, [1] -> endgame tables, [6] -> type of a piece
+    const int Eval::white_piece_square_table[2][6][64] = {
+        {
+            // pawn
+            {0,  0,  0,  0,  0,  0,  0,  0,
+            50, 50, 50, 50, 50, 50, 50, 50,
+            10, 10, 20, 30, 30, 20, 10, 10,
+            5,  5, 10, 25, 25, 10,  5,  5,
+            0,  0,  0, 20, 20,  0,  0,  0,
+            5, -5,-10,  0,  0,-10, -5,  5,
+            5, 10, 10,-20,-20, 10, 10,  5,
+            0,  0,  0,  0,  0,  0,  0,  0,},
+            // knight
+            {-50,-40,-30,-30,-30,-30,-40,-50,
+            -40,-20,  0,  0,  0,  0,-20,-40,
+            -30,  0, 10, 15, 15, 10,  0,-30,
+            -30,  5, 15, 20, 20, 15,  5,-30,
+            -30,  0, 15, 20, 20, 15,  0,-30,
+            -30,  5, 10, 15, 15, 10,  5,-30,
+            -40,-20,  0,  5,  5,  0,-20,-40,
+            -50,-40,-30,-30,-30,-30,-40,-50,},
+            // king
+            {-30,-40,-40,-50,-50,-40,-40,-30,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -20,-30,-30,-40,-40,-30,-30,-20,
+            -10,-20,-20,-20,-20,-20,-20,-10,
+            20, 20,  0,  0,  0,  0, 20, 20,
+            20, 30, 10,  0,  0, 10, 30, 20},
+            // bishop
+            {-20,-10,-10,-10,-10,-10,-10,-20,
+            -10,  0,  0,  0,  0,  0,  0,-10,
+            -10,  0,  5, 10, 10,  5,  0,-10,
+            -10,  5,  5, 10, 10,  5,  5,-10,
+            -10,  0, 10, 10, 10, 10,  0,-10,
+            -10, 10, 10, 10, 10, 10, 10,-10,
+            -10,  5,  0,  0,  0,  0,  5,-10,
+            -20,-10,-10,-10,-10,-10,-10,-20,},
+            // rook
+            {0,  0,  0,  0,  0,  0,  0,  0,
+            5, 10, 10, 10, 10, 10, 10,  5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            0,  0,  0,  5,  5,  0,  0,  0},
+            // queen
+            {-20,-10,-10, -5, -5,-10,-10,-20,
+            -10,  0,  0,  0,  0,  0,  0,-10,
+            -10,  0,  5,  5,  5,  5,  0,-10,
+            -5,  0,  5,  5,  5,  5,  0, -5,
+            0,  0,  5,  5,  5,  5,  0, -5,
+            -10,  5,  5,  5,  5,  5,  0,-10,
+            -10,  0,  5,  0,  0,  0,  0,-10,
+            -20,-10,-10, -5, -5,-10,-10,-20},
+        },
+
+        // endgame
+        {
+            //pawn
+            {0,   0,  0,  0,  0,  0,  0,  0,
+            55,  55, 50, 45, 45, 50, 55, 55,
+            30,  30, 20, 30, 30, 20, 30, 30,
+            15,  15, 20, 25, 25, 20, 20, 15,
+            10,  10, 10, 10, 10, 10, 10, 10,
+             5,   5,  5,  5,  5,  5,  5,  5,
+            -10, -5, -5, -5, -5, -5, -5, -10,
+            0,  0,  0,  0,  0,  0,  0,  0},
+
+            // knight
+            {-50,-40,-30,-30,-30,-30,-40,-50,
+            -40,-20,  0,  0,  0,  0,-20,-40,
+            -30,  0, 10, 15, 15, 10,  0,-30,
+            -30,  5, 15, 20, 20, 15,  5,-30,
+            -30,  0, 15, 20, 20, 15,  0,-30,
+            -30,  5, 10, 15, 15, 10,  5,-30,
+            -40,-20,  0,  5,  5,  0,-20,-40,
+            -50,-40,-30,-30,-30,-30,-40,-50},
+
+            // king
+            {-50,-40,-30,-20,-20,-30,-40,-50,
+            -30,-20,-10,  0,  0,-10,-20,-30,
+            -30,-10, 20, 30, 30, 20,-10,-30,
+            -30,-10, 30, 40, 40, 30,-10,-30,
+            -30,-10, 30, 40, 40, 30,-10,-30,
+            -30,-10, 20, 30, 30, 20,-10,-30,
+            -30,-30,  0,  0,  0,  0,-30,-30,
+            -50,-30,-30,-30,-30,-30,-30,-50},
+
+            // bishop
+            {-20,-10,-10,-10,-10,-10,-10,-20,
+            -10,  0,  0,  0,  0,  0,  0,-10,
+            -10,  0,  5, 10, 10,  5,  0,-10,
+            -10,  5,  5, 10, 10,  5,  5,-10,
+            -10,  0, 10, 10, 10, 10,  0,-10,
+            -10, 10, 10, 10, 10, 10, 10,-10,
+            -10,  5,  0,  0,  0,  0,  5,-10,
+            -20,-10,-10,-10,-10,-10,-10,-20},
+
+            // rook
+            {10, 10, 10, 10, 10, 10, 10, 10,
+             10, 20, 20, 20, 20, 20, 20, 10,
+            -10,  0,  0,  0,  0,  0,  0,-10,
+            -10,  0,  0,  0,  0,  0,  0,-10,
+            -10,  0,  0,  0,  0,  0,  0,-10,
+            -10,  0,  0,  0,  0,  0,  0,-10,
+            -10,  0,  0,  0,  0,  0,  0,-10,
+              0,  0,  0, 10, 10,  0,  0,  0},
+
+            // queen
+            {-20,-10,-10, -5, -5,-10,-10,-20,
+            -10,  0,  0,  0,  0,  0,  0,-10,
+            -10,  0,  5,  5,  5,  5,  0,-10,
+             -5,  0,  5,  5,  5,  5,  0, -5,
+              0,  0,  5,  5,  5,  5,  0, -5,
+            -10,  5,  5,  5,  5,  5,  0,-10,
+            -10,  0,  5,  0,  0,  0,  0,-10,
+            -20,-10,-10, -5, -5,-10,-10,-20},
+        }
     };
-    int white_king_square_tables[2][64] = {
-        // for white
-        // middle game
-        {-30,-40,-40,-50,-50,-40,-40,-30,
-        -30,-40,-40,-50,-50,-40,-40,-30,
-        -30,-40,-40,-50,-50,-40,-40,-30,
-        -30,-40,-40,-50,-50,-40,-40,-30,
-        -20,-30,-30,-40,-40,-30,-30,-20,
-        -10,-20,-20,-20,-20,-20,-20,-10,
-        20, 20,  0,  0,  0,  0, 20, 20,
-        20, 30, 10,  0,  0, 10, 30, 20},
-        // end game
-        {-50,-40,-30,-20,-20,-30,-40,-50,
-        -30,-20,-10,  0,  0,-10,-20,-30,
-        -30,-10, 20, 30, 30, 20,-10,-30,
-        -30,-10, 30, 40, 40, 30,-10,-30,
-        -30,-10, 30, 40, 40, 30,-10,-30,
-        -30,-10, 20, 30, 30, 20,-10,-30,
-        -30,-30,  0,  0,  0,  0,-30,-30,
-        -50,-30,-30,-30,-30,-30,-30,-50,}
-    };
-    static int piece_square_table[2][6][64] = {0};
-    static int king_square_tables[2][2][64] = {0};
-    static TTable<int> pawn_table;
+
+    // Modifiable piece values
+    int Eval::piece_square_table[2][2][6][64] = {0};
+    Bitboard Eval::passed_pawn_masks[2][64] = {0};
+    TTable<int> Eval::pawn_table = TTable<int>(4);
 
     /**
      * @brief Initialize the boards for evaluation
      */
-    void init_eval()
+    void Eval::init()
     {
         // Initialize the pieces tables
-        for(int i = 0; i < 6; i++){
-            if (i == Piece::King - 1){
-                continue;
-            }
-            for(int j = 0; j < 64; j++){
-                piece_square_table[1][i][j] = white_piece_square_table[i][j];
-                piece_square_table[0][i][j] = white_piece_square_table[i][63 - j];
+        for (int state = 0; state < 2; state++){
+            for (int type = 0; type < 6; type++){
+                for (int j = 0; j < 64; j++){
+                    piece_square_table[state][1][type][j] = white_piece_square_table[state][type][j];
+                    piece_square_table[state][0][type][j] = white_piece_square_table[state][type][63 - j];
+                }
             }
         }
 
-        // Initialize the king square tables
-        for(int i = 0; i < 2; i++){
-            for(int j = 0; j < 64; j++){
-                king_square_tables[1][i][j] = white_king_square_tables[i][j];
-                king_square_tables[0][i][j] = white_king_square_tables[i][63 - j];
+        // Initialize the passed pawn masks
+        for(int side = 0; side < 2; side++)
+        {
+            for(Square sq = 0; sq < 64; sq++)
+            {
+                int rank = sq >> 3;
+                int file = sq % 8;
+                Bitboard file_bb = 0;
+
+                // Iterate through this square and it's sides
+                for (int i = -1; i < 2; i++)
+                {
+                    // File out of board bounds
+                    if (file + i < 0 || file + i > 7)
+                        continue;
+
+                    // Get file bitboard for this square
+                    file_bb |= file_bitboards[file + i];
+
+                    // Delete all bits BELOW or equal to this rank
+                    if (side == 0)
+                        for (int r = 0; r <= rank && rank < 7; r++)
+                            file_bb &= ~(1UL << (8*r + file + i));
+                    // Delete all bits ABOVE or eqaul to this rank
+                    else 
+                        for (int r = rank; r < 8 && rank > 0; r++)
+                            file_bb &= ~(1UL << (8*r + file + i));
+                }
+
+                passed_pawn_masks[side][sq] = file_bb;
             }
         }
+    }
+
+    /**
+     * @brief Evaluate pawn structure
+     */
+    constexpr int eval_pawn_structure(Bitboard pawns, Bitboard epawns, Bitboard file, bool is_white)
+    {
+        int pawn_eval = 0;
+        Bitboard pawns_on_file = pawns & file;
+
+        if (pawns_on_file)
+        {
+            // Doubled pawns
+            if (pop_count(pawns_on_file) > 1)
+                pawn_eval -= 10;
+
+            // Isolated pawns
+            if (!(pawns & (file >> 1)) && !(pawns & (file << 1)))
+                pawn_eval -= 10;
+            
+            // Connected
+            if (pawns & (file >> 8) || pawns & (file << 8))
+                pawn_eval += 10;
+
+            // Get square of that pawn and check if it's a passed pawn
+            while (pawns_on_file)
+                if ((Eval::passed_pawn_masks[is_white][pop_lsb1(pawns_on_file)] & epawns) == 0)
+                    pawn_eval += 30;
+        }
+
+        return pawn_eval;
     }
 
     
     /**
      * @brief Evaluation function for the board in centipawns
-     * positive values are good for white, negative values are good for black
+     * positive values are good current side, negative for the opposite
      */
-    int evaluate(Board& board)
+    int Eval::evaluate(Board& board)
     {
-        int eval = 0;
-        bool is_white = board.getSide() == Piece::White;
-        bool is_enemy = !is_white;
-        int king_sq = bitScanForward(board.bitboards(is_white)[Piece::King - 1]);
-        int eking_sq = bitScanForward(board.bitboards(is_enemy)[Piece::King - 1]);
+        int eval           = 0;
+        bool is_white      = board.getSide() == Piece::White;
+        bool is_enemy      = !is_white;
+        int endgame_factor = 0;
 
-        const uint64_t file_bitboards[8] = {
-            0x0101010101010101ULL,
-            0x0202020202020202ULL,
-            0x0404040404040404ULL,
-            0x0808080808080808ULL,
-            0x1010101010101010ULL,
-            0x2020202020202020ULL,
-            0x4040404040404040ULL,
-            0x8080808080808080ULL
-        };
+        // Calcualte endgame factor
+        for(int type = 1; type < 6; type++)
+        {
+            if (type == Piece::King - 1)
+                continue;
+            
+            // Calculate endgame factor, by adding up values of a piece * it's quantity
+            int my_count    = pop_count(board.m_bitboards[is_white][type]);
+            int enemy_count = pop_count(board.m_bitboards[is_enemy][type]);
+
+            endgame_factor += (ENDGAME_FACTOR_PIECES[type] * (my_count + enemy_count));
+
+            // Update the evaluation
+            eval += piece_values[type] * (my_count - enemy_count);
+        }
+
+        // Clamp the value from 0 to MAX_ENDGAME_FACTOR
+        endgame_factor = std::min(endgame_factor, MAX_ENDGAME_FACTOR);
+        endgame_factor = MAX_ENDGAME_FACTOR - endgame_factor;
 
         // Count the material & piece square tables
+        int square_table_eval = 0;
         for (int type = 0; type < 6; type++){
-            if (type == Piece::King - 1){
-                continue;
-            }
-
             uint64_t epieces = board.bitboards(is_enemy)[type];
             uint64_t apieces = board.bitboards(is_white)[type];
 
             while(epieces){
                 int sq = pop_lsb1(epieces);
-                eval -= piece_values[type];
-                eval -= piece_square_table[is_enemy][type][sq];
+                square_table_eval -= (endgame_factor * piece_square_table[is_enemy][ENDGAME][type][sq]
+                        + (MAX_ENDGAME_FACTOR - endgame_factor) * piece_square_table[is_enemy][MIDDLE_GAME][type][sq]); 
             }
             while(apieces){
                 int sq = pop_lsb1(apieces);
-                eval += piece_values[type];
-                eval += piece_square_table[is_white][type][sq];
+                square_table_eval += (endgame_factor * piece_square_table[is_white][ENDGAME][type][sq]
+                        + (MAX_ENDGAME_FACTOR - endgame_factor) * piece_square_table[is_white][MIDDLE_GAME][type][sq]);
             }
         }
-        
+
+        // Scale the square table evaluation
+        square_table_eval /= MAX_ENDGAME_FACTOR;
+
+        // Add the evaluation to the total
+        eval += square_table_eval;
+
         // Bonus for having the bishop pair
         if (pop_count(board.bitboards(is_white)[Piece::Bishop - 1]) >= 2){
             eval += 50;
@@ -165,47 +284,14 @@ namespace chess
         } else {
             int pawn_eval = 0;
 
-            // Doubled pawns
-            Bitboard pawns = board.bitboards(is_white)[Piece::Pawn - 1];
-            Bitboard epawns = board.bitboards(is_enemy)[Piece::Pawn - 1];
-            for (int i = 0; i < 8; i++){
-                Bitboard file = file_bitboards[i];
-                if (pawns & file && pop_count(pawns & file) > 1){
-                    pawn_eval -= 10;
-                }
-                if (epawns & file && pop_count(epawns & file) > 1){
-                    pawn_eval += 10;
-                }
-            }
+            Bitboard pawns  = board.m_bitboards[is_white][Piece::Pawn - 1];
+            Bitboard epawns = board.m_bitboards[is_enemy][Piece::Pawn - 1];
 
-            // Isolated pawns
-            for (int i = 0; i < 8; i++){
+            for (int i = 0; i < 8; i++)
+            {
                 Bitboard file = file_bitboards[i];
-                if (pawns & file){
-                    if (!(pawns & (file >> 1)) && !(pawns & (file << 1))){
-                        pawn_eval -= 10;
-                    }
-                }
-                if (epawns & file){
-                    if (!(epawns & (file >> 1)) && !(epawns & (file << 1))){
-                        pawn_eval += 10;
-                    }
-                }
-            }
-
-            // Connected pawns
-            for (int i = 0; i < 8; i++){
-                Bitboard file = file_bitboards[i];
-                if (pawns & file){
-                    if (pawns & (file >> 8) || pawns & (file << 8)){
-                        pawn_eval += 10;
-                    }
-                }
-                if (epawns & file){
-                    if (epawns & (file >> 8) || epawns & (file << 8)){
-                        pawn_eval -= 10;
-                    }
-                }
+                pawn_eval += eval_pawn_structure(pawns, epawns, file, is_white);
+                pawn_eval -= eval_pawn_structure(epawns, pawns, file, is_enemy);
             }
 
             // Store the pawn hash
@@ -213,85 +299,6 @@ namespace chess
             eval += pawn_eval;
         }
 
-        // const uint64_t enemy_board_side[2] = {
-        //     0xFFFFFFFF00000000ULL, // for black
-        //     0x00000000FFFFFFFFULL, // for white
-        // };
-        // // Mobility / Activity (doesn't work properly -> enemy activity is too high)
-        // uint64_t allied_activity = c->activity & enemy_board_side[is_white];
-        // uint64_t enemy_activity = c->danger & enemy_board_side[is_enemy];
-
-        // eval += (pop_count(allied_activity) - pop_count(enemy_activity)) * 5;
-        
-
-        // King square tables
-        bool is_endgame = false;
-
-        if (pop_count(board.pieces()) <= 6 || ((pop_count(board.queens()) == 0) && (pop_count(board.rooks()) == 0))){
-            is_endgame = true;
-        }
-
-        eval += king_square_tables[is_white][is_endgame][king_sq];
-        eval -= king_square_tables[is_enemy][is_endgame][eking_sq];
-
         return eval;
-    }
-
-    /**
-     * @brief Get the status of the game (ongoing, checkmate, stalemate, draw)
-     */
-    GameStatus get_status(Board* board, MoveList *ml)
-    {
-        if (board->halfmoveClock() >= 100){
-            return DRAW;
-        }
-
-        // Checkmate / stalemate
-        if (ml->size() == 0){
-            if (board->inCheck()){
-                return CHECKMATE;
-            }
-            return STALEMATE;
-        }
-
-        // Insufficient material
-        if ((board->pieces() | board->pawns()) == 0){
-            return DRAW;
-        }
-
-        if (board->isRepetition()){
-            return DRAW;
-        }
-
-        return ONGOING;
-    }
-
-    /**
-     * @brief Get the status of the game (ongoing, checkmate, stalemate, draw)
-     */
-    GameStatus get_status(Board& board)
-    {
-        MoveList ml = board.generateLegalMoves();
-        return get_status(&board, &ml);
-    }
-
-    /**
-     * @brief Convert the game status to a string
-     */
-    std::string game_status_to_string(GameStatus status)
-    {
-        switch (status)
-        {
-        case ONGOING:
-            return "Ongoing";
-        case CHECKMATE:
-            return "Checkmate";
-        case STALEMATE:
-            return "Stalemate";
-        case DRAW:
-            return "Draw";
-        default:
-            return "Unknown";
-        }
     }
 }

@@ -103,12 +103,11 @@ namespace chess
         int depth             = 1;
         m_result              = {};
         int whotomove         = m_board.turn() ? 1 : -1;
-        auto status           = get_status(m_board);
 
         // Check if the game is over
-        if (status != ONGOING)
+        if (m_board.isTerminated())
         {
-            m_result.status  = status;
+            m_result.status  = m_board.getTermination();
             m_best_result    = m_result;
             m_thinking       = false;
             glogger.printf("bestmove (none)\n");
@@ -121,7 +120,7 @@ namespace chess
             eval = search<Root>(m_board, alpha, beta, depth);
 
             // Update the result
-            m_result.pv       = get_pv(16);
+            m_result.pv       = get_pv(depth);
             m_result.bestmove = m_result.pv.size() > 0 ? m_result.pv[0] : m_bestmove;
             update_score(m_result.score, besteval, whotomove, m_result.pv); 
             m_best_result     = m_result;
@@ -168,19 +167,8 @@ namespace chess
     Value Thread::qsearch(Board& board, Value alpha, Value beta, int depth)
     {   
         // Evaluate the position
-        Value     eval  = evaluate(board);
+        Value     eval  = Eval::evaluate(board);
         MoveList moves  = board.generateLegalCaptures();
-
-        // Check if the search should stop
-        // auto status = get_status(&board, &moves);
-        // if (status != ONGOING)
-        // {
-        //     if (status == DRAW || status == STALEMATE)
-        //         best = 0;
-        //     return best;
-        // }
-
-        // (void)moves.filter(Move::capture);
 
         // Alpha beta pruning, if the evaluation is greater or equal to beta
         // that means the position is 'too good' for the side to move
@@ -254,10 +242,10 @@ namespace chess
         bool  turn         = board.turn();
 
         // Look for draw conditions and check if the game is over
-        auto status = get_status(&board, &moves);
-        if (status != ONGOING)
+        if (board.isTerminated(&moves))
         {
-            if (status == DRAW || status == STALEMATE)
+            auto termination = board.getTermination();
+            if (termination != Termination::CHECKMATE)
                 best = 0;
             return best;
         }
