@@ -130,6 +130,7 @@ namespace chess
     // Modifiable piece values
     int Eval::piece_square_table[2][2][6][64] = {0};
     Bitboard Eval::passed_pawn_masks[2][64] = {0};
+    int8_t Eval::manhattan_distance[64][64] = {0};
     TTable<int> Eval::pawn_table = TTable<int>(4);
 
     /**
@@ -177,6 +178,21 @@ namespace chess
                 }
 
                 passed_pawn_masks[side][sq] = file_bb;
+            }
+        }
+
+        // Initalize manhattan distance
+        for (int i = 0; i < 64; i++)
+        {
+            int rank = i / 8;
+            int file = i % 8;
+
+            for (int j = 0; j < 64; j++)
+            {
+                int rank2 = j / 8;
+                int file2 = j % 8;
+
+                manhattan_distance[i][j] = abs(rank - rank2) + abs(file - file2);
             }
         }
     }
@@ -305,13 +321,17 @@ namespace chess
         // if the endgame factor is high and one side has a significant advantage
         // then the winning side's king should be more active and 
         // try to get closer to the enemy king
-        if (endgame_factor > (MAX_ENDGAME_FACTOR * 7 / 10) && abs(material) >= piece_values[Piece::Rook - 1])
+        if (
+            endgame_factor > (MAX_ENDGAME_FACTOR * 8 / 10) && abs(material) >= piece_values[Piece::Rook - 1]
+            && ((board.m_bitboards[0][Piece::Pawn - 1] | board.m_bitboards[1][Piece::Pawn - 1]) == 0))
         {
             int whoiswinning  = material > 0 ? 1 : -1;
             Square king       = bitScanForward(board.m_bitboards[is_white][Piece::King - 1]);
             Square enemy_king = bitScanForward(board.m_bitboards[is_enemy][Piece::King - 1]);
 
-            eval += 13 * whoiswinning * (manhattan_distance[king] - manhattan_distance[enemy_king]);
+            // If it's winning side, apply penalty for being far from the enemy king
+            // for losing side, apply bonus for being far from the enemy king
+            eval += -13 * whoiswinning * (manhattan_distance[king][enemy_king]);
         }
 
         return eval;

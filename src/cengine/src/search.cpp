@@ -97,7 +97,6 @@ namespace chess
 
         // Initialize variables
         Value eval            = 0;
-        Value besteval        = MIN;
         Value alpha           = MIN;
         Value beta            = MAX;
         int depth             = 1;
@@ -122,19 +121,16 @@ namespace chess
             // Update the result
             m_result.pv       = get_pv(depth);
             m_result.bestmove = m_result.pv.size() > 0 ? m_result.pv[0] : m_bestmove;
-            update_score(m_result.score, besteval, whotomove, m_result.pv); 
-            m_best_result     = m_result;
+            
+            update_score(m_result.score, eval, whotomove, depth); 
+            m_best_result = m_result;
 
             // Check if the search should stop
             if (m_interrupt.get())
                 break;
 
             // Update best evaluation & alpha
-            if (eval > besteval)
-            {
-                besteval = eval;
-                alpha = std::max(alpha, besteval);
-            }
+            alpha = std::max(alpha, eval);
 
             if (eval >= beta)
                 break;

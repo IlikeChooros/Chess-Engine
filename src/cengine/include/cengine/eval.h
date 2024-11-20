@@ -24,19 +24,6 @@ namespace chess
         // Piece values source: https://www.chessprogramming.org/Simplified_Evaluation_Function
         static constexpr int piece_values[6] = {100, 320, 20000, 330, 500, 900};
 
-        // Manhatten distance of a square to the center
-        static constexpr int manhattan_distance[64] = 
-        {
-            6, 5, 4, 3, 3, 4, 5, 6,
-            5, 4, 3, 2, 2, 3, 4, 5,
-            4, 3, 2, 1, 1, 2, 3, 4,
-            3, 2, 1, 0, 0, 1, 2, 3,
-            3, 2, 1, 0, 0, 1, 2, 3,
-            4, 3, 2, 1, 1, 2, 3, 4,
-            5, 4, 3, 2, 2, 3, 4, 5,
-            6, 5, 4, 3, 3, 4, 5, 6
-        };
-
         // Bitboards for files
         static constexpr Bitboard file_bitboards[8] = {
             0x0101010101010101ULL,
@@ -48,6 +35,9 @@ namespace chess
             0x4040404040404040ULL,
             0x8080808080808080ULL
         };
+
+        // Manhatten distance of a squara
+        static int8_t manhattan_distance[64][64];
 
         static const int white_piece_square_table[2][6][64];
         static int piece_square_table[2][2][6][64];

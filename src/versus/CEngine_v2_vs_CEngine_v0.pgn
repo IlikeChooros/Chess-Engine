@@ -1,0 +1,60 @@
+[Event "Versus Match"]
+[Site "Local"]
+[Date "2024.11.20"]
+[Round "1"]
+[White "CEngine_v0"]
+[Black "CEngine_v2"]
+[Result "0-1"]
+[FEN "r1bqkbnr/pp1ppppp/2n5/2p5/2P5/2N5/PP1PPPPP/R1BQKBNR w KQkq - 2 3"]
+[SetUp "1"]
+
+3. Nf3 Nf6 4. e3 d5 5. Ke2 d4 6. exd4 cxd4 7. Nb5 Bf5 8. Qa4 e5 9. Nh4 Be6 10.
+Nf3 a6 11. Na3 Bd6 12. Kd3 e4+ 13. Kc2 exf3 14. Kd3 Bf5# 0-1
+
+[Event "Versus Match"]
+[Site "Local"]
+[Date "2024.11.20"]
+[Round "1"]
+[White "CEngine_v0"]
+[Black "CEngine_v2"]
+[Result "0-1"]
+[FEN "r1bqkbnr/pp1ppppp/2n5/2p5/2P5/2N5/PP1PPPPP/R1BQKBNR w KQkq - 2 3"]
+[SetUp "1"]
+
+3. Nf3 Nf6 4. e3 d5 5. Ke2 d4 6. exd4 cxd4 7. Nb5 Bf5 8. Qa4 e5 9. Nh4 Be6 10.
+Nf3 a6 11. Na3 Bd6 12. Kd3 e4+ 13. Kc2 exf3 14. Kd3 Bf5# 0-1
+
+[Event "Versus Match"]
+[Site "Local"]
+[Date "2024.11.20"]
+[Round "2"]
+[White "CEngine_v0"]
+[Black "CEngine_v2"]
+[Result "0-1"]
+[FEN "r1bqkbnr/pp1ppppp/2n5/2p5/2P5/2N3P1/PP1PPP1P/R1BQKBNR b KQkq - 0 3"]
+[SetUp "1"]
+
+3... Nf6 4. Nf3 e5 5. Bg2 Be7 6. d3 O-O 7. Kd2 d5 8. cxd5 Nxd5 9. Qb3 Nxc3 10.
+Kxc3 Nd4 11. Qd1 Qa5+ 12. Kc4 Be6# 0-1
+
+[Event "Versus Match"]
+[Site "Local"]
+[Date "2024.11.20"]
+[Round "3"]
+[White "CEngine_v0"]
+[Black "CEngine_v2"]
+[Result "0-1"]
+[FEN "r2qr1k1/pp2bp1p/1n1p1np1/P1pP1b2/5P2/2N1P1P1/1P1QN1BP/R1B2RK1 b - - 2 15"]
+[SetUp "1"]
+
+15... Nc4 16. Qd1 Ng4 17. e4 Nge3 18. Bxe3 Nxe3 19. Qd3 Nxf1 20. exf5 c4 21.
+Qd4 Bf6 22. Qxc4 Ne3 23. Qb3 Nxg2 24. Kxg2 gxf5 25. Kf3 Bxc3 26. Nxc3 Qe7 27.
+Qc2 Qe3+ 28. Kg2 Rab8 29. a6 Re7 30. Rd1 Rd8 31. Qb3 Qb6 32. Qxb6 axb6 33. h4
+bxa6 34. Kf3 Rde8 35. Rd3 Re1 36. Kf2 Kh8 37. h5 R8e7 38. h6 Rh1 39. b4 Ree1
+40. Ne2 Rb1 41. Ke3 Rxb4 42. Nd4 Rc4 43. Nxf5 f6 44. Kf3 Rcc1 45. Ke4 Rc7 46.
+Nxd6 Rd7 47. Nf5 a5 48. Rc3 Re1+ 49. Ne3 Re7+ 50. Kd4 Re8 51. f5 a4 52. Ra3 Rh1
+53. Ng4 Rg8 54. Nxf6 Rg5 55. Re3 Rxh6 56. Re8+ Kg7 57. Ne4 Rg4 58. f6+ Rxf6 59.
+d6 Rxd6+ 60. Ke5 Rd7 61. Rg8+ Kxg8 62. Nf6+ Kh8 63. Nxg4 a3 64. Ne3 Rc7 65. Ke4
+a2 66. Nc2 Rxc2 67. g4 a1=Q 68. g5 Qg7 69. g6 Rc4+ 70. Kf5 Qxg6+ 71. Ke5 Re4+
+72. Kd5 Qe6# 0-1
+
