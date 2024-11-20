@@ -97,7 +97,6 @@ namespace chess
 
         // Initialize variables
         Value eval            = 0;
-        Value besteval        = MIN;
         Value alpha           = MIN;
         Value beta            = MAX;
         int depth             = 1;
@@ -123,7 +122,7 @@ namespace chess
             // Update the result
             m_result.pv       = get_pv(16);
             m_result.bestmove = m_result.pv.size() > 0 ? m_result.pv[0] : m_bestmove;
-            update_score(m_result.score, besteval, whotomove, m_result.pv); 
+            update_score(m_result.score, eval, whotomove, m_result.pv); 
             m_best_result     = m_result;
 
             // Check if the search should stop
@@ -131,11 +130,8 @@ namespace chess
                 break;
 
             // Update best evaluation & alpha
-            if (eval > besteval)
-            {
-                besteval = eval;
-                alpha = std::max(alpha, besteval);
-            }
+            alpha = std::max(alpha, eval);
+            
 
             if (eval >= beta)
                 break;
@@ -152,6 +148,13 @@ namespace chess
 
             alpha = MIN;
             beta = MAX;
+
+            if (depth > MAX_PLY)
+            {
+                glogger.logf("Max depth reached: %d\n", MAX_PLY);
+                glogger.logf("position %s\n", m_board.fen().c_str());
+                break;
+            }
         }
 
         // Print the best move
