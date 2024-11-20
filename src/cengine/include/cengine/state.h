@@ -21,7 +21,7 @@ namespace chess
         uint64_t halfmove_clock:6; // 6 bits for halfmove clock (0 - 63 (max is 50))
         uint64_t fullmove_counter:13; // 13 bits for fullmove counter (0 - 8192)
         uint64_t castling_rights:CastlingRights::bits; // 4 bits for castling rights
-        uint64_t reserved:9;
+        uint64_t irreversible_index:9;
         // That gives total of 128 bits, instead of 6*32 + 64 = 256 bits
     } State;
 

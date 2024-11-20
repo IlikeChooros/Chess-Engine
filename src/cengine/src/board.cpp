@@ -401,12 +401,17 @@ namespace chess
         {
             if (moves[i].movePart() == move.movePart())
             {
-                // If the flags are not empty, return the move
-                if (move.getFlags() != Move::FLAG_NONE)
-                    return move;
-                
-                // If the flags are empty, return the move from the legal moves
-                return moves[i];
+                if (moves[i].isPromotion())
+                {
+                    // If the move is a promotion, check if the promotion piece is the same
+                    if (moves[i].getPromotionPiece() == move.getPromotionPiece())
+                        return moves[i];
+                }
+                else
+                {
+                    // If the move is not a promotion, return the move
+                    return moves[i];
+                }
             }
         }
         
@@ -563,14 +568,15 @@ namespace chess
     void Board::push_state(Move move)
     {
         State state;
-        state.hash = hash();
-        state.side_to_move = m_side;
-        state.captured_piece = m_captured_piece;
-        state.castling_rights = m_castling_rights.get();
-        state.enpassant_target = m_enpassant_target;
-        state.halfmove_clock = m_halfmove_clock;
-        state.fullmove_counter = m_fullmove_counter;
-        state.move = move;
+        state.hash               = hash();
+        state.side_to_move       = m_side;
+        state.captured_piece     = m_captured_piece;
+        state.castling_rights    = m_castling_rights.get();
+        state.enpassant_target   = m_enpassant_target;
+        state.halfmove_clock     = m_halfmove_clock;
+        state.fullmove_counter   = m_fullmove_counter;
+        state.move               = move;
+        state.irreversible_index = m_irreversible_index;
 
         m_history.push_back(state);
     }
@@ -835,13 +841,14 @@ namespace chess
         }
 
         // Restore other states
-        m_hash             = history.hash;
-        m_side             = history.side_to_move;
-        m_halfmove_clock   = history.halfmove_clock;
-        m_enpassant_target = history.enpassant_target;
-        m_castling_rights  = history.castling_rights;
-        m_fullmove_counter = history.fullmove_counter;
-        m_captured_piece   = history.captured_piece;
+        m_hash               = history.hash;
+        m_side               = history.side_to_move;
+        m_halfmove_clock     = history.halfmove_clock;
+        m_enpassant_target   = history.enpassant_target;
+        m_castling_rights    = history.castling_rights;
+        m_fullmove_counter   = history.fullmove_counter;
+        m_captured_piece     = history.captured_piece;
+        m_irreversible_index = history.irreversible_index;
     }
 
     /**

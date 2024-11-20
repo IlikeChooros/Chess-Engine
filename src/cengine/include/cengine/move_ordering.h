@@ -24,7 +24,9 @@ namespace chess
                 if (m.isCapture())
                 {
                     // The value of the captured piece
-                    return 1024 + piece_values[Piece::getType(b->board[m.getTo()])] - piece_values[Piece::getType(b->board[m.getFrom()])];
+                    return 1024 
+                        + piece_values[Piece::getType(b->board[m.getTo()]) - 1] 
+                        - piece_values[Piece::getType(b->board[m.getFrom()]) - 1];
                 }
                 return 0;
             }
