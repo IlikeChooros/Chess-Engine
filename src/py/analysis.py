@@ -15,7 +15,7 @@ import io
 import time
 
 BASE_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
-ENGINE_GAMEPLAY_PATH = BASE_DIR / 'src' / 'versus' / 'CEngine_v0_vs_CEngine_v0.pgn'
+ENGINE_GAMEPLAY_PATH = BASE_DIR / 'src' / 'versus' / 'CEngine_v2_vs_CEngine_v0.pgn'
 STOCKFISH_PATH = ''
 ANALYZE_ALL_GAMES = True
 SAVE_TO_FILE = True
@@ -150,7 +150,7 @@ if __name__ == "__main__":
             else:
                 analysis[last_phase]['draw'] += 1
 
-            print(f"{analysis['total_games']} | Avg time: {(time.time() - start_time) / analysis['total_games']}", end='\r')
+            print(f"{analysis['total_games']} | Avg time: {(time.time() - start_time) / analysis['total_games'] :.2f}", end='\r')
 
             if not ANALYZE_ALL_GAMES and analysis['total_games'] >= 100:
                 break

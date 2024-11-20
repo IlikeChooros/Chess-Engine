@@ -147,6 +147,13 @@ namespace chess
 
             alpha = MIN;
             beta = MAX;
+
+            if (depth > MAX_PLY)
+            {
+                glogger.logf("Max depth reached: %d\n", MAX_PLY);
+                glogger.logf("position %s\n", m_board.fen().c_str());
+                break;
+            }
         }
 
         // Print the best move

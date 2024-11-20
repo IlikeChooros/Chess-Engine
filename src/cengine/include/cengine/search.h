@@ -70,6 +70,8 @@ namespace chess
     class Thread
     {
     public:
+        static constexpr int MAX_PLY = 128;
+
         Thread();
         ~Thread();
 

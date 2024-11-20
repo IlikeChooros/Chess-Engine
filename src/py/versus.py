@@ -104,8 +104,9 @@ def play_game(white: Engine, black: Engine, fen: str) -> list[chess.Move]:
     black.send_command("ucinewgame")
 
     # Set the current engine
-    turn: chess.Color = chess.Board(fen).turn
-    current_engine    = white if turn == chess.WHITE else black
+    board: chess.Board = chess.Board(fen)
+    turn: chess.Color  = board.turn
+    current_engine     = white if turn == chess.WHITE else black
 
     # Play the game
     while True:
@@ -120,7 +121,14 @@ def play_game(white: Engine, black: Engine, fen: str) -> list[chess.Move]:
         turn = not turn
         moves.append(resp)
         current_engine = white if turn == chess.WHITE else black
-        print(f"{len(moves)} | {resp}", end='\r')
+        print(f"{len(moves)} | {resp} ", end='\r')
+
+        board.push(resp)
+        if not board.is_valid() or board.is_game_over(claim_draw=True):
+            # print(f"Undetected game over: {board.result(claim_draw=True)} {board.status()}")
+            # print(f"FEN: {fen}", f"moves: {[str(move) for move in moves]}", sep='\n')
+            # input('Press enter to continue...')
+            break
 
     return moves
 
@@ -163,7 +171,7 @@ def main():
         save_game(fen, moves, i + 1 + SKIP_FIRST_N_LINES)
 
         print(
-            f"({i + 1 + SKIP_FIRST_N_LINES:15}) {((i + 1)/MAX_GAMES * 100):4.1f}% | ETA: {((time.time() - start_time)/(i + 1) * (MAX_GAMES - i - 1)):8.1f}s", 
+            f"{i + 1 + SKIP_FIRST_N_LINES:15} {((i + 1)/MAX_GAMES * 100):4.1f}% | ETA: {((time.time() - start_time)/(i + 1) * (MAX_GAMES - i - 1)):8.1f}s", 
             end='\r'
         )
     
