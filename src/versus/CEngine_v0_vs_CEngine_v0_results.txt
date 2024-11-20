@@ -1,4 +1,4 @@
 Results:
-White: 15
-Black: 27
-Draw: 2
+White: 1
+Black: 1
+Draw: 0
