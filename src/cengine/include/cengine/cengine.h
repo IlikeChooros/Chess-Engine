@@ -59,6 +59,7 @@ namespace chess
      * 
      *   // Start the search
      *   chess::Move best_move = engine.go(options);
+     *   engine.join();
      *   
      *   std::cout << "Best move: " << best_move.uci() << "\n";
      * 

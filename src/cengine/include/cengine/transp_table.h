@@ -27,6 +27,14 @@ struct TEntry
     int age;
 };
 
+// Hash function for the transposition table
+struct no_hash
+{
+    size_t operator()(const uint64_t& key) const
+    {
+        return key;
+    }
+};
 
 // Transposition table class, implemented as a hash table
 // T: Type of the entry (default is TEntry)
@@ -34,7 +42,7 @@ template <typename T = TEntry>
 class TTable
 {
 public:
-    typedef typename std::unordered_map<uint64_t, T> TableType;
+    typedef typename std::unordered_map<uint64_t, T, no_hash> TableType;
 
     TTable(size_t sizeMB = 1) noexcept 
     {

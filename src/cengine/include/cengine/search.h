@@ -11,6 +11,7 @@
 #include "move_ordering.h"
 #include "search_options.h"
 #include "interrupt.h"
+#include "extensions.h"
 
 
 namespace chess
@@ -70,7 +71,7 @@ namespace chess
     class Thread
     {
     public:
-        static constexpr int MAX_PLY = 128;
+        static constexpr int MAX_PLY = 64;
 
         Thread();
         ~Thread();
@@ -92,9 +93,10 @@ namespace chess
         Value qsearch(Board& board, Value alpha, Value beta, int depth);
 
         template <NodeType>
-        Value search(Board& board, Value alpha, Value beta, int depth);
+        Value search(Board& board, Value alpha, Value beta, int depth, int extension = 0);
 
         MoveList get_pv(int max_depth = 10);
+        Move get_pv_move(int depth);
 
         Board m_board;
         SearchCache *m_search_cache;
@@ -102,6 +104,7 @@ namespace chess
         Interrupt m_interrupt;
         Result m_result;
         Move m_bestmove;
+        Depth m_depth;
 
         std::thread m_thread;
         std::atomic<bool> m_thinking;

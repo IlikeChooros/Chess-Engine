@@ -355,9 +355,23 @@ namespace uci
         m_queue.stop();
     }
 
-    void UCI::loop()
+    /**
+     * @brief Run the UCI loop, read commands from the standard input
+     */
+    void UCI::loop(int argc, char** argv)
     {
         std::cout << "CEngine UCI ver " << global_settings.version << "\n";
+
+        // Process the command line arguments
+        if (argc > 1)
+        {
+            std::string command;
+            for (int i = 1; i < argc; i++)
+                command += std::string(argv[i]) + " ";
+            
+            sendCommand(command);
+        }
+
         // Read from standard input commands
         while(1)
         {

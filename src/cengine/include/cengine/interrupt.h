@@ -80,6 +80,11 @@ public:
     {
         return m_time.elapsed();
     }
+
+    chess::TimeMan& time_man()
+    {
+        return m_time;
+    }
 };
 
 }

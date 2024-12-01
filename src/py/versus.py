@@ -2,7 +2,8 @@ import pathlib
 import chess
 import chess.pgn
 import time
-from package.engine import Engine
+from package.engine import Engine, SearchOptions
+
 
 """
 
@@ -11,16 +12,17 @@ and save the games in a pgn file
 
 """
 
-MATCH_NUMBER = 1
+MATCH_NUMBER       = 1
 SKIP_FIRST_N_LINES = 0
+TOTAL_GAMES        = 100
 
-MAX_GAMES = 250 - SKIP_FIRST_N_LINES
+MAX_GAMES = TOTAL_GAMES - SKIP_FIRST_N_LINES
 POSTFIX = '' if MATCH_NUMBER == 1 else f'_{MATCH_NUMBER}'
 
 # Paths
 BASE_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
 ENGINE_WHITE_PATH = BASE_DIR / "src" / "engines" / "CEngine_v0"
-ENGINE_BLACK_PATH = BASE_DIR / "src" / "engines" / "CEngine_v2"
+ENGINE_BLACK_PATH = BASE_DIR / "src" / "engines" / "CEngine_v0"
 OPENINGS_PATH = BASE_DIR / "src" / "utils" / "openings.txt"
 OUTPUT_PATH = BASE_DIR / "src" / "versus" / (
     ENGINE_BLACK_PATH.stem + '_vs_' + ENGINE_WHITE_PATH.stem + POSTFIX + '.pgn'
@@ -35,6 +37,13 @@ results: dict = {
     'draw': 0
 }
 
+names: dict = {
+    'white': '',
+    'black': ''
+}
+
+SEARCH_OPTIONS = SearchOptions(movetime=200)
+
 def setup_engine(engine: Engine):
     """
     Setup the engine, turn off the logging and set the hash size
@@ -42,7 +51,12 @@ def setup_engine(engine: Engine):
     engine.send_command("uci")
     engine.isready()
     engine.send_command("setoption name Hash value 64")
-    engine.send_command("setoption name Log File value <empty>")
+
+    if engine.name == 'CEngine_v0':
+        engine.send_command("setoption name Log File value <empty>")
+    else:
+        engine.send_command("setoption name Log File value log.txt")
+    engine.set_search_options(SEARCH_OPTIONS)
 
 def save_game(fen: str, moves: list[chess.Move], game_number: int):
     """
@@ -74,17 +88,19 @@ def save_game(fen: str, moves: list[chess.Move], game_number: int):
 
     outcome = board.outcome(claim_draw=True)
     if outcome is None:
-        results['draw'] += 1
+        pass
     elif outcome.winner == chess.WHITE:
         results['white'] += 1
-    else:
+    elif outcome.winner == chess.BLACK:
         results['black'] += 1
+    else:
+        results['draw'] += 1
 
     # Save the results
     with open(OUTPUT_RESULTS_PATH, 'w') as results_file:
         results_file.write(f"Results:\n")
-        results_file.write(f"White: {results['white']}\n")
-        results_file.write(f"Black: {results['black']}\n")
+        results_file.write(f"{names['white']}: {results['white']}\n")
+        results_file.write(f"{names['black']}: {results['black']}\n")
         results_file.write(f"Draw: {results['draw']}\n")
 
     # Save the game in the pgn file
@@ -95,11 +111,14 @@ def save_game(fen: str, moves: list[chess.Move], game_number: int):
 
 def play_game(white: Engine, black: Engine, fen: str) -> list[chess.Move]:
     """
-    Play a game between two engines
+    Play a game between two engines, returns the moves played
     """
-    moves: list[chess.Move] = []
 
     # Set the engines
+    white.stop()
+    white.isready()
+    black.stop()
+    black.isready()
     white.send_command("ucinewgame")
     black.send_command("ucinewgame")
 
@@ -111,26 +130,40 @@ def play_game(white: Engine, black: Engine, fen: str) -> list[chess.Move]:
     # Play the game
     while True:
         # Make a move
-        current_engine.set_position(moves, fen=fen)
-        current_engine.send_command("go movetime 100")
+        current_engine.load_game(board, fen=fen)
+        current_engine.go()
         resp = current_engine.get_bestmove()
-        if resp is None:
+        if resp is None or not bool(resp):
             break
         
         # Switch the turn and the engine
-        turn = not turn
-        moves.append(resp)
-        current_engine = white if turn == chess.WHITE else black
-        print(f"{len(moves)} | {resp} ", end='\r')
-
         board.push(resp)
+        turn = not turn
+        current_engine = white if turn == chess.WHITE else black
+        print(f"{len(board.move_stack)} | {resp} ", end='\r')
+        
         if not board.is_valid() or board.is_game_over(claim_draw=True):
             # print(f"Undetected game over: {board.result(claim_draw=True)} {board.status()}")
             # print(f"FEN: {fen}", f"moves: {[str(move) for move in moves]}", sep='\n')
             # input('Press enter to continue...')
             break
 
-    return moves
+    return board.move_stack
+
+
+def format_time(seconds: int) -> str:
+    secs: int = seconds % 60
+    mins: int = seconds // 60
+    hour: int = mins // 60
+    
+    format_ = ''
+    if hour:
+        format_ += f"{hour}h "
+    if mins:
+        format_ += f"{mins}m "
+    format_ += f"{secs}s "
+
+    return format_
 
 def main():
     global ENGINE_WHITE_PATH, ENGINE_BLACK_PATH, OPENINGS_PATH, \
@@ -150,6 +183,9 @@ def main():
     black = Engine(ENGINE_BLACK_PATH)
     setup_engine(white)
     setup_engine(black)
+
+    names['white'] = white.name
+    names['black'] = black.name
 
     # Skip the first n positions
     for _ in range(SKIP_FIRST_N_LINES):
@@ -171,7 +207,7 @@ def main():
         save_game(fen, moves, i + 1 + SKIP_FIRST_N_LINES)
 
         print(
-            f"{i + 1 + SKIP_FIRST_N_LINES:15} {((i + 1)/MAX_GAMES * 100):4.1f}% | ETA: {((time.time() - start_time)/(i + 1) * (MAX_GAMES - i - 1)):8.1f}s", 
+            f"{i + 1 + SKIP_FIRST_N_LINES:15} {((i + 1)/MAX_GAMES * 100):4.1f}% | ETA: {format_time(int((time.time() - start_time)/(i + 1) * (MAX_GAMES - i - 1))):8} ", 
             end='\r'
         )
     

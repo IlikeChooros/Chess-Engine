@@ -213,7 +213,7 @@ namespace uci
         int commandsLeft() { return m_queue.tasksLeft(); }
 
         void sendCommand(std::string comm);
-        void loop();
+        void loop(int argc = 0, char** argv = nullptr);
         
     private:
         void setoption(std::istringstream& iss);

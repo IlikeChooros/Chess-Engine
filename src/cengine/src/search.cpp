@@ -57,13 +57,23 @@ namespace chess
     }
 
     /**
+     * @brief Get the principal variation move at a certain depth of the search
+     */
+    Move Thread::get_pv_move(int depth)
+    {
+        Depth ply   = m_depth - depth;
+        MoveList pv = get_pv(ply + 1);
+        return int(pv.size()) > ply ? pv[ply] : Move();
+    }
+
+    /**
      * @brief Get the principal variation from the transposition table
      */
     MoveList Thread::get_pv(int max_depth)
     {
         int pv_depth  = 0;
         MoveList pv   = {};
-        uint64_t hash = m_board.hash();
+        uint64_t hash = m_board.getHash();
 
         // Search through the transposition table for the principal variation
         while (m_search_cache->getTT().contains(hash))
@@ -75,7 +85,7 @@ namespace chess
             // Add the move to the PV & make the move
             pv.add(entry.bestMove);
             m_board.makeMove(entry.bestMove);
-            hash = m_board.hash();
+            hash = m_board.getHash();
         }
 
         // Unmake the moves
@@ -99,7 +109,8 @@ namespace chess
         Value eval            = 0;
         Value alpha           = MIN;
         Value beta            = MAX;
-        int depth             = 1;
+        // Value delta           = 50;
+        m_depth               = 1;
         m_result              = {};
         int whotomove         = m_board.turn() ? 1 : -1;
 
@@ -114,46 +125,70 @@ namespace chess
         }
 
         // Iterative deepening loop
-        while(true)
+        while(m_depth <= MAX_PLY && !m_interrupt.get())
         {
-            eval = search<Root>(m_board, alpha, beta, depth);
+            // Aspiration window
+            // while(true)
+            // {
+            //     eval = search<Root>(m_board, alpha, beta, m_depth);
 
-            // Update the result
-            m_result.pv       = get_pv(depth);
-            m_result.bestmove = m_result.pv.size() > 0 ? m_result.pv[0] : m_bestmove;
+            //     if (eval <= alpha)
+            //     {
+            //         alpha = std::max(alpha - delta, MIN);
+            //     }
+            //     else if (eval >= beta)
+            //     {
+            //         beta = std::min(beta + delta, MAX);
+            //     }
+            //     else
+            //     {
+            //         break;
+            //     }
+
+            //     delta += delta / 2;
+            // }
             
-            update_score(m_result.score, eval, whotomove, depth); 
-            m_best_result = m_result;
+            eval              = search<Root>(m_board, alpha, beta, m_depth); 
+            m_result.pv       = get_pv(m_depth);
+            m_result.bestmove = m_result.pv.size() > 0 ? m_result.pv[0] : m_bestmove;
 
-            // Check if the search should stop
+            // Update alpha beta
+            // alpha    = eval - delta;
+            // beta     = eval + delta;
+
             if (m_interrupt.get())
+            {
+                if (m_result.pv.empty())
+                {
+                    update_score(m_result.score, eval, whotomove, 0);
+                    m_best_result = m_result;
+                }
                 break;
+            }
 
-            // Update best evaluation & alpha
-            alpha = std::max(alpha, eval);
-
-            if (eval >= beta)
-                break;
+            update_score(m_result.score, eval, whotomove, m_result.pv.size());
+            m_best_result = m_result;
 
             // Print info
             glogger.printInfo(
-                depth, m_result.score.value, m_result.score.type == Score::cp, 
+                m_depth, m_result.score.value, m_result.score.type == Score::cp, 
                 m_interrupt.nodes(), m_interrupt.time(), &m_result.pv
             );
 
+            // Check if mate has been found
+            // if (m_result.score.type == Score::mate && m_depth > 3)
+            //     break;
+
             // Update depth & alpha beta
-            depth += 1;
-            m_interrupt.depth(depth);
+            m_depth += 1;
+            m_interrupt.depth(m_depth);
+        }
 
-            alpha = MIN;
-            beta = MAX;
 
-            if (depth > MAX_PLY)
-            {
-                glogger.logf("Max depth reached: %d\n", MAX_PLY);
-                glogger.logf("position %s\n", m_board.fen().c_str());
-                break;
-            }
+        if (m_depth > MAX_PLY)
+        {
+            glogger.logf("Max depth reached: %d\n", MAX_PLY);
+            glogger.logf("position %s\n", m_board.fen().c_str());
         }
 
         // Print the best move
@@ -167,11 +202,28 @@ namespace chess
     /**
      * @brief Run quiescence search
      */
-    Value Thread::qsearch(Board& board, Value alpha, Value beta, int depth)
+    Value Thread::qsearch(Board& board, Value alpha, Value beta, int ply = 0)
     {   
         // Evaluate the position
         Value     eval  = Eval::evaluate(board);
         MoveList moves  = board.generateLegalCaptures();
+
+        // // Check if that's a terminal node
+        // if (board.isTerminated(&moves))
+        // {
+        //     auto termination = board.getTermination();
+        //     if (termination == Termination::CHECKMATE)
+        //         eval = MATE - (m_depth + ply);
+        //     else
+        //         eval = 0;
+
+        //     alpha = std::max(alpha, eval);
+        //     return eval >= beta ? beta : alpha;
+        // }
+
+        // // Filter moves by captures
+        // (void)moves.captures();
+        
 
         // Alpha beta pruning, if the evaluation is greater or equal to beta
         // that means the position is 'too good' for the side to move
@@ -188,7 +240,7 @@ namespace chess
             Move m = moves[i];
 
             board.makeMove(m);
-            eval = -qsearch(board, -beta, -alpha, depth - 1);
+            eval = -qsearch(board, -beta, -alpha, ply + 1);
             board.undoMove(m);
 
             if (alpha >= beta)
@@ -205,9 +257,26 @@ namespace chess
      * @brief Priciple variation search
      */
     template <NodeType nType>
-    Value Thread::search(Board& board, Value alpha, Value beta, int depth)
+    Value Thread::search(Board& board, Value alpha, Value beta, int depth, int extension)
     {
-        constexpr bool isRoot = nType == Root;
+        constexpr bool isRoot       = nType == Root;
+        constexpr bool pv           = nType == PV;
+        constexpr NodeType nextType = isRoot ? PV : (pv ? PV : nonPV);
+
+        // Update interrupt
+        m_interrupt.update();
+
+        // Look for draw conditions and check if the game is over
+        MoveList moves  = board.generateLegalMoves();
+        Value best      = MATE - depth;
+
+        if (board.isTerminated(&moves))
+        {
+            auto termination = board.getTermination();
+            if (termination != Termination::CHECKMATE)
+                best = 0;
+            return best;
+        }
 
         // Lookup transposition table and check for possible cutoffs
         uint64_t hash = board.getHash();
@@ -236,44 +305,30 @@ namespace chess
 
         // Quiescence search
         if (depth == 0)
-            return qsearch(board, alpha, beta, depth);
+            return qsearch(board, alpha, beta);
         
         // Generate legal moves, setup variables for the search
-        MoveList moves     = board.generateLegalMoves();
-        Value best         = MATE - depth;
-        Move  bestmove     = Move::nullMove;
-        bool  turn         = board.turn();
-
-        // Look for draw conditions and check if the game is over
-        if (board.isTerminated(&moves))
-        {
-            auto termination = board.getTermination();
-            if (termination != Termination::CHECKMATE)
-                best = 0;
-            return best;
-        }
+        Move  bestmove = Move::nullMove;
+        bool  turn     = board.turn();
 
         // Sort the moves using move ordering
-        if constexpr (isRoot)
-        {
-            MoveList pv = get_pv(10);
-            MoveOrdering::sort(&moves, &pv, &board, m_search_cache);
-        }
-        else
-        {
-            MoveOrdering::sort(&moves, nullptr, &board, m_search_cache);
-        }
+        MoveOrdering::sort(&moves, get_pv_move(depth), &board, m_search_cache);        
         
-        // Loop through all the moves and evaluate them
+        // Loop through the rest of the moves
         for (size_t i = 0; i < moves.size(); i++)
         {
-            // Update interrupt
-            m_interrupt.update();
-
             Move m = moves[i];
             board.makeMove(m);
-            Value eval = -search<nonRoot>(board, -beta, -alpha, depth - 1);
+
+            // Add extensions
+            int ext    = Extensions::check(board, extension);
+            Value eval = 0;
+            eval = -search<nextType>(board, -beta, -alpha, depth - 1 + ext, extension);
+
             board.undoMove(m);
+
+            if (m_interrupt.get() && m_bestmove)
+                return 0;
 
             if (eval > best)
             {
@@ -286,10 +341,7 @@ namespace chess
                 {
                     m_bestmove = bestmove;
                 };
-            }
-
-            if (m_interrupt.get())
-                return 0;
+            }            
 
             if (best >= beta)
                 break;     

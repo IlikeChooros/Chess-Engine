@@ -29,7 +29,7 @@ struct Score
 };
 
 // Updates the score based on the given evaluation
-inline void update_score(Score& score, int eval, int whotomove, int depth)
+inline void update_score(Score& score, int eval, int whotomove, int pv_size)
 {
     // Update the score
     score.type = Score::cp;
@@ -40,15 +40,15 @@ inline void update_score(Score& score, int eval, int whotomove, int depth)
     {
         score.type = Score::mate;
         // Get the mate in moves, from eval
-        score.value = MATE_THRESHOLD + depth - abs(eval);
-        score.value = std::max(score.value, 1);
-        score.value *= eval > 0 ? 1 : -1;
-        score.value *= whotomove;
-
-        // score.value = (pv.size() + 1) / 2;
+        // score.value = MATE_THRESHOLD + depth - abs(eval);
         // score.value = std::max(score.value, 1);
         // score.value *= eval > 0 ? 1 : -1;
         // score.value *= whotomove;
+
+        score.value = (pv_size + 1) / 2;
+        score.value = std::max(score.value, 1);
+        score.value *= eval > 0 ? 1 : -1;
+        score.value *= whotomove;
     }
 }
 

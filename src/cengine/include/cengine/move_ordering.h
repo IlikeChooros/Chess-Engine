@@ -25,7 +25,7 @@ namespace chess
                 if (m.isCapture())
                 {
                     // The value of the captured piece
-                    return 1024 
+                    return 900 
                         + Eval::piece_values[Piece::getType(b->board[m.getTo()]) - 1] 
                         - Eval::piece_values[Piece::getType(b->board[m.getFrom()]) - 1];
                 }
@@ -57,6 +57,6 @@ namespace chess
         /**
          * @brief Order the moves in the move list, modifies the list in place
          */
-        static void sort(MoveList *ml, MoveList *pv, Board *b, SearchCache* sc);
+        static void sort(MoveList *ml, Move pv, Board *b, SearchCache* sc);
     };
 }

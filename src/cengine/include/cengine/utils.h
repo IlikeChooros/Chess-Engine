@@ -10,6 +10,9 @@
 #include "types.h"
 #include "settings.h"
 
+namespace chess
+{
+
 /**
  * @brief Converts a square index to a string representation
  */
@@ -119,3 +122,6 @@ inline void dbitboard(uint64_t bitboard64)
         printf("%*c", 2, 'a' + i);
     printf("\n\n");
 }
+
+
+} // namespace chess

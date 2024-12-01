@@ -49,6 +49,8 @@ namespace chess
     class Board: public Mailbox
     {
         friend class Engine;
+        friend class Thread;
+        friend class Eval;
 
         inline void restore_state(State& state);
         inline void undo(Square from, Square to, bool is_white, int type);

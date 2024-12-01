@@ -3,6 +3,8 @@
 
 namespace{
 
+using namespace chess;
+
 // Utility functions
 
 TEST(Utils, str_to_square){

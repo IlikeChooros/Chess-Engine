@@ -90,6 +90,8 @@ namespace chess
         m_irreversible_index = 0;
         m_in_check           = false;
         m_termination        = Termination::NONE;
+
+        push_state(Move());
     }
 
     Board::Board(const Board& other)
@@ -271,13 +273,16 @@ namespace chess
         ss >> full_move;
         m_fullmove_counter = std::stoi(full_move);
 
-        m_captured_piece = Piece::Empty;
-        m_termination    = Termination::NONE;
+        m_captured_piece     = Piece::Empty;
+        m_termination        = Termination::NONE;
+        m_irreversible_index = 0;
 
         // Update bitboards
+        m_history.clear();
         updateBitboards();
         verify_castling_rights();
         (void)hash();
+        push_state(Move());
 
         // Read the 'moves' part
         std::string moves;
@@ -374,7 +379,7 @@ namespace chess
         fen += ' ';
         if (m_enpassant_target == 0){
             fen += '-';
-        } 
+        }
         else {
             fen += square_to_str(m_enpassant_target);
         }
@@ -617,13 +622,14 @@ namespace chess
         if (m_halfmove_clock >= 100)
             m_termination = Termination::FIFTY_MOVES;
         
-        // Check if the board is in a checkmate
-        if (m_in_check && ml->empty())
-            m_termination = Termination::CHECKMATE;
-        
-        // Check if the board is in a stalemate
-        if (!m_in_check && ml->empty())
-            m_termination = Termination::STALEMATE;
+        // Check if the board is in a checkmate or stalemate
+        if (ml->empty())
+        {
+            if (m_in_check)
+                m_termination = Termination::CHECKMATE;
+            else
+                m_termination = Termination::STALEMATE;
+        }
 
         return (m_termination != Termination::NONE) || isRepetition<Threefold>() || isInsufficientMaterial();
     }
@@ -635,8 +641,11 @@ namespace chess
     template <RepetitionType type>
     bool Board::isRepetition()
     {
+        if (m_history.empty())
+            return false;
+        
         int count = 0;
-        for (size_t i = m_irreversible_index; i < m_history.size(); i++)
+        for (int i = m_history.size() - 1; i >= m_irreversible_index; i -= 2)
         {
             if (m_history[i].hash == m_hash)
                 count++;
@@ -653,7 +662,7 @@ namespace chess
                 m_termination = Termination::FIVEFOLD_REPETITION;
         }
         
-        return count >= 3;
+        return m_termination != Termination::NONE;
     }
 
 
@@ -670,7 +679,7 @@ namespace chess
 
         // If there are only kings and one knight or one bishop on the board, the game is a draw
         constexpr int pieces[2] = {Piece::Knight - 1, Piece::Bishop - 1};
-        constexpr int size = sizeof(pieces) / sizeof(pieces[0]);
+        constexpr int size      = sizeof(pieces) / sizeof(pieces[0]);
         int count[2] = {0};
         
         for (int i = 0; i < 2; i++)
@@ -757,8 +766,6 @@ namespace chess
     void Board::makeMove(Move move)
     {
         // Push the current state to the history
-        push_state(move);
-
         Square to           = move.getTo();
         Square from         = move.getFrom();
         int type            = Piece::getType(board[from]);
@@ -926,6 +933,8 @@ namespace chess
 
         // Update zobrist hash, change the side to move
         m_hash ^= Zobrist::hash_turn;
+
+        push_state(move);
     }
 
     /**
@@ -933,11 +942,11 @@ namespace chess
      */
     void Board::undoNullMove()
     {
-        if (m_history.empty())
+        if (m_history.size() <= 1)
             return;
         
-        State state = m_history.back();
         m_history.pop_back();
+        State state = m_history.back();
 
         restore_state(state);
     }
@@ -978,12 +987,12 @@ namespace chess
     void Board::undoMove(Move move)
     {
         // If there's no history, return
-        if (m_history.empty())
+        if (m_history.size() <= 1)
             return;
         
         // Get the last state
-        State history = m_history.back();
         m_history.pop_back();
+        State history = m_history.back();
 
         Square to           = move.getTo();
         Square from         = move.getFrom();

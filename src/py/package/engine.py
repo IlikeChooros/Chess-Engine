@@ -99,10 +99,12 @@ class Engine:
 
     process: subprocess.Popen
     engine_path: str
-    killed: bool = False
+    killed: bool                  = False
     search_options: SearchOptions = SearchOptions()
-    name: str = 'Engine'
-    should_print: bool = False
+    name: str                     = 'Engine'
+    should_print: bool            = False
+    is_running: bool              = False
+    last_line: str                = ''
 
     def __init__(self, engine_path: str, should_print = False) -> None:
         self.engine_path = engine_path
@@ -135,6 +137,7 @@ class Engine:
         Read a single line from the engine output
         """
         out = self.process.stdout.readline().strip()
+        self.last_line = out
 
         if self.should_print:
             print('[%s]: %s' % (self.name, out))
@@ -155,9 +158,10 @@ class Engine:
         while True:
             line = self._read_line()
             if line.startswith(until):
+                self.last_line = line
                 return line
     
-    def _read_until_bestmove(self) -> chess.Move | None:
+    def _read_until_bestmove(self, line: str | None = None) -> chess.Move | None:
         """
         Read the output of the engine until the bestmove command is found.
 
@@ -165,11 +169,13 @@ class Engine:
 
         :return: string containing the bestmove output, ex: 'bestmove e2e4'
         """
-        line = self._read_until('bestmove')
+        if line is None:
+            line = self._read_until('bestmove')
         strmove = line.split()[1]
         move: chess.Move | None = None
         if strmove != '(none)':
             move = chess.Move.from_uci(strmove)
+        self.is_running = False
         return move
             
 
@@ -177,7 +183,8 @@ class Engine:
 
     def send_command(self, command: str) -> None:
         """
-        Send a command to the engine
+        Send a command to the engine,
+        See htt
         """
         if self.process.poll() is not None or self.killed:
             raise EngineNotRunning(self._format_error('Engine is not ready'))
@@ -188,6 +195,12 @@ class Engine:
         if self.should_print:
             print(command)
         
+        if command.startswith('go'):
+            self.is_running = True
+        
+        if command.startswith(('stop', 'quit')):
+            self.is_running = False
+
         self.process.stdin.write(command + '\n')
         self.process.stdin.flush()
 
@@ -263,10 +276,20 @@ class Engine:
                 continue
 
             if line.startswith('bestmove'):
+                self.is_running = False
                 break
             
             prev_evaluation._from_string(line)
             yield prev_evaluation
+
+    def go(self, options: typing.Optional[SearchOptions] = None) -> None:
+        """
+        Run the search command with the specified options
+        """
+        if options is not None:
+            self.set_search_options(options)
+        
+        self.send_command(f'go {str(self.search_options)}')
 
     def get_bestmove(self) -> chess.Move | None:
         """
@@ -275,6 +298,16 @@ class Engine:
         """
         return self._read_until_bestmove()
     
+
+    def try_bestmove(self) -> chess.Move | None:
+        """
+        Try to get the best move, if the engine is not running, return None
+        """        
+        line = self._try_read_line()        
+        if line is not None and line.startswith('bestmove'):
+            return self._read_until_bestmove(line)
+
+        return None
 
     def isready(self) -> bool:
         """
@@ -301,5 +334,4 @@ class Engine:
         self.send_command('quit')
         self.process.wait()
         self.process.kill()
-        self.killed = True
     

@@ -39,3 +39,8 @@ Code related:
 - [x] refactor `search` function, it's a mess
 - [x] refactor ALL of the code
 
+- [ ] write own hash table, since std::unordered_map is hasing the board hash again
+- [ ] fix search with alpha-beta:
+  - [ ] zw search not working (no asp window)
+  - [ ] alpha beta with asp window + normal search
+  - search alone seems fine, should benchmar

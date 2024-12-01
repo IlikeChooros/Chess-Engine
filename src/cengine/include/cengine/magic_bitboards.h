@@ -18,6 +18,8 @@ https://www.chessprogramming.org/Looking_for_Magics
 #include "mailbox.h" // for move mailbox move generation
 #include "pieces.h"
 
+namespace chess
+{
 // Magic bitboard struct, fancy magic bitboard stuff
 struct Magic {
     Bitboard mask;
@@ -39,3 +41,5 @@ public:
 };
 
 void init_magics(bool recalculate = false);
+
+} // namespace chess

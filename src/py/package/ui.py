@@ -120,7 +120,7 @@ class EvaluationWidget(BaseWidget):
     Evaluation widget class
     """
 
-    def __init__(self, evaluation: engine.Evaluation | None) -> None:
+    def __init__(self, evaluation: engine.Evaluation | None = None) -> None:
         self.surface = draw_evaluation(evaluation)
 
     def update(self, evaluation: engine.Evaluation) -> None:
@@ -248,12 +248,20 @@ class VersusWindow(BaseWindow):
     def __init__(self, board: chess.Board) -> None:
         self.board_widget = BoardWidget(board)
         self.fps_widget = FPSWidget(pygame.time.Clock())
+        self.eval_white_widget = EvaluationWidget()
+        self.eval_black_widget = EvaluationWidget()
 
-    def update(self, board: chess.Board) -> None:
+    def update(
+            self, board: chess.Board, eval_white: engine.Evaluation, 
+            eval_black: engine.Evaluation, clock: pygame.time.Clock
+        ) -> None:
         """
         Update the versus window
         """
         self.board_widget.update(board)
+        self.eval_white_widget.update(eval_white)
+        self.eval_black_widget.update(eval_black)
+        self.fps_widget.update(clock)
 
     def draw(self, window: pygame.Surface) -> None:
         """
@@ -261,12 +269,11 @@ class VersusWindow(BaseWindow):
         """
         self.board_widget.draw(window)
         self.fps_widget.draw(window)
+        self.eval_white_widget.draw(window)
+        self.eval_black_widget.draw(window)
     
     def input(self, event: pygame.event.Event, board: chess.Board) -> None:
-        """
-        Handle the input event
-        """
-        inputs.handle_inputs(event, board)
+        pass
 
 
 # ----------------- Utility functions -----------------
@@ -299,7 +306,7 @@ def eval_bar_score_clamp(score: int) -> float:
     return (fscore / (1 + np.abs(fscore))) * 0.5 + 0.5
 
 
-def _eval_bar(evaluation: engine.Evaluation) -> pygame.Surface:
+def _eval_bar(evaluation: engine.Evaluation | None) -> pygame.Surface:
     """
     Return the evaluation bar as a Pygame Surface
     """ 
@@ -336,11 +343,13 @@ def _eval_bar(evaluation: engine.Evaluation) -> pygame.Surface:
     return surface
 
 
-def draw_evaluation(evaluation: engine.Evaluation) -> pygame.Surface:
+def draw_evaluation(evaluation: engine.Evaluation | None) -> pygame.Surface:
     """
     Return the evaluation as a Pygame Surface
     """
     surface = pygame.Surface(settings.EVALUATION_SIZE)
+    if evaluation is None:
+        evaluation = engine.Evaluation()
 
     # Draw the principal variation
     for index, move in enumerate(evaluation.pv):
@@ -367,7 +376,7 @@ def draw_board(board: chess.Board) -> pygame.Surface:
             *get_svg_data(
                 chess.svg.board(
                     board=board, size=settings.BOARD_SIZE, coordinates=False, 
-                    **inputs.render_settings.__dict__()
+                    **inputs.render_settings.board_kwargs()
             ))
         )
 

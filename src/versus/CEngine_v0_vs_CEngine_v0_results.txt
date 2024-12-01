@@ -1,4 +1,4 @@
 Results:
-White: 15
-Black: 27
-Draw: 2
+CEngine_v0: 19
+CEngine_v0: 28
+Draw: 52

@@ -88,7 +88,7 @@ void Log::logBoardInfo(chess::Board* board)
         board->getSide() == chess::Piece::White ? "White" : "Black",
         board->fullmoveCounter(),
         board->halfmoveClock(),
-        square_to_str(board->enpassantTarget()).c_str()
+        chess::square_to_str(board->enpassantTarget()).c_str()
     );
 }
 

@@ -33,7 +33,7 @@ namespace chess
             -20,-30,-30,-40,-40,-30,-30,-20,
             -10,-20,-20,-20,-20,-20,-20,-10,
             20, 20,  0,  0,  0,  0, 20, 20,
-            20, 30, 10,  0,  0, 10, 30, 20},
+            20, 30, 20,  0,  0, 10, 30, 20},
             // bishop
             {-20,-10,-10,-10,-10,-10,-10,-20,
             -10,  0,  0,  0,  0,  0,  0,-10,
@@ -66,14 +66,14 @@ namespace chess
         // endgame
         {
             //pawn
-            {0,   0,  0,  0,  0,  0,  0,  0,
-            55,  55, 50, 45, 45, 50, 55, 55,
-            30,  30, 20, 30, 30, 20, 30, 30,
-            15,  15, 20, 25, 25, 20, 20, 15,
-            10,  10, 10, 10, 10, 10, 10, 10,
-             5,   5,  5,  5,  5,  5,  5,  5,
-            -10, -5, -5, -5, -5, -5, -5, -10,
-            0,  0,  0,  0,  0,  0,  0,  0},
+            {0,  0,  0,  0,  0,  0,  0,  0,
+            50, 50, 50, 50, 50, 50, 50, 50,
+            10, 10, 20, 30, 30, 20, 10, 10,
+            5,  5, 10, 25, 25, 10,  5,  5,
+            0,  0,  0, 20, 20,  0,  0,  0,
+            5, -5,-10,  0,  0,-10, -5,  5,
+            5, 10, 10,-20,-20, 10, 10,  5,
+            0,  0,  0,  0,  0,  0,  0,  0,},
 
             // knight
             {-50,-40,-30,-30,-30,-30,-40,-50,
@@ -106,14 +106,14 @@ namespace chess
             -20,-10,-10,-10,-10,-10,-10,-20},
 
             // rook
-            {10, 10, 10, 10, 10, 10, 10, 10,
-             10, 20, 20, 20, 20, 20, 20, 10,
-            -10,  0,  0,  0,  0,  0,  0,-10,
-            -10,  0,  0,  0,  0,  0,  0,-10,
-            -10,  0,  0,  0,  0,  0,  0,-10,
-            -10,  0,  0,  0,  0,  0,  0,-10,
-            -10,  0,  0,  0,  0,  0,  0,-10,
-              0,  0,  0, 10, 10,  0,  0,  0},
+            {0,  0,  0,  0,  0,  0,  0,  0,
+            5, 10, 10, 10, 10, 10, 10,  5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            -5,  0,  0,  0,  0,  0,  0, -5,
+            0,  0,  0,  5,  5,  0,  0,  0},
 
             // queen
             {-20,-10,-10, -5, -5,-10,-10,-20,
@@ -128,6 +128,7 @@ namespace chess
     };
 
     // Modifiable piece values
+    // evaluate piece based on it's position, [turn][state][type][square]
     int Eval::piece_square_table[2][2][6][64] = {0};
     Bitboard Eval::passed_pawn_masks[2][64] = {0};
     int8_t Eval::manhattan_distance[64][64] = {0};
@@ -142,8 +143,8 @@ namespace chess
         for (int state = 0; state < 2; state++){
             for (int type = 0; type < 6; type++){
                 for (int j = 0; j < 64; j++){
-                    piece_square_table[state][1][type][j] = white_piece_square_table[state][type][j];
-                    piece_square_table[state][0][type][j] = white_piece_square_table[state][type][63 - j];
+                    piece_square_table[1][state][type][j] = white_piece_square_table[state][type][j];
+                    piece_square_table[0][state][type][j] = white_piece_square_table[state][type][63 - j];
                 }
             }
         }
@@ -202,30 +203,72 @@ namespace chess
      */
     constexpr int eval_pawn_structure(Bitboard pawns, Bitboard epawns, Bitboard file, bool is_white)
     {
-        int pawn_eval = 0;
+        int pawn_eval          = 0;
         Bitboard pawns_on_file = pawns & file;
+        int rank_offset        = is_white ? -1 : 1;
 
         if (pawns_on_file)
         {
             // Doubled pawns
             if (pop_count(pawns_on_file) > 1)
-                pawn_eval -= 10;
+                pawn_eval -= 15;
 
             // Isolated pawns
             if (!(pawns & (file >> 1)) && !(pawns & (file << 1)))
                 pawn_eval -= 10;
-            
-            // Connected
-            if (pawns & (file >> 8) || pawns & (file << 8))
-                pawn_eval += 10;
 
             // Get square of that pawn and check if it's a passed pawn
-            while (pawns_on_file)
-                if ((Eval::passed_pawn_masks[is_white][pop_lsb1(pawns_on_file)] & epawns) == 0)
-                    pawn_eval += 30;
+            do
+            {
+                Square sq           = pop_lsb1(pawns_on_file);
+                Square rank         = sq >> 3;
+                Bitboard rank_below = Eval::rank_bitboards[rank + rank_offset];
+
+                // Pawn structures (positive)
+                // pawn chain
+                if (pawns & (((file >> 1) | (file << 1)) & rank_below))
+                    pawn_eval += 10;
+                
+                // side-to-side
+                if (pawns & (((file >> 1) | (file << 1)) & Eval::rank_bitboards[rank]))
+                    pawn_eval += 5;
+
+                // passer
+                if ((Eval::passed_pawn_masks[is_white][sq] & epawns) == 0)
+                    pawn_eval += 15 + Eval::piece_square_table[is_white][Eval::ENDGAME][Piece::Pawn - 1][sq];
+            } while(pawns_on_file);
         }
 
         return pawn_eval;
+    }
+
+    /**
+     * @brief Calculate king safety based on pawn structure near king
+     */
+    int eval_king_safety(Bitboard pawns, Square king_sq, bool is_white)
+    {
+        int      eval        = 0;
+        int      offset_file = 0;
+        Square   file        = king_sq % 8;
+        Square   rank        = king_sq >> 3;
+        Bitboard rank_off    = is_white ? 
+            (rank > 0 ? Eval::rank_bitboards[rank - 1] : 0) 
+            : (rank < 8 ? Eval::rank_bitboards[rank + 1] : 0);
+
+        // Cut off the area below the king (based on the side)
+        Bitboard safety      = (Board::pieceAttacks[Board::KING_TYPE][king_sq] & (~rank_off)) & pawns;
+
+        for (int i = -1; i < 2; ++i)
+        {
+            offset_file = file + i;
+            if ((offset_file >= 0 && offset_file < 8) 
+                && (safety & Eval::file_bitboards[offset_file]) != 0)
+            {
+                eval += 5;
+            }
+        }
+        
+        return eval;
     }
 
     
@@ -235,14 +278,15 @@ namespace chess
      */
     int Eval::evaluate(Board& board)
     {
-        int eval           = 0;
-        int material       = 0;
-        bool is_white      = board.getSide() == Piece::White;
-        bool is_enemy      = !is_white;
-        int endgame_factor = 0;
+        int eval              = 0;
+        int material          = 0;
+        bool is_white         = board.getSide() == Piece::White;
+        bool is_enemy         = !is_white;
+        int endgame_factor    = 0;
+        int middlegame_factor = 0;
 
         // Calcualte endgame factor
-        for(int type = 1; type < 6; type++)
+        for(int type = Piece::Knight - 1; type < 6; type++)
         {
             if (type == Piece::King - 1)
                 continue;
@@ -251,7 +295,7 @@ namespace chess
             int my_count    = pop_count(board.m_bitboards[is_white][type]);
             int enemy_count = pop_count(board.m_bitboards[is_enemy][type]);
 
-            endgame_factor += (ENDGAME_FACTOR_PIECES[type] * (my_count + enemy_count));
+            middlegame_factor += (ENDGAME_FACTOR_PIECES[type] * (my_count + enemy_count));
 
             // Update the evaluation
             material += piece_values[type] * (my_count - enemy_count);
@@ -260,24 +304,29 @@ namespace chess
         eval += material;
 
         // Clamp the value from 0 to MAX_ENDGAME_FACTOR
-        endgame_factor = std::min(endgame_factor, MAX_ENDGAME_FACTOR);
-        endgame_factor = MAX_ENDGAME_FACTOR - endgame_factor;
+        middlegame_factor = std::min(middlegame_factor, MAX_ENDGAME_FACTOR);
+        endgame_factor    = MAX_ENDGAME_FACTOR - middlegame_factor;
 
-        // Count the material & piece square tables
+        // piece square tables
         int square_table_eval = 0;
-        for (int type = 0; type < 6; type++){
-            uint64_t epieces = board.bitboards(is_enemy)[type];
-            uint64_t apieces = board.bitboards(is_white)[type];
+        for (int type = 0; type < 6; type++)
+        {
+            uint64_t epieces = board.m_bitboards[is_enemy][type];
+            uint64_t apieces = board.m_bitboards[is_white][type];
 
-            while(epieces){
+            while(epieces)
+            {
                 int sq = pop_lsb1(epieces);
-                square_table_eval -= (endgame_factor * piece_square_table[is_enemy][ENDGAME][type][sq]
-                        + (MAX_ENDGAME_FACTOR - endgame_factor) * piece_square_table[is_enemy][MIDDLE_GAME][type][sq]); 
+                square_table_eval -=
+                            (endgame_factor * piece_square_table[is_enemy][ENDGAME][type][sq]
+                        + middlegame_factor * piece_square_table[is_enemy][MIDDLE_GAME][type][sq]); 
             }
-            while(apieces){
+            while(apieces)
+            {
                 int sq = pop_lsb1(apieces);
-                square_table_eval += (endgame_factor * piece_square_table[is_white][ENDGAME][type][sq]
-                        + (MAX_ENDGAME_FACTOR - endgame_factor) * piece_square_table[is_white][MIDDLE_GAME][type][sq]);
+                square_table_eval +=
+                            (endgame_factor * piece_square_table[is_white][ENDGAME][type][sq]
+                        + middlegame_factor * piece_square_table[is_white][MIDDLE_GAME][type][sq]);
             }
         }
 
@@ -318,20 +367,22 @@ namespace chess
             eval += pawn_eval;
         }
 
+        Square king       = bitScanForward(board.m_bitboards[is_white][Piece::King - 1]);
+        Square enemy_king = bitScanForward(board.m_bitboards[is_enemy][Piece::King - 1]);
+
+        eval += eval_king_safety(board.m_bitboards[is_white][Board::PAWN_TYPE], king, is_white);
+        eval -= eval_king_safety(board.m_bitboards[is_enemy][Board::PAWN_TYPE], enemy_king, is_enemy);
+
         // if the endgame factor is high and one side has a significant advantage
         // then the winning side's king should be more active and 
         // try to get closer to the enemy king
         if (
-            endgame_factor > (MAX_ENDGAME_FACTOR * 8 / 10) && abs(material) >= piece_values[Piece::Rook - 1]
+            endgame_factor > (MAX_ENDGAME_FACTOR * 8 / 10) && material >= piece_values[Piece::Rook - 1]
             && ((board.m_bitboards[0][Piece::Pawn - 1] | board.m_bitboards[1][Piece::Pawn - 1]) == 0))
-        {
-            int whoiswinning  = material > 0 ? 1 : -1;
-            Square king       = bitScanForward(board.m_bitboards[is_white][Piece::King - 1]);
-            Square enemy_king = bitScanForward(board.m_bitboards[is_enemy][Piece::King - 1]);
-
+        {            
             // If it's winning side, apply penalty for being far from the enemy king
             // for losing side, apply bonus for being far from the enemy king
-            eval += -13 * whoiswinning * (manhattan_distance[king][enemy_king]);
+            eval += -10 * (manhattan_distance[king][enemy_king]);
         }
 
         return eval;

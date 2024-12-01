@@ -25,12 +25,15 @@ PROMOTION_WINDOW_OFFSETS = (
 EVALUATION_SIZE = (BOARD_OFFSETS[0], HEIGHT)
 EVALUATION_BAR_SIZE = (EVALUATION_SIZE[0] // 3, HEIGHT)
 EVALUATION_BAR_OFFSETS = (EVALUATION_SIZE[0] - EVALUATION_BAR_SIZE[0], 0)
+EVALUATION_BAR_OFFSETS_2 = (BOARD_OFFSETS[0] + BOARD_SIZE, 0)
 EVALUATION_FONT_SIZE = 24
 
 
 # Engine settings
 
 import os
+import pathlib
 
-BASE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-ENGINE_PATH = os.path.join(BASE_PATH, 'engines', 'CEngine_v2')
+BASE_PATH     = pathlib.Path(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+ENGINE_FOLDER = BASE_PATH / 'engines'
+ENGINE_PATH   = ENGINE_FOLDER / 'CEngine_v3_norm'

@@ -1,5 +1,8 @@
 #include <cengine/magic_bitboards.h>
 
+namespace chess
+{
+
 // Bits used for given square, number of bits set to 1 in the mask
 // For example for square 56 (a1):
 // . . . . . . . .
@@ -389,3 +392,6 @@ void init_magics(bool recalculate)
         }
     }
 }
+
+
+} // namespace chess

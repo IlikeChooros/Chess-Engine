@@ -20,13 +20,23 @@ class BoardRenderSettings:
     lastmove: chess.Move | None = None
     check: chess.Color | None = None
     orientation: chess.Color = chess.WHITE
+    change: bool = False
 
     def __dict__(self) -> dict:
         return {
             'fill': self.fill,
             'lastmove': self.lastmove,
             'check': self.check,
-            'orientation': self.orientation
+            'orientation': self.orientation,
+            'change': self.change
+        }
+
+    def board_kwargs(self) -> dict:
+        return {
+            'fill': self.fill,
+            'lastmove': self.lastmove,
+            'check': self.check,
+            'orientation': self.orientation,
         }
 
     def __str__(self) -> str:
