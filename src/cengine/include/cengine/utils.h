@@ -89,6 +89,9 @@ inline int pop_lsb1(uint64_t& b)
     return lsb1;
 }
 
+/**
+ * @brief Count the number of bits that are 1 in a bitboard
+ */
 inline int pop_count(uint64_t b)
 {
     #if defined(__GNUC__) || defined(__clang__)
@@ -108,7 +111,7 @@ inline int pop_count(uint64_t b)
 }
 
 /**
- * @brief Prints a bitboard to the console
+ * @brief Prints a bitboard to the standard output
  */
 inline void dbitboard(uint64_t bitboard64)
 {

@@ -29,7 +29,7 @@ struct Score
 };
 
 // Updates the score based on the given evaluation
-inline void update_score(Score& score, int eval, int whotomove, int pv_size)
+inline void update_score(Score& score, int eval, int whotomove, int pv_length = 0)
 {
     // Update the score
     score.type = Score::cp;
@@ -45,7 +45,7 @@ inline void update_score(Score& score, int eval, int whotomove, int pv_size)
         // score.value *= eval > 0 ? 1 : -1;
         // score.value *= whotomove;
 
-        score.value = (pv_size + 1) / 2;
+        score.value = (pv_length + 1) / 2;
         score.value = std::max(score.value, 1);
         score.value *= eval > 0 ? 1 : -1;
         score.value *= whotomove;

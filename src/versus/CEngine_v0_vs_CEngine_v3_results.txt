@@ -1,4 +1,4 @@
 Results:
-CEngine_v3: 19
-CEngine_v0: 42
-Draw: 34
+CEngine_v0: 25
+CEngine_v3: 28
+Draw: 47

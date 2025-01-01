@@ -90,10 +90,10 @@ namespace chess
 
     private:
 
-        Value qsearch(Board& board, Value alpha, Value beta, int depth);
+        Value qsearch(Board& board, Value alpha, Value beta, Depth depth);
 
         template <NodeType>
-        Value search(Board& board, Value alpha, Value beta, int depth, int extension = 0);
+        Value search(Board& board, Value alpha, Value beta, Depth depth, Depth extension = 0);
 
         MoveList get_pv(int max_depth = 10);
         Move get_pv_move(int depth);
@@ -105,6 +105,7 @@ namespace chess
         Result m_result;
         Move m_bestmove;
         Depth m_depth;
+        MoveList m_root_pv;
 
         std::thread m_thread;
         std::atomic<bool> m_thinking;

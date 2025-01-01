@@ -36,4 +36,5 @@ import pathlib
 
 BASE_PATH     = pathlib.Path(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 ENGINE_FOLDER = BASE_PATH / 'engines'
-ENGINE_PATH   = ENGINE_FOLDER / 'CEngine_v3_norm'
+BIN_PATH      = BASE_PATH.parent / 'build' / 'bin'
+ENGINE_PATH   = BIN_PATH / 'CEngine'

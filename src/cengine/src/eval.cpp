@@ -211,7 +211,7 @@ namespace chess
         {
             // Doubled pawns
             if (pop_count(pawns_on_file) > 1)
-                pawn_eval -= 15;
+                pawn_eval -= 10;
 
             // Isolated pawns
             if (!(pawns & (file >> 1)) && !(pawns & (file << 1)))
@@ -227,15 +227,15 @@ namespace chess
                 // Pawn structures (positive)
                 // pawn chain
                 if (pawns & (((file >> 1) | (file << 1)) & rank_below))
-                    pawn_eval += 10;
+                    pawn_eval += 15;
                 
                 // side-to-side
                 if (pawns & (((file >> 1) | (file << 1)) & Eval::rank_bitboards[rank]))
-                    pawn_eval += 5;
+                    pawn_eval += 10;
 
                 // passer
                 if ((Eval::passed_pawn_masks[is_white][sq] & epawns) == 0)
-                    pawn_eval += 15 + Eval::piece_square_table[is_white][Eval::ENDGAME][Piece::Pawn - 1][sq];
+                    pawn_eval += Eval::piece_square_table[is_white][Eval::ENDGAME][Piece::Pawn - 1][sq];
             } while(pawns_on_file);
         }
 
@@ -271,71 +271,36 @@ namespace chess
         return eval;
     }
 
-    
-    /**
-     * @brief Evaluation function for the board in centipawns
-     * positive values are good current side, negative for the opposite
-     */
-    int Eval::evaluate(Board& board)
+    // Old evaluation function
+    int old_eval(Board& board)
     {
-        int eval              = 0;
-        int material          = 0;
-        bool is_white         = board.getSide() == Piece::White;
-        bool is_enemy         = !is_white;
-        int endgame_factor    = 0;
-        int middlegame_factor = 0;
+        int eval        = 0;
+        bool is_white   = board.getSide() == Piece::White;
+        bool is_enemy   = !is_white;
+        Square king_sq  = bitScanForward(board.bitboards(is_white)[Piece::King - 1]);
+        // Square eking_sq = bitScanForward(board.bitboards(is_enemy)[Piece::King - 1]);
 
-        // Calcualte endgame factor
-        for(int type = Piece::Knight - 1; type < 6; type++)
-        {
-            if (type == Piece::King - 1)
+        // Count the material & piece square tables
+        for (int type = 0; type < 6; type++){
+            if (type == Piece::King - 1){
                 continue;
-            
-            // Calculate endgame factor, by adding up values of a piece * it's quantity
-            int my_count    = pop_count(board.m_bitboards[is_white][type]);
-            int enemy_count = pop_count(board.m_bitboards[is_enemy][type]);
+            }
 
-            middlegame_factor += (ENDGAME_FACTOR_PIECES[type] * (my_count + enemy_count));
+            uint64_t epieces = board.bitboards(is_enemy)[type];
+            uint64_t apieces = board.bitboards(is_white)[type];
 
-            // Update the evaluation
-            material += piece_values[type] * (my_count - enemy_count);
-        }
-
-        eval += material;
-
-        // Clamp the value from 0 to MAX_ENDGAME_FACTOR
-        middlegame_factor = std::min(middlegame_factor, MAX_ENDGAME_FACTOR);
-        endgame_factor    = MAX_ENDGAME_FACTOR - middlegame_factor;
-
-        // piece square tables
-        int square_table_eval = 0;
-        for (int type = 0; type < 6; type++)
-        {
-            uint64_t epieces = board.m_bitboards[is_enemy][type];
-            uint64_t apieces = board.m_bitboards[is_white][type];
-
-            while(epieces)
-            {
+            while(epieces){
                 int sq = pop_lsb1(epieces);
-                square_table_eval -=
-                            (endgame_factor * piece_square_table[is_enemy][ENDGAME][type][sq]
-                        + middlegame_factor * piece_square_table[is_enemy][MIDDLE_GAME][type][sq]); 
+                eval -= Eval::piece_values[type];
+                eval -= Eval::piece_square_table[is_enemy][Eval::MIDDLE_GAME][type][sq];
             }
-            while(apieces)
-            {
+            while(apieces){
                 int sq = pop_lsb1(apieces);
-                square_table_eval +=
-                            (endgame_factor * piece_square_table[is_white][ENDGAME][type][sq]
-                        + middlegame_factor * piece_square_table[is_white][MIDDLE_GAME][type][sq]);
+                eval += Eval::piece_values[type];
+                eval += Eval::piece_square_table[is_white][Eval::MIDDLE_GAME][type][sq];
             }
         }
-
-        // Scale the square table evaluation
-        square_table_eval /= MAX_ENDGAME_FACTOR;
-
-        // Add the evaluation to the total
-        eval += square_table_eval;
-
+        
         // Bonus for having the bishop pair
         if (pop_count(board.bitboards(is_white)[Piece::Bishop - 1]) >= 2){
             eval += 50;
@@ -347,44 +312,193 @@ namespace chess
         // Pawn structure
         // Try to get hashed pawn structure (already calculated)
         Bitboard pawn_hash = board.pawnHash();
-        if (pawn_table.contains(pawn_hash)){
-            eval += pawn_table.get(pawn_hash);
-        } else {
+        if (Eval::pawn_table.contains(pawn_hash))
+        {
+            eval += Eval::pawn_table.get(pawn_hash);
+        } 
+        else 
+        {
             int pawn_eval = 0;
+            Bitboard pawns = board.bitboards(is_white)[Piece::Pawn - 1];
+            Bitboard epawns = board.bitboards(is_enemy)[Piece::Pawn - 1];
 
-            Bitboard pawns  = board.m_bitboards[is_white][Piece::Pawn - 1];
-            Bitboard epawns = board.m_bitboards[is_enemy][Piece::Pawn - 1];
+            for (int i = 0; i < 8; i++){
+                Bitboard file = Eval::file_bitboards[i];
 
-            for (int i = 0; i < 8; i++)
-            {
-                Bitboard file = file_bitboards[i];
-                pawn_eval += eval_pawn_structure(pawns, epawns, file, is_white);
-                pawn_eval -= eval_pawn_structure(epawns, pawns, file, is_enemy);
+                // Doubled pawns
+                if (pawns & file && pop_count(pawns & file) > 1){
+                    pawn_eval -= 10;
+                }
+                if (epawns & file && pop_count(epawns & file) > 1){
+                    pawn_eval += 10;
+                }
+
+                // Isolated pawns
+                if (pawns & file){
+                    if (!(pawns & (file >> 1)) && !(pawns & (file << 1))){
+                        pawn_eval -= 10;
+                    }
+                }
+                if (epawns & file){
+                    if (!(epawns & (file >> 1)) && !(epawns & (file << 1))){
+                        pawn_eval += 10;
+                    }
+                }
+            
+
+                // Connected pawns
+                if (pawns & file){
+                    if (pawns & (file >> 8) || pawns & (file << 8)){
+                        pawn_eval += 10;
+                    }
+                }
+                if (epawns & file){
+                    if (epawns & (file >> 8) || epawns & (file << 8)){
+                        pawn_eval -= 10;
+                    }
+                }
             }
 
             // Store the pawn hash
-            pawn_table.store(pawn_hash, pawn_eval);
+            Eval::pawn_table.store(pawn_hash, pawn_eval);
             eval += pawn_eval;
+        }        
+
+        // King square tables
+        bool is_endgame = false;
+
+        if (pop_count(board.pieces()) <= 6 || ((pop_count(board.queens()) == 0) && (pop_count(board.rooks()) == 0))){
+            is_endgame = true;
         }
 
-        Square king       = bitScanForward(board.m_bitboards[is_white][Piece::King - 1]);
-        Square enemy_king = bitScanForward(board.m_bitboards[is_enemy][Piece::King - 1]);
-
-        eval += eval_king_safety(board.m_bitboards[is_white][Board::PAWN_TYPE], king, is_white);
-        eval -= eval_king_safety(board.m_bitboards[is_enemy][Board::PAWN_TYPE], enemy_king, is_enemy);
-
-        // if the endgame factor is high and one side has a significant advantage
-        // then the winning side's king should be more active and 
-        // try to get closer to the enemy king
-        if (
-            endgame_factor > (MAX_ENDGAME_FACTOR * 8 / 10) && material >= piece_values[Piece::Rook - 1]
-            && ((board.m_bitboards[0][Piece::Pawn - 1] | board.m_bitboards[1][Piece::Pawn - 1]) == 0))
-        {            
-            // If it's winning side, apply penalty for being far from the enemy king
-            // for losing side, apply bonus for being far from the enemy king
-            eval += -10 * (manhattan_distance[king][enemy_king]);
-        }
+        eval += Eval::piece_square_table[is_white][is_endgame][Piece::King - 1][king_sq];
+        eval -= Eval::piece_square_table[is_enemy][is_endgame][Piece::King - 1][king_sq];
 
         return eval;
+    }
+
+    
+    /**
+     * @brief Evaluation function for the board in centipawns
+     * positive values are good current side, negative for the opposite
+     */
+    int Eval::evaluate(Board& board)
+    {
+        return old_eval(board);
+        // int eval              = 0;
+        // int material          = 0;
+        // bool is_white         = board.getSide() == Piece::White;
+        // bool is_enemy         = !is_white;
+        // int endgame_factor    = 0;
+        // int middlegame_factor = 0;
+
+
+        // // Step 1: Evaluate the material and middlegame/endgame factors
+        // for(int type = Piece::Pawn - 1; type < 6; type++)
+        // {
+        //     if (type == Piece::King - 1)
+        //         continue;
+            
+        //     // Calculate endgame factor, by adding up values of a piece * it's quantity
+        //     int my_count    = pop_count(board.m_bitboards[is_white][type]);
+        //     int enemy_count = pop_count(board.m_bitboards[is_enemy][type]);
+
+        //     middlegame_factor += (ENDGAME_FACTOR_PIECES[type] * (my_count + enemy_count));
+
+        //     // Update the evaluation
+        //     material += piece_values[type] * (my_count - enemy_count);
+        // }
+
+        // eval += material;
+
+        // // Clamp the value from 0 to MAX_ENDGAME_FACTOR
+        // middlegame_factor = std::min(middlegame_factor, MAX_ENDGAME_FACTOR);
+        // endgame_factor    = MAX_ENDGAME_FACTOR - middlegame_factor;
+
+        
+        // // Step 2: Evaluate the piece square tables
+
+        // int square_table_eval = 0;
+        // for (int type = 0; type < 6; type++)
+        // {
+        //     uint64_t epieces = board.m_bitboards[is_enemy][type];
+        //     uint64_t apieces = board.m_bitboards[is_white][type];
+
+        //     while(epieces)
+        //     {
+        //         Square sq = pop_lsb1(epieces);
+        //         square_table_eval -=
+        //                     (endgame_factor * piece_square_table[is_enemy][ENDGAME][type][sq]
+        //                 + middlegame_factor * piece_square_table[is_enemy][MIDDLE_GAME][type][sq]); 
+        //     }
+        //     while(apieces)
+        //     {
+        //         Square sq = pop_lsb1(apieces);
+        //         square_table_eval +=
+        //                     (endgame_factor * piece_square_table[is_white][ENDGAME][type][sq]
+        //                 + middlegame_factor * piece_square_table[is_white][MIDDLE_GAME][type][sq]);
+        //     }
+        // }
+
+        // // Scale the square table evaluation
+        // square_table_eval /= MAX_ENDGAME_FACTOR;
+
+        // // Add the evaluation to the total
+        // eval += square_table_eval;
+
+        // // Step 2a: Bonus for having both bishops
+
+        // if (pop_count(board.bitboards(is_white)[Piece::Bishop - 1]) >= 2){
+        //     eval += 25;
+        // }
+        // if (pop_count(board.bitboards(is_enemy)[Piece::Bishop - 1]) >= 2){
+        //     eval -= 25;
+        // }
+
+        // // Step 3: Evaluate the pawn structure
+        // // Try to get hashed pawn structure (already calculated)
+        // Bitboard pawn_hash = board.pawnHash();
+        // if (pawn_table.contains(pawn_hash)){
+        //     eval += pawn_table.get(pawn_hash);
+        // } else {
+        //     int pawn_eval = 0;
+
+        //     Bitboard pawns  = board.m_bitboards[is_white][Piece::Pawn - 1];
+        //     Bitboard epawns = board.m_bitboards[is_enemy][Piece::Pawn - 1];
+
+        //     for (int i = 0; i < 8; i++)
+        //     {
+        //         Bitboard file = file_bitboards[i];
+        //         pawn_eval += eval_pawn_structure(pawns, epawns, file, is_white);
+        //         pawn_eval -= eval_pawn_structure(epawns, pawns, file, is_enemy);
+        //     }
+
+        //     // Store the pawn hash
+        //     pawn_table.store(pawn_hash, pawn_eval);
+        //     eval += pawn_eval;
+        // }
+
+        // Square king       = bitScanForward(board.m_bitboards[is_white][Piece::King - 1]);
+        // Square enemy_king = bitScanForward(board.m_bitboards[is_enemy][Piece::King - 1]);
+
+        // // Step 4: Evaluate the king safety
+        // eval += eval_king_safety(board.m_bitboards[is_white][Board::PAWN_TYPE], king, is_white);
+        // eval -= eval_king_safety(board.m_bitboards[is_enemy][Board::PAWN_TYPE], enemy_king, is_enemy);
+
+
+        // // Step 5: Evaluate the king position in the winning endgame
+        // // if the endgame factor is high and one side has a significant advantage
+        // // then the winning side's king should be more active and 
+        // // try to get closer to the enemy king
+        // if (
+        //     material >= piece_values[Piece::Rook - 1]
+        //     && ((board.m_bitboards[0][Piece::Pawn - 1] | board.m_bitboards[1][Piece::Pawn - 1]) == 0))
+        // {
+        //     // If it's winning side, apply penalty for being far from the enemy king
+        //     // for losing side, apply bonus for being far from the enemy king
+        //     eval += -10 * (manhattan_distance[king][enemy_king]);
+        // }
+
+        // return eval;
     }
 }

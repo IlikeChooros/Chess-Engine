@@ -13,8 +13,8 @@ and save the games in a pgn file
 """
 
 MATCH_NUMBER       = 1
-SKIP_FIRST_N_LINES = 0
-TOTAL_GAMES        = 100
+SKIP_FIRST_N_LINES = 100
+TOTAL_GAMES        = 200
 
 MAX_GAMES = TOTAL_GAMES - SKIP_FIRST_N_LINES
 POSTFIX = '' if MATCH_NUMBER == 1 else f'_{MATCH_NUMBER}'
@@ -22,13 +22,13 @@ POSTFIX = '' if MATCH_NUMBER == 1 else f'_{MATCH_NUMBER}'
 # Paths
 BASE_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
 ENGINE_WHITE_PATH = BASE_DIR / "src" / "engines" / "CEngine_v0"
-ENGINE_BLACK_PATH = BASE_DIR / "src" / "engines" / "CEngine_v0"
+ENGINE_BLACK_PATH = BASE_DIR / "src" / "engines" / "CEngine_v3"
 OPENINGS_PATH = BASE_DIR / "src" / "utils" / "openings.txt"
 OUTPUT_PATH = BASE_DIR / "src" / "versus" / (
-    ENGINE_BLACK_PATH.stem + '_vs_' + ENGINE_WHITE_PATH.stem + POSTFIX + '.pgn'
+    ENGINE_WHITE_PATH.stem + '_vs_' + ENGINE_BLACK_PATH.stem + POSTFIX + '.pgn'
 )
 OUTPUT_RESULTS_PATH = BASE_DIR / "src" / "versus" / (
-    ENGINE_BLACK_PATH.stem + '_vs_' + ENGINE_WHITE_PATH.stem + POSTFIX + '_results' + '.txt'
+    ENGINE_WHITE_PATH.stem + '_vs_' + ENGINE_BLACK_PATH.stem + POSTFIX + '_results' + '.txt'
 )
 
 results: dict = {
@@ -57,6 +57,7 @@ def setup_engine(engine: Engine):
     else:
         engine.send_command("setoption name Log File value log.txt")
     engine.set_search_options(SEARCH_OPTIONS)
+    engine.should_print = False
 
 def save_game(fen: str, moves: list[chess.Move], game_number: int):
     """
@@ -143,9 +144,6 @@ def play_game(white: Engine, black: Engine, fen: str) -> list[chess.Move]:
         print(f"{len(board.move_stack)} | {resp} ", end='\r')
         
         if not board.is_valid() or board.is_game_over(claim_draw=True):
-            # print(f"Undetected game over: {board.result(claim_draw=True)} {board.status()}")
-            # print(f"FEN: {fen}", f"moves: {[str(move) for move in moves]}", sep='\n')
-            # input('Press enter to continue...')
             break
 
     return board.move_stack
@@ -179,19 +177,20 @@ def main():
         open(OUTPUT_PATH, 'x')
 
     # Set the engines
-    white = Engine(ENGINE_WHITE_PATH)
-    black = Engine(ENGINE_BLACK_PATH)
+    white = Engine(ENGINE_WHITE_PATH, should_print=True)
+    black = Engine(ENGINE_BLACK_PATH, should_print=True)
     setup_engine(white)
     setup_engine(black)
 
     names['white'] = white.name
     names['black'] = black.name
 
+    print("Starting the match...")
+    print(f"White: {names['white']} | Black: {names['black']}")
+
     # Skip the first n positions
     for _ in range(SKIP_FIRST_N_LINES):
         openings_file.readline()
-    
-    print("Starting the match...")
 
     # Play the games
     start_time = time.time()
@@ -213,7 +212,7 @@ def main():
     
     openings_file.close()
 
-    print(f"Match finished in {time.time() - start_time:.2f}s")
+    print(f"\nMatch finished in {time.time() - start_time:.2f}s")
 
 if __name__ == "__main__":
     main()

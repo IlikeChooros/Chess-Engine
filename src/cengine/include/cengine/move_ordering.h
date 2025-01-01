@@ -43,9 +43,9 @@ namespace chess
             {
                 move = m;
                 value = 0;
-                value += (m == pvm) * 10000; // PV move, should be ordered first
+                value += (m == pvm) * 16000; // PV move, should be ordered first
                 value += captured_value(m, b); // Most valuable victim, least valuable attacker
-                value += sc->getHH().get(b->getSide() == Piece::White, m) * 25; // History heuristic
+                value += sc->getHH().get(b->getSide() == Piece::White, m) * 256; // History heuristic
             }
         };
 

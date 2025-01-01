@@ -12,7 +12,7 @@ namespace chess
 class Extensions
 {
 public:
-    static constexpr int MAX_EXTENSIONS = 4;
+    static constexpr int MAX_EXTENSIONS = 6;
 
     /**
      * @brief Extend the search by 1 ply if the position is in check,
@@ -22,7 +22,7 @@ public:
      */
     static int check(Board& board, int& extension)
     {
-        if (extension < MAX_EXTENSIONS && board.inCheck())
+        if (extension < MAX_EXTENSIONS && board.m_in_check)
         {
             extension++;
             return 1;

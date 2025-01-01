@@ -57,13 +57,17 @@ namespace chess
     }
 
     /**
-     * @brief Get the principal variation move at a certain depth of the search
+     * @brief Get the principal variation move at a certain depth of the search,
+     * based on `m_root_pv`, should be already set.
      */
     Move Thread::get_pv_move(int depth)
     {
-        Depth ply   = m_depth - depth;
-        MoveList pv = get_pv(ply + 1);
-        return int(pv.size()) > ply ? pv[ply] : Move();
+        Depth ply = m_depth - depth;
+        
+        if (ply < 0 || ply >= int(m_root_pv.size()))
+            return Move();
+
+        return m_root_pv.moves[ply];
     }
 
     /**
@@ -148,8 +152,14 @@ namespace chess
             //     delta += delta / 2;
             // }
             
-            eval              = search<Root>(m_board, alpha, beta, m_depth); 
-            m_result.pv       = get_pv(m_depth);
+            eval              = search<Root>(m_board, alpha, beta, m_depth);
+            if (abs(eval) >= MATE_THRESHOLD)
+                m_result.pv       = get_pv(MAX_PLY);
+            else
+                m_result.pv       = get_pv(m_depth);
+            
+            // Save the pv
+            m_root_pv         = m_result.pv;
             m_result.bestmove = m_result.pv.size() > 0 ? m_result.pv[0] : m_bestmove;
 
             // Update alpha beta
@@ -160,7 +170,7 @@ namespace chess
             {
                 if (m_result.pv.empty())
                 {
-                    update_score(m_result.score, eval, whotomove, 0);
+                    update_score(m_result.score, eval, whotomove);
                     m_best_result = m_result;
                 }
                 break;
@@ -176,8 +186,8 @@ namespace chess
             );
 
             // Check if mate has been found
-            // if (m_result.score.type == Score::mate && m_depth > 3)
-            //     break;
+            if (m_result.score.type == Score::mate && m_depth > 3)
+                break;
 
             // Update depth & alpha beta
             m_depth += 1;
@@ -202,28 +212,11 @@ namespace chess
     /**
      * @brief Run quiescence search
      */
-    Value Thread::qsearch(Board& board, Value alpha, Value beta, int ply = 0)
+    Value Thread::qsearch(Board& board, Value alpha, Value beta, Depth ply = 0)
     {   
         // Evaluate the position
         Value     eval  = Eval::evaluate(board);
-        MoveList moves  = board.generateLegalCaptures();
-
-        // // Check if that's a terminal node
-        // if (board.isTerminated(&moves))
-        // {
-        //     auto termination = board.getTermination();
-        //     if (termination == Termination::CHECKMATE)
-        //         eval = MATE - (m_depth + ply);
-        //     else
-        //         eval = 0;
-
-        //     alpha = std::max(alpha, eval);
-        //     return eval >= beta ? beta : alpha;
-        // }
-
-        // // Filter moves by captures
-        // (void)moves.captures();
-        
+        MoveList moves  = board.generateLegalCaptures();        
 
         // Alpha beta pruning, if the evaluation is greater or equal to beta
         // that means the position is 'too good' for the side to move
@@ -257,7 +250,7 @@ namespace chess
      * @brief Priciple variation search
      */
     template <NodeType nType>
-    Value Thread::search(Board& board, Value alpha, Value beta, int depth, int extension)
+    Value Thread::search(Board& board, Value alpha, Value beta, Depth depth, Depth extension)
     {
         constexpr bool isRoot       = nType == Root;
         constexpr bool pv           = nType == PV;
@@ -309,7 +302,6 @@ namespace chess
         
         // Generate legal moves, setup variables for the search
         Move  bestmove = Move::nullMove;
-        bool  turn     = board.turn();
 
         // Sort the moves using move ordering
         MoveOrdering::sort(&moves, get_pv_move(depth), &board, m_search_cache);        
@@ -321,9 +313,10 @@ namespace chess
             board.makeMove(m);
 
             // Add extensions
-            int ext    = Extensions::check(board, extension);
+            // int ext    = Extensions::check(board, extension);
+            int ext    = 0;
             Value eval = 0;
-            eval = -search<nextType>(board, -beta, -alpha, depth - 1 + ext, extension);
+            eval       = -search<nextType>(board, -beta, -alpha, depth - 1 + ext, extension);
 
             board.undoMove(m);
 
@@ -359,7 +352,7 @@ namespace chess
         else if (best >= beta)
         {
             entry.nodeType = TEntry::LOWERBOUND;
-            m_search_cache->getHH().update(turn, bestmove, depth);
+            m_search_cache->getHH().update(board.turn(), bestmove, depth);
         }
         else
             entry.nodeType = TEntry::EXACT;
