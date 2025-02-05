@@ -183,8 +183,7 @@ class Engine:
 
     def send_command(self, command: str) -> None:
         """
-        Send a command to the engine,
-        See htt
+        Send a command to the engine
         """
         if self.process.poll() is not None or self.killed:
             raise EngineNotRunning(self._format_error('Engine is not ready'))
@@ -249,7 +248,11 @@ class Engine:
         """
         Load a game into the engine, based on the board's move stack and a FEN string
         """
-        self.set_position(board.move_stack, fen=fen)
+        moves: str = ''
+
+        if len(board.move_stack) != 0:
+            moves = 'moves ' + ' '.join(map(str, board.move_stack))
+        self.send_command('position fen %s %s' % (fen, moves))
 
 
     def set_search_options(self, options: SearchOptions) -> None:

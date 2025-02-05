@@ -130,8 +130,14 @@ namespace chess
     // Modifiable piece values
     // evaluate piece based on it's position, [turn][state][type][square]
     int Eval::piece_square_table[2][2][6][64] = {0};
+
+    // 
     Bitboard Eval::passed_pawn_masks[2][64] = {0};
+
+    // manhattan distance [from|to][to|from] (symetrical)
     int8_t Eval::manhattan_distance[64][64] = {0};
+
+    // Hash table for pawn structure
     TTable<int> Eval::pawn_table = TTable<int>(4);
 
     /**
@@ -449,10 +455,10 @@ namespace chess
         // // Step 2a: Bonus for having both bishops
 
         // if (pop_count(board.bitboards(is_white)[Piece::Bishop - 1]) >= 2){
-        //     eval += 25;
+        //     eval += 50;
         // }
         // if (pop_count(board.bitboards(is_enemy)[Piece::Bishop - 1]) >= 2){
-        //     eval -= 25;
+        //     eval -= 50;
         // }
 
         // // Step 3: Evaluate the pawn structure

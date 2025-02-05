@@ -1,4 +1,0 @@
-Results:
-White: 0
-Black: 3
-Draw: 0

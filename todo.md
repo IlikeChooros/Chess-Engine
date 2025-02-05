@@ -44,23 +44,18 @@ Code related:
   - [ ] zw search not working (no asp window)
   - [ ] alpha beta with asp window + normal search
   - search alone seems fine, should benchmark eval:
-    - no asp window, no eval-king-safety:
-      - CEngine_v0: 42
-      - CEngine_v3: 20
-      - Draw: 36
-    - asp window, eval-king-safety:
-      - CEngine_v0: 44
-      - CEngine_v3: 16
-      - Draw: 38
     - v0 vs v0
       - CEngine_v0: 30
       - CEngine_v0: 27
       - Draw: 43
-    - v0 vs v3 (asp window)
-      - CEngine_v0: 43
-      - CEngine_v3: 24
-      - Draw: 32
     - v0 vs v3 (base model)
       - CEngine_v0: 25
       - CEngine_v3: 28
       - Draw: 47
+    - v0 vs v3 (eval upgrade)
+      - CEngine_v0: 33
+      - CEngine_v3: 31
+      - Draw: 36
+    - v0 vs v3 (aspiration window)
+      -
+

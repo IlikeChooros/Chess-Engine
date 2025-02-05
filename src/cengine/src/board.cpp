@@ -614,7 +614,8 @@ namespace chess
     }
 
     /**
-     * @brief Check if the board is terminated
+     * @brief Check if the board is terminated, sets internal termination flags
+     * @param ml valid movelist for this board state
      */
     bool Board::isTerminated(MoveList* ml)
     {
