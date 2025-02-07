@@ -238,6 +238,10 @@ namespace chess
             return m_bitboards[0][PAWN_TYPE] | m_bitboards[1][PAWN_TYPE];
         }
 
+        inline Bitboard pawns(bool side){
+            return m_bitboards[side][PAWN_TYPE];
+        }
+
         /**
          * @brief Get the queens bitboard
          */
@@ -250,6 +254,20 @@ namespace chess
          */
         inline Bitboard rooks() {
             return m_bitboards[0][ROOK_TYPE] | m_bitboards[1][ROOK_TYPE];
+        }
+
+        /**
+         * @brief Get the rooks bitboard, but only for given side (1 = white, 0 - black)
+         */
+        inline Bitboard rooks(bool side){
+            return m_bitboards[side][ROOK_TYPE];
+        }
+
+        /**
+         * @brief Get the queens bitboard, but only for given side (1 = white, 0 - black)
+         */
+        inline Bitboard queens(bool side){
+            return m_bitboards[side][QUEEN_TYPE];
         }
         
         /**

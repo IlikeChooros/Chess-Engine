@@ -113,7 +113,7 @@ namespace chess
         Value eval            = 0;
         Value alpha           = MIN;
         Value beta            = MAX;
-        // Value delta           = 50;
+        Value delta           = 50;
         m_depth               = 1;
         m_result              = {};
         int whotomove         = m_board.turn() ? 1 : -1;
@@ -132,27 +132,27 @@ namespace chess
         while(m_depth <= MAX_PLY && !m_interrupt.get())
         {
             // Aspiration window
-            // while(true)
-            // {
-            //     eval = search<Root>(m_board, alpha, beta, m_depth);
+            while(true)
+            {
+                eval = search<Root>(m_board, alpha, beta, m_depth);
 
-            //     if (eval <= alpha)
-            //     {
-            //         alpha = std::max(alpha - delta, MIN);
-            //     }
-            //     else if (eval >= beta)
-            //     {
-            //         beta = std::min(beta + delta, MAX);
-            //     }
-            //     else
-            //     {
-            //         break;
-            //     }
+                if (eval <= alpha)
+                {
+                    alpha = std::max(alpha - delta, MIN);
+                }
+                else if (eval >= beta)
+                {
+                    beta = std::min(beta + delta, MAX);
+                }
+                else
+                {
+                    break;
+                }
 
-            //     delta += delta / 2;
-            // }
+                delta += delta / 2;
+            }
             
-            eval              = search<Root>(m_board, alpha, beta, m_depth);
+            // eval = search<Root>(m_board, alpha, beta, m_depth);
             if (abs(eval) >= MATE_THRESHOLD)
                 m_result.pv       = get_pv(MAX_PLY);
             else
@@ -163,8 +163,8 @@ namespace chess
             m_result.bestmove = m_result.pv.size() > 0 ? m_result.pv[0] : m_bestmove;
 
             // Update alpha beta
-            // alpha    = eval - delta;
-            // beta     = eval + delta;
+            alpha  = eval - delta;
+            beta   = eval + delta;
 
             if (m_interrupt.get())
             {

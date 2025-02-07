@@ -1,4 +1,0 @@
-Results:
-CEngine_v0: 0
-CEngine_v3-asp-oldeval: 0
-Draw: 0

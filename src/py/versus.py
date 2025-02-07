@@ -26,9 +26,11 @@ POSTFIX = '' if MATCH_NUMBER == 1 else f'_{MATCH_NUMBER}'
 BASE_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
 ENGINE_WHITE_PATH = BASE_DIR / "src" / "engines" / "CEngine_v0"
 ENGINE_BLACK_PATH = BASE_DIR / "src" / "engines" / "CEngine_v31"
-OPENINGS_PATH = BASE_DIR / "src" / "utils" / "openings.txt"
-BOTH_SIDES    = False
-NO_PGN        = False
+OPENINGS_PATH     = BASE_DIR / "src" / "utils" / "openings.txt"
+
+# Options
+BOTH_SIDES        = False
+NO_PGN            = False
 
 # For Shared Memory array
 SHARED_DIM = 5
@@ -278,7 +280,7 @@ def parse_args() -> list[str]:
                         type=int, default=0)
     
     parser.add_argument('--both-sides', 
-                        help='Play the engines with both sides, will result in 2x more games than specified',
+                        help='Play games with swapped sides (as a bonus), will result in 2x more games than specified',
                         default=False, action='store_true')
     
     parser.add_argument('--no-pgn', 
@@ -381,7 +383,7 @@ def main():
         start_time   = time.time()
         existing_shm = multiprocessing.shared_memory.SharedMemory(shm.name)
         np_array     = np.ndarray(SHARED_DIM, dtype=np.int64, buffer=existing_shm.buf)
-        np_array[0]  = 1
+        np_array[0]  = 0
         existing_shm.close()
 
         run_pool()

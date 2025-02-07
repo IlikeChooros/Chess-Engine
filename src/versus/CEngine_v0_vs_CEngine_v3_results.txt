@@ -1,4 +1,0 @@
-Results:
-CEngine_v0: 33
-CEngine_v3: 31
-Draw: 36
