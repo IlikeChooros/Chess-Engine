@@ -390,7 +390,138 @@ namespace chess
      */
     int Eval::evaluate(Board& board)
     {
-        return old_eval(board);
+        int eval              = 0;
+        int material          = 0;
+        int endgame_factor    = 0;
+        int middlegame_factor = 0;
+        bool is_white         = board.getSide() == Piece::White;
+        bool is_enemy         = !is_white;
+        // Square king_sq        = bitScanForward(board.bitboards(is_white)[Piece::King - 1]);
+
+        // Step 1: Evaluate the material and middlegame/endgame factors
+        for(int type = Piece::Pawn - 1; type < 6; type++)
+        {
+            if (type == Piece::King - 1)
+                continue;
+            
+            // Calculate endgame factor, by adding up values of a piece * it's quantity
+            int my_count    = pop_count(board.m_bitboards[is_white][type]);
+            int enemy_count = pop_count(board.m_bitboards[is_enemy][type]);
+
+            middlegame_factor += (ENDGAME_FACTOR_PIECES[type] * (my_count + enemy_count));
+
+            // Update the material
+            material += piece_values[type] * (my_count - enemy_count);
+        }
+
+        eval += material;
+
+        // Clamp the value from 0 to MAX_ENDGAME_FACTOR
+        middlegame_factor = std::min(middlegame_factor, MAX_ENDGAME_FACTOR);
+        endgame_factor    = MAX_ENDGAME_FACTOR - middlegame_factor;
+
+        // Step 2: Evaluate the piece square tables
+        int square_table_eval = 0;
+        for (int type = 0; type < 6; type++)
+        {
+            uint64_t epieces = board.m_bitboards[is_enemy][type];
+            uint64_t apieces = board.m_bitboards[is_white][type];
+
+            while(epieces)
+            {
+                Square sq = pop_lsb1(epieces);
+                square_table_eval -=
+                            (endgame_factor * piece_square_table[is_enemy][ENDGAME][type][sq]
+                        + middlegame_factor * piece_square_table[is_enemy][MIDDLE_GAME][type][sq]); 
+            }
+            while(apieces)
+            {
+                Square sq = pop_lsb1(apieces);
+                square_table_eval +=
+                            (endgame_factor * piece_square_table[is_white][ENDGAME][type][sq]
+                        + middlegame_factor * piece_square_table[is_white][MIDDLE_GAME][type][sq]);
+            }
+        }
+        
+        square_table_eval /= MAX_ENDGAME_FACTOR;
+        eval += square_table_eval;
+        
+        // Bonus for having the bishop pair
+        if (pop_count(board.bitboards(is_white)[Piece::Bishop - 1]) >= 2){
+            eval += 50;
+        }
+        if (pop_count(board.bitboards(is_enemy)[Piece::Bishop - 1]) >= 2){
+            eval -= 50;
+        }
+
+        // Pawn structure
+        // Try to get hashed pawn structure (already calculated)
+        Bitboard pawn_hash = board.pawnHash();
+        if (Eval::pawn_table.contains(pawn_hash))
+        {
+            eval += Eval::pawn_table.get(pawn_hash);
+        } 
+        else 
+        {
+            int pawn_eval = 0;
+            Bitboard pawns = board.bitboards(is_white)[Piece::Pawn - 1];
+            Bitboard epawns = board.bitboards(is_enemy)[Piece::Pawn - 1];
+
+            for (int i = 0; i < 8; i++){
+                Bitboard file = Eval::file_bitboards[i];
+
+                // Doubled pawns
+                if (pawns & file && pop_count(pawns & file) > 1){
+                    pawn_eval -= 10;
+                }
+                if (epawns & file && pop_count(epawns & file) > 1){
+                    pawn_eval += 10;
+                }
+
+                // Isolated pawns
+                if (pawns & file){
+                    if (!(pawns & (file >> 1)) && !(pawns & (file << 1))){
+                        pawn_eval -= 10;
+                    }
+                }
+                if (epawns & file){
+                    if (!(epawns & (file >> 1)) && !(epawns & (file << 1))){
+                        pawn_eval += 10;
+                    }
+                }
+            
+
+                // Connected pawns
+                if (pawns & file){
+                    if (pawns & (file >> 8) || pawns & (file << 8)){
+                        pawn_eval += 10;
+                    }
+                }
+                if (epawns & file){
+                    if (epawns & (file >> 8) || epawns & (file << 8)){
+                        pawn_eval -= 10;
+                    }
+                }
+            }
+
+            // Store the pawn hash
+            Eval::pawn_table.store(pawn_hash, pawn_eval);
+            eval += pawn_eval;
+        }        
+
+        // King square tables
+        // auto game_phase = MIDDLE_GAME;
+
+        // if (pop_count(board.pieces()) <= 6 || ((pop_count(board.queens()) == 0) && (pop_count(board.rooks()) == 0))){
+        //     game_phase = ENDGAME;
+        // }
+
+        // eval += Eval::piece_square_table[is_white][game_phase][Piece::King - 1][king_sq];
+        // eval -= Eval::piece_square_table[is_enemy][game_phase][Piece::King - 1][king_sq];
+
+        return eval;
+
+
         // int eval              = 0;
         // int material          = 0;
         // bool is_white         = board.getSide() == Piece::White;

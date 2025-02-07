@@ -163,7 +163,7 @@ class Engine:
     
     def _read_until_bestmove(self, line: str | None = None) -> chess.Move | None:
         """
-        Read the output of the engine until the bestmove command is found.
+        Read the output of the engine until the `bestmove` is found.
 
         This is used to get the best move after a search command
 
