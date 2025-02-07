@@ -27,14 +27,14 @@ BASE_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
 ENGINE_WHITE_PATH = BASE_DIR / "src" / "engines" / "CEngine_v0"
 ENGINE_BLACK_PATH = BASE_DIR / "src" / "engines" / "CEngine_v31"
 OPENINGS_PATH = BASE_DIR / "src" / "utils" / "openings.txt"
+BOTH_SIDES    = False
+NO_PGN        = False
 
+# For Shared Memory array
 SHARED_DIM = 5
-
-results: dict = {
-    'white': 0,
-    'black': 0,
-    'draw': 0
-}
+BLACK_INDEX   = 1
+WHITE_INDEX   = 2
+DRAW_INDEX    = 3
 
 names: dict = {
     'white': '',
@@ -57,8 +57,9 @@ def save_game(fen: str, moves: list[chess.Move], results : list) -> tuple[int, i
     """
     Save the game in a pgn file, thread safe
     """
-    global PGN_OUTPUT, ENGINE_WHITE_PATH, ENGINE_BLACK_PATH, pgn_lock
-
+    global PGN_OUTPUT, ENGINE_WHITE_PATH, ENGINE_BLACK_PATH, pgn_lock, \
+            BLACK_INDEX, WHITE_INDEX, DRAW_INDEX 
+    
     with pgn_lock:
         # Create the game
         game = chess.pgn.Game()
@@ -87,24 +88,25 @@ def save_game(fen: str, moves: list[chess.Move], results : list) -> tuple[int, i
         if outcome is None:
             pass
         elif outcome.winner == chess.WHITE:
-            results[1] += 1
+            results[WHITE_INDEX] += 1
         elif outcome.winner == chess.BLACK:
-            results[2] += 1
+            results[BLACK_INDEX] += 1
         else:
-            results[3] += 1
+            results[DRAW_INDEX] += 1
         count_lock.release()
 
         # Save the results
         with open(OUTPUT_RESULTS_PATH, 'w') as results_file:
             results_file.write(f"Results:\n")
-            results_file.write(f"{names['white']}: {results[1]}\n")
-            results_file.write(f"{names['black']}: {results[2]}\n")
-            results_file.write(f"Draw: {results[3]}\n")
+            results_file.write(f"{names['white']}: {results[WHITE_INDEX]}\n")
+            results_file.write(f"{names['black']}: {results[BLACK_INDEX]}\n")
+            results_file.write(f"Draw: {results[DRAW_INDEX]}\n")
 
         # Save the game in the pgn file
-        exporter = chess.pgn.StringExporter(headers=True, variations=True, comments=True)
-        with open(PGN_OUTPUT, 'a') as pgn_file:
-            pgn_file.write(f"{game.accept(exporter)}\n\n")
+        if not NO_PGN:
+            exporter = chess.pgn.StringExporter(headers=True, variations=True, comments=True)
+            with open(PGN_OUTPUT, 'a') as pgn_file:
+                pgn_file.write(f"{game.accept(exporter)}\n\n")
 
 
 def play_moves(white: Engine, black: Engine, fen: str) -> list[chess.Move]:
@@ -118,7 +120,6 @@ def play_moves(white: Engine, black: Engine, fen: str) -> list[chess.Move]:
     board: chess.Board = chess.Board(fen)
     turn: chess.Color  = board.turn
     current_engine     = white if turn == chess.WHITE else black
-    count              = np.int64(1)
 
     # Play the game
     while True:
@@ -126,12 +127,11 @@ def play_moves(white: Engine, black: Engine, fen: str) -> list[chess.Move]:
         current_engine.load_game(board, fen=fen)
         current_engine.go()
         resp   = current_engine.get_bestmove()
-        count += 1
         if resp is None:
             break
         
         # Too many moves in a game, or null move
-        if count > MAX_MOVE_COUNT or not bool(resp):
+        if len(board.move_stack) > MAX_MOVE_COUNT or not bool(resp):
             raise TimeoutError
 
         # Switch the turn and the engine
@@ -186,7 +186,7 @@ def play_one_game(arg : tuple[str, str]) -> None:
     save_results: bool = True
     try:
         moves = play_moves(white, black, fen)
-    except TimeoutError:
+    except:
         save_results = False
 
     # Using shared variables in Python is waaaay to complicated than it should be
@@ -210,7 +210,7 @@ def play_one_game(arg : tuple[str, str]) -> None:
     # Print the game progress
     with print_lock:
         print(
-            f"{value + SKIP_FIRST_N_LINES:4} {((value)/TOTAL_GAMES * 100):4.1f}% | ETA: {format_time(int((time.time() - start_time)/(value) * (TOTAL_GAMES - value))):8} ", 
+            f"{value:4} {((value)/TOTAL_GAMES * 100):4.1f}% | ETA: {format_time(int((time.time() - start_time)/(value) * (TOTAL_GAMES - value))):8} ", 
             end='\r'
         )
 
@@ -237,7 +237,8 @@ def init_pool(pg_lock : Lock, prnt_lock : Lock, cnt_lock : Lock):
 def parse_args() -> list[str]:
     global ENGINE_BLACK_PATH, ENGINE_WHITE_PATH, \
             PGN_OUTPUT, OUTPUT_RESULTS_PATH, names, \
-            OPENINGS_PATH, TOTAL_GAMES, SKIP_FIRST_N_LINES
+            OPENINGS_PATH, TOTAL_GAMES, SKIP_FIRST_N_LINES, \
+            BOTH_SIDES, NO_PGN
 
     # Parse the arguments
     parser = argparse.ArgumentParser()
@@ -275,6 +276,14 @@ def parse_args() -> list[str]:
     parser.add_argument('--skip', '-s',
                         help='Skip first n positions in the `openings` file, by default 0',
                         type=int, default=0)
+    
+    parser.add_argument('--both-sides', 
+                        help='Play the engines with both sides, will result in 2x more games than specified',
+                        default=False, action='store_true')
+    
+    parser.add_argument('--no-pgn', 
+                        help='Wheter to create a pgn file with the games, by default pgn will be created',
+                        default=False, action='store_true')
 
     args = parser.parse_args()
 
@@ -284,10 +293,13 @@ def parse_args() -> list[str]:
     BASE_OUTPUT        = args.output
     TOTAL_GAMES        = args.games
     SKIP_FIRST_N_LINES = args.skip
+    BOTH_SIDES         = args.both_sides
+    NO_PGN             = args.no_pgn
     
     print('Settings:')
     outputs = (('White', ENGINE_WHITE_PATH), ('Black', ENGINE_BLACK_PATH), ('Openings', OPENINGS_PATH),
-                ('Output', BASE_OUTPUT), ('Games', TOTAL_GAMES), ('Skip', SKIP_FIRST_N_LINES))
+                ('Output', BASE_OUTPUT), ('Games', TOTAL_GAMES), ('Skip', SKIP_FIRST_N_LINES), 
+                ('Both Sides', BOTH_SIDES))
     
     for field, value in outputs:
         print(' %s: %s' % (field, value))
@@ -328,7 +340,8 @@ def parse_args() -> list[str]:
 
 def main():
     global ENGINE_WHITE_PATH, ENGINE_BLACK_PATH, OPENINGS_PATH, \
-           PGN_OUTPUT, OUTPUT_RESULTS_PATH, SKIP_FIRST_N_LINES, TOTAL_GAMES, start_time
+           PGN_OUTPUT, OUTPUT_RESULTS_PATH, SKIP_FIRST_N_LINES, TOTAL_GAMES, \
+            start_time, BOTH_SIDES, WHITE_INDEX, BLACK_INDEX
 
     
     # Prepare the fens
@@ -343,15 +356,36 @@ def main():
 
     args = [(fen, shm.name) for fen in fens]
 
-    print("Starting the match...")
-    print(f"White: {names['white']} | Black: {names['black']}")
+    def run_pool():
+        print("Starting the match...")
+        print(f"White: {names['white']} | Black: {names['black']}")
 
-    with multiprocessing.Pool(
-        processes=multiprocessing.cpu_count(), 
-        initializer=init_pool, 
-        initargs=(pgn_lock, print_lock, count_lock)) as pool:
-        pool.map(play_one_game, args)
+        with multiprocessing.Pool(
+            processes=multiprocessing.cpu_count(), 
+            initializer=init_pool, 
+            initargs=(pgn_lock, print_lock, count_lock)) as pool:
+            pool.map(play_one_game, args)
     
+    run_pool()
+
+    # Switch the sides
+    if BOTH_SIDES:
+        print('\nFinnished games for one side, switching sides...')
+
+        ENGINE_WHITE_PATH, ENGINE_BLACK_PATH = ENGINE_BLACK_PATH, ENGINE_WHITE_PATH
+        BLACK_INDEX, WHITE_INDEX             = WHITE_INDEX, BLACK_INDEX
+
+        names['white'] = ENGINE_WHITE_PATH.stem
+        names['black'] = ENGINE_BLACK_PATH.stem
+
+        start_time   = time.time()
+        existing_shm = multiprocessing.shared_memory.SharedMemory(shm.name)
+        np_array     = np.ndarray(SHARED_DIM, dtype=np.int64, buffer=existing_shm.buf)
+        np_array[0]  = 1
+        existing_shm.close()
+
+        run_pool()
+
     shm.close()
     shm.unlink()
 

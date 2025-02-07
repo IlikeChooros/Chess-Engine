@@ -207,7 +207,7 @@ namespace chess
     /**
      * @brief Evaluate pawn structure
      */
-    constexpr int eval_pawn_structure(Bitboard pawns, Bitboard epawns, Bitboard file, bool is_white)
+    int eval_pawn_structure(Bitboard pawns, Bitboard epawns, Bitboard file, bool is_white)
     {
         int pawn_eval          = 0;
         Bitboard pawns_on_file = pawns & file;
@@ -217,11 +217,11 @@ namespace chess
         {
             // Doubled pawns
             if (pop_count(pawns_on_file) > 1)
-                pawn_eval -= 10;
+                pawn_eval -= 20;
 
             // Isolated pawns
             if (!(pawns & (file >> 1)) && !(pawns & (file << 1)))
-                pawn_eval -= 10;
+                pawn_eval -= 15;
 
             // Get square of that pawn and check if it's a passed pawn
             do
@@ -233,15 +233,17 @@ namespace chess
                 // Pawn structures (positive)
                 // pawn chain
                 if (pawns & (((file >> 1) | (file << 1)) & rank_below))
-                    pawn_eval += 15;
+                    pawn_eval += 5;
                 
                 // side-to-side
                 if (pawns & (((file >> 1) | (file << 1)) & Eval::rank_bitboards[rank]))
-                    pawn_eval += 10;
+                    pawn_eval += 5;
 
                 // passer
                 if ((Eval::passed_pawn_masks[is_white][sq] & epawns) == 0)
-                    pawn_eval += Eval::piece_square_table[is_white][Eval::ENDGAME][Piece::Pawn - 1][sq];
+                    pawn_eval += 15;
+                    // pawn_eval += Eval::piece_square_table[is_white][Eval::ENDGAME][Piece::Pawn - 1][sq];
+
             } while(pawns_on_file);
         }
 
@@ -454,7 +456,7 @@ namespace chess
             eval -= 50;
         }
 
-        // Pawn structure
+        // Step 3: Evaluate the pawn structure
         // Try to get hashed pawn structure (already calculated)
         Bitboard pawn_hash = board.pawnHash();
         if (Eval::pawn_table.contains(pawn_hash))
@@ -470,54 +472,59 @@ namespace chess
             for (int i = 0; i < 8; i++){
                 Bitboard file = Eval::file_bitboards[i];
 
-                // Doubled pawns
-                if (pawns & file && pop_count(pawns & file) > 1){
-                    pawn_eval -= 10;
-                }
-                if (epawns & file && pop_count(epawns & file) > 1){
-                    pawn_eval += 10;
-                }
+                pawn_eval += eval_pawn_structure(pawns, epawns, file, is_white);
+                pawn_eval -= eval_pawn_structure(epawns, pawns, file, is_enemy);
 
-                // Isolated pawns
-                if (pawns & file){
-                    if (!(pawns & (file >> 1)) && !(pawns & (file << 1))){
-                        pawn_eval -= 10;
-                    }
-                }
-                if (epawns & file){
-                    if (!(epawns & (file >> 1)) && !(epawns & (file << 1))){
-                        pawn_eval += 10;
-                    }
-                }
+                // Doubled pawns
+                // if (pawns & file && pop_count(pawns & file) > 1){
+                //     pawn_eval -= 10;
+                // }
+                // if (epawns & file && pop_count(epawns & file) > 1){
+                //     pawn_eval += 10;
+                // }
+
+                // // Isolated pawns
+                // if (pawns & file){
+                //     if (!(pawns & (file >> 1)) && !(pawns & (file << 1))){
+                //         pawn_eval -= 10;
+                //     }
+                // }
+                // if (epawns & file){
+                //     if (!(epawns & (file >> 1)) && !(epawns & (file << 1))){
+                //         pawn_eval += 10;
+                //     }
+                // }
             
 
-                // Connected pawns
-                if (pawns & file){
-                    if (pawns & (file >> 8) || pawns & (file << 8)){
-                        pawn_eval += 10;
-                    }
-                }
-                if (epawns & file){
-                    if (epawns & (file >> 8) || epawns & (file << 8)){
-                        pawn_eval -= 10;
-                    }
-                }
+                // // Connected pawns
+                // if (pawns & file){
+                //     if (pawns & (file >> 8) || pawns & (file << 8)){
+                //         pawn_eval += 10;
+                //     }
+                // }
+                // if (epawns & file){
+                //     if (epawns & (file >> 8) || epawns & (file << 8)){
+                //         pawn_eval -= 10;
+                //     }
+                // }
             }
 
             // Store the pawn hash
             Eval::pawn_table.store(pawn_hash, pawn_eval);
             eval += pawn_eval;
-        }        
+        }
 
-        // King square tables
-        // auto game_phase = MIDDLE_GAME;
+        // if (
+        //     material >= piece_values[Piece::Rook - 1]
+        //     && ((board.m_bitboards[0][Piece::Pawn - 1] | board.m_bitboards[1][Piece::Pawn - 1]) == 0))
+        // {
+        //     Square king       = bitScanForward(board.m_bitboards[is_white][Piece::King - 1]);
+        //     Square enemy_king = bitScanForward(board.m_bitboards[is_enemy][Piece::King - 1]);
 
-        // if (pop_count(board.pieces()) <= 6 || ((pop_count(board.queens()) == 0) && (pop_count(board.rooks()) == 0))){
-        //     game_phase = ENDGAME;
+        //     // If it's winning side, apply penalty for being far from the enemy king
+        //     // for losing side, apply bonus for being far from the enemy king
+        //     eval += -10 * (manhattan_distance[king][enemy_king]);
         // }
-
-        // eval += Eval::piece_square_table[is_white][game_phase][Piece::King - 1][king_sq];
-        // eval -= Eval::piece_square_table[is_enemy][game_phase][Piece::King - 1][king_sq];
 
         return eval;
 

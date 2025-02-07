@@ -56,6 +56,16 @@ Code related:
       - CEngine_v0: 33
       - CEngine_v3: 31
       - Draw: 36
-    - v0 vs v3 (aspiration window)
-      -
 
+
+# New matches
+
+v3.1 vs v0:
+- CEngine_v31: 159
+- CEngine_v0: 107
+- Draw: 232
+
+(manhattan dist) vs v0:
+- CEngine_v31: 142
+- CEngine_v0: 116
+- Draw: 238
