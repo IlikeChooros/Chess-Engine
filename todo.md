@@ -149,3 +149,8 @@ beta   = eval + delta;
 // rest of the code...
 
 ```
+
+v3.4 vs v0 (asp window + eval upgrade + killer heuristic):
+- CEngine_v34: 190
+- CEngine_v0: 100
+- Draw: 204

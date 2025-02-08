@@ -24,12 +24,16 @@ uint64_t Perft::run(int depth, std::string fen)
     if (depth < 1)
         return 0;
 
-    // Load the fen, TODO: add `moves` support
+    using namespace std::chrono;
+    auto start = high_resolution_clock::now();
+
     m_board.loadFen(fen.c_str());
     uint64_t total = perft<true>(depth);
 
     if(m_print) {
-        std::cout<< "Nodes: " << total << "\n\n";
+        auto total_s  = double(duration_cast<microseconds>(high_resolution_clock::now() - start).count()) / 1000000.0;
+        auto Mnps     = (double(total) / (total_s)) / 1000000.0;
+        std::cout<< "Nodes: " << total << " (" << std::setprecision(4) << Mnps << " Mnps)\n\n";
     }
     return total;
 }

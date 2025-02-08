@@ -2,13 +2,13 @@
 
 namespace chess
 {
-    void MoveOrdering::sort(MoveList *ml, Move pv, Board *board, SearchCache* sc)
+    void MoveOrdering::sort(MoveList *ml, Move pv, Board *board, SearchCache* sc, Depth ply)
     {
         OrderedMove om[ml->size()];
 
         for (size_t i = 0; i < ml->size(); i++)
         {
-            om[i].set(ml->moves[i], pv, board, sc);
+            om[i].set(ml->moves[i], pv, board, sc, ply);
         }
 
         std::stable_sort(om, om + ml->size(), greater);

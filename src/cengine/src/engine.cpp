@@ -43,6 +43,7 @@ void Engine::reset()
 {
     m_search_cache.getTT().clear();
     m_search_cache.getHH().clear();
+    m_search_cache.getKH().clear();
 }
 
 /**

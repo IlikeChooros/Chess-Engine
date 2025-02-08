@@ -93,10 +93,10 @@ namespace chess
         Value qsearch(Board& board, Value alpha, Value beta, Depth depth);
 
         template <NodeType>
-        Value search(Board& board, Value alpha, Value beta, Depth depth, Depth extension = 0);
+        Value search(Board& board, Value alpha, Value beta, Depth depth, Depth ply = 0);
 
         MoveList get_pv(int max_depth = 10);
-        Move get_pv_move(int depth);
+        Move get_pv_move(Depth& ply);
 
         Board m_board;
         SearchCache *m_search_cache;

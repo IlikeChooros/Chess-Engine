@@ -60,6 +60,11 @@ class Move
         return (move >> 12) & FLAG_CAPTURE;
     }
 
+    // Fast quiet check, a quiet move is one that doesn't change the material (not a capture or promotion)
+    static constexpr bool fquiet(uint16_t move){
+        return ((move >> 12) & FLAG_CAPTURE) != 0 || ((move >> 12) & FLAG_PROMOTION) != 0;
+    }
+
     // Check if the move is a capture
     static bool capture(Move move) {return fcapture(move.m_move);};
 
@@ -140,6 +145,7 @@ class Move
 
     bool isCapture() const {return getFlags() & FLAG_CAPTURE;};
     bool isPromotion() const {return getFlags() & FLAG_PROMOTION;};
+    bool isQuiet() const {return fquiet(this->m_move);};
     bool isPromotionCapture() const {return (getFlags() & (FLAG_CAPTURE | FLAG_PROMOTION)) == (FLAG_CAPTURE | FLAG_PROMOTION);};
     bool isDoubleMove() const {return getFlags() == FLAG_DOUBLE_PAWN;};
     bool isEnPassant() const {return getFlags() == FLAG_ENPASSANT_CAPTURE;};

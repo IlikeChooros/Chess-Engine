@@ -12,7 +12,7 @@ namespace chess
 class Extensions
 {
 public:
-    static constexpr int MAX_EXTENSIONS = 6;
+    static constexpr int MAX_EXTENSIONS = 2;
 
     /**
      * @brief Extend the search by 1 ply if the position is in check,

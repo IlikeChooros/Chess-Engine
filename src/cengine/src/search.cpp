@@ -60,11 +60,10 @@ namespace chess
      * @brief Get the principal variation move at a certain depth of the search,
      * based on `m_root_pv`, should be already set.
      */
-    Move Thread::get_pv_move(int depth)
-    {
-        Depth ply = m_depth - depth;
-        
-        if (ply < 0 || ply >= int(m_root_pv.size()))
+    Move Thread::get_pv_move(Depth& ply)
+    {        
+        // Extensions
+        if (ply >= Depth(m_root_pv.size()))
             return Move();
 
         return m_root_pv.moves[ply];
@@ -129,12 +128,12 @@ namespace chess
         }
 
         // Iterative deepening loop
-        while(m_depth <= MAX_PLY && !m_interrupt.get())
+        while(m_depth < MAX_PLY && !m_interrupt.get())
         {
             // Aspiration window
             while(true)
             {
-                eval = search<Root>(m_board, alpha, beta, m_depth);
+                eval = search<Root>(m_board, alpha, beta, m_depth, 0);
 
                 if (eval <= alpha)
                 {
@@ -250,7 +249,7 @@ namespace chess
      * @brief Priciple variation search
      */
     template <NodeType nType>
-    Value Thread::search(Board& board, Value alpha, Value beta, Depth depth, Depth extension)
+    Value Thread::search(Board& board, Value alpha, Value beta, Depth depth, Depth ply)
     {
         constexpr bool isRoot       = nType == Root;
         constexpr bool pv           = nType == PV;
@@ -258,11 +257,12 @@ namespace chess
 
         // Update interrupt
         m_interrupt.update();
-
-        // Look for draw conditions and check if the game is over
+        
+        // Generate legal moves, setup variables for the search
         MoveList moves  = board.generateLegalMoves();
         Value best      = MATE - depth;
 
+        // Look for draw conditions and check if the game is over
         if (board.isTerminated(&moves))
         {
             auto termination = board.getTermination();
@@ -272,12 +272,14 @@ namespace chess
         }
 
         // Lookup transposition table and check for possible cutoffs
-        uint64_t hash = board.getHash();
-        int old_alpha = alpha;
+        Move hash_move = Move::nullMove;
+        uint64_t  hash = board.getHash();
+        int  old_alpha = alpha;
         
         if (m_search_cache->getTT().contains(hash))
         {
             TEntry entry = m_search_cache->getTT().get(hash);
+            hash_move    = entry.bestMove;
             if (entry.depth >= depth)
             {
                 if (entry.nodeType == TEntry::EXACT)
@@ -300,11 +302,10 @@ namespace chess
         if (depth == 0)
             return qsearch(board, alpha, beta);
         
-        // Generate legal moves, setup variables for the search
         Move  bestmove = Move::nullMove;
 
         // Sort the moves using move ordering
-        MoveOrdering::sort(&moves, get_pv_move(depth), &board, m_search_cache);        
+        MoveOrdering::sort(&moves, get_pv_move(ply), &board, m_search_cache, ply);        
         
         // Loop through the rest of the moves
         for (size_t i = 0; i < moves.size(); i++)
@@ -312,11 +313,7 @@ namespace chess
             Move m = moves[i];
             board.makeMove(m);
 
-            // Add extensions
-            // int ext    = Extensions::check(board, extension);
-            int ext    = 0;
-            Value eval = 0;
-            eval       = -search<nextType>(board, -beta, -alpha, depth - 1 + ext, extension);
+            Value eval = -search<nextType>(board, -beta, -alpha, depth - 1, ply + 1);
 
             board.undoMove(m);
 
@@ -352,7 +349,13 @@ namespace chess
         else if (best >= beta)
         {
             entry.nodeType = TEntry::LOWERBOUND;
-            m_search_cache->getHH().update(board.turn(), bestmove, depth);
+            
+            // Beta-cutoff, add that to the history and update killers
+            if (!bestmove.isPromotionCapture())
+            {
+                m_search_cache->getHH().update(board.turn(), bestmove, depth);
+                m_search_cache->getKH().update(bestmove, ply);
+            }
         }
         else
             entry.nodeType = TEntry::EXACT;
