@@ -3,6 +3,7 @@
 #include "cache.h"
 #include "board.h"
 #include "types.h"
+#include "eval.h"
 
 namespace chess
 {
@@ -17,16 +18,38 @@ public:
     // - depth >= 3
     // - board is not in check
     // - move is not a killer (caused beta cut-off)
-    static int reduce(Depth depth, Depth ply, Move& move, Board& state, SearchCache* sc)
+    static bool valid(Depth ply, Move& move, bool check_before_move, bool impr, SearchCache* sc)
     {
-        // Do not reduce on small depth, when in check, or if the move is a killer
-        bool not_reducing = (depth < 3) || state.m_in_check || sc->getKH().is_killer(move, ply);
+        return !(impr || sc->getKH().is_killer(move, ply)
+            || (!move.isQuiet()) || check_before_move);
+    }
 
-        if (not_reducing)
-            return depth;
-        
-        // Decrease by 1
-        return depth - 1;
+    // Returns new reduce value of the search depth
+    constexpr static int reduce(Depth depth, int n_move, bool null_window)
+    {
+        return ((null_window ? 2 : 1) + depth / 3 + n_move / 13) + 1;
+    }
+};
+
+// Null Move Pruning (Heuristic)
+class NMP
+{
+public:
+
+    // Checks if given position is valid for pruning
+    static bool valid(Depth depth, Board& board)
+    {
+        if ((depth < 4))
+            return false;
+
+        auto factors = Eval::get_factors(board);
+        return ((factors.endgame_factor < (int)(Eval::MAX_ENDGAME_FACTOR * 0.9))
+                && !board.m_in_check);
+    }
+
+    static int reduce(Depth depth)
+    {
+        return 3 + depth / 4;
     }
 };
 

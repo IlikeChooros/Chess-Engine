@@ -386,21 +386,13 @@ namespace chess
     }
 
     
-    /**
-     * @brief Evaluation function for the board in centipawns
-     * positive values are good current side, negative for the opposite
-     */
-    int Eval::evaluate(Board& board)
+    Eval::material_factors_t Eval::get_factors(Board& board)
     {
-        int eval              = 0;
-        int material          = 0;
-        int endgame_factor    = 0;
-        int middlegame_factor = 0;
-        bool is_white         = board.getSide() == Piece::White;
-        bool is_enemy         = !is_white;
-        // Square king_sq        = bitScanForward(board.bitboards(is_white)[Piece::King - 1]);
+        bool is_white   = board.getSide() == Piece::White;
+        bool is_enemy   = !is_white;
 
-        // Step 1: Evaluate the material and middlegame/endgame factors
+        material_factors_t result = {0, 0, 0};
+        
         for(int type = Piece::Pawn - 1; type < 6; type++)
         {
             if (type == Piece::King - 1)
@@ -410,17 +402,32 @@ namespace chess
             int my_count    = pop_count(board.m_bitboards[is_white][type]);
             int enemy_count = pop_count(board.m_bitboards[is_enemy][type]);
 
-            middlegame_factor += (ENDGAME_FACTOR_PIECES[type] * (my_count + enemy_count));
+            result.middlegame_factor += (ENDGAME_FACTOR_PIECES[type] * (my_count + enemy_count));
 
             // Update the material
-            material += piece_values[type] * (my_count - enemy_count);
+            result.material += piece_values[type] * (my_count - enemy_count);
         }
 
-        eval += material;
-
         // Clamp the value from 0 to MAX_ENDGAME_FACTOR
-        middlegame_factor = std::min(middlegame_factor, MAX_ENDGAME_FACTOR);
-        endgame_factor    = MAX_ENDGAME_FACTOR - middlegame_factor;
+        result.middlegame_factor = std::min(result.middlegame_factor, MAX_ENDGAME_FACTOR);
+        result.endgame_factor    = MAX_ENDGAME_FACTOR - result.middlegame_factor;
+
+        return result;
+    }
+
+    /**
+     * @brief Evaluation function for the board in centipawns
+     * positive values are good current side, negative for the opposite
+     */
+    int Eval::evaluate(Board& board)
+    {
+        int eval              = 0;
+        bool is_white         = board.getSide() == Piece::White;
+        bool is_enemy         = !is_white; // i'm not racist
+
+        // Step 1: Evaluate the material and middlegame/endgame factors
+        auto factors = get_factors(board);
+        eval        += factors.material;
 
         // Step 2: Evaluate the piece square tables
         int square_table_eval = 0;
@@ -433,15 +440,15 @@ namespace chess
             {
                 Square sq = pop_lsb1(epieces);
                 square_table_eval -=
-                            (endgame_factor * piece_square_table[is_enemy][ENDGAME][type][sq]
-                        + middlegame_factor * piece_square_table[is_enemy][MIDDLE_GAME][type][sq]); 
+                            (factors.endgame_factor * piece_square_table[is_enemy][ENDGAME][type][sq]
+                        + factors.middlegame_factor * piece_square_table[is_enemy][MIDDLE_GAME][type][sq]); 
             }
             while(apieces)
             {
                 Square sq = pop_lsb1(apieces);
                 square_table_eval +=
-                            (endgame_factor * piece_square_table[is_white][ENDGAME][type][sq]
-                        + middlegame_factor * piece_square_table[is_white][MIDDLE_GAME][type][sq]);
+                            (factors.endgame_factor * piece_square_table[is_white][ENDGAME][type][sq]
+                        + factors.middlegame_factor * piece_square_table[is_white][MIDDLE_GAME][type][sq]);
             }
         }
         

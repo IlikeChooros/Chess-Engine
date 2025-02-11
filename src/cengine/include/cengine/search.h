@@ -12,6 +12,7 @@
 #include "search_options.h"
 #include "interrupt.h"
 #include "extensions.h"
+#include "reductions.h"
 
 
 namespace chess
@@ -93,13 +94,14 @@ namespace chess
         Value qsearch(Board& board, Value alpha, Value beta, Depth depth);
 
         template <NodeType>
-        Value search(Board& board, Value alpha, Value beta, Depth depth, Depth ply = 0);
+        Value search(Board& board, Value alpha, Value beta, Depth depth, Depth ply = 0, bool nmp = true);
 
         MoveList get_pv(int max_depth = 10);
         Move get_pv_move(Depth& ply);
 
         Board m_board;
         SearchCache *m_search_cache;
+        SearchStack m_ss;
         Limits m_limits;
         Interrupt m_interrupt;
         Result m_result;

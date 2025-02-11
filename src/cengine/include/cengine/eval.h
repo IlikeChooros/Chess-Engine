@@ -55,9 +55,16 @@ namespace chess
         static Bitboard passed_pawn_masks[2][64];
         static TTable<int> pawn_table;
 
+        typedef struct {
+            int material;
+            int endgame_factor;
+            int middlegame_factor;
+        } material_factors_t;
+
         Eval() = delete;
         
         static void init();
         static int evaluate(Board& board);
+        static material_factors_t get_factors(Board& board);
     };
 }

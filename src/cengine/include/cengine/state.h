@@ -11,8 +11,23 @@
 namespace chess
 {
     // Struct to store the state of the game
-    typedef struct 
+    typedef struct State
     {
+        constexpr friend bool operator==(const State& lhs, const State& rhs)
+        {
+            return (
+                    lhs.hash                == rhs.hash
+                && lhs.move                 == rhs.move
+                && lhs.side_to_move         == rhs.side_to_move
+                && lhs.captured_piece       == rhs.captured_piece
+                && lhs.enpassant_target     == rhs.enpassant_target
+                && lhs.halfmove_clock       == rhs.halfmove_clock
+                && lhs.fullmove_counter     == rhs.fullmove_counter
+                && lhs.castling_rights      == rhs.castling_rights
+                && lhs.irreverisble_index   == rhs.irreverisble_index
+            );
+        }
+
         uint64_t hash; // 64 bits for Zobrist hash
         uint64_t move:Move::bits; // 16 bits
         uint64_t side_to_move:Piece::bits; // 5 bit for side to move (Piece::Color)

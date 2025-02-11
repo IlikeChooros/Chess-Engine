@@ -203,6 +203,20 @@ TEST_F(ManagerTest, testMoveGenPromotion)
     ASSERT_FALSE(move.isCapture());
 }
 
+TEST_F(ManagerTest, testNullMoves)
+{
+    loadFen("r1bqkbnr/pP3ppp/2n5/8/4pP2/8/PPPP2PP/RNBQKBNR w KQkq - 1 6");
+
+    Board copy(board);
+    
+    ASSERT_TRUE(copy == board);
+
+    board.makeNullMove();
+    board.undoNullMove();
+
+    ASSERT_TRUE(copy == board);
+}
+
 
 TEST_F(ManagerTest, testPreft)
 {

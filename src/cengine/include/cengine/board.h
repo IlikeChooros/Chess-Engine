@@ -82,6 +82,7 @@ namespace chess
         Board(const Board& other);
         Board(std::string fen);
         Board& operator=(const Board& other);
+        bool operator==(const Board& other);
         
         Board& init();
         void loadFen(std::string fen);
@@ -230,8 +231,16 @@ namespace chess
          */
         inline Bitboard pieces() 
         {
-            return m_bitboards[0][KNIGHT_TYPE] | m_bitboards[0][ROOK_TYPE] | m_bitboards[0][BISHOP_TYPE] | m_bitboards[0][QUEEN_TYPE] |
-                   m_bitboards[1][KNIGHT_TYPE] | m_bitboards[1][ROOK_TYPE] | m_bitboards[1][BISHOP_TYPE] | m_bitboards[1][QUEEN_TYPE];
+            return m_bitboards[0][KNIGHT_TYPE] | m_bitboards[0][ROOK_TYPE] 
+                | m_bitboards[0][BISHOP_TYPE] | m_bitboards[0][QUEEN_TYPE] 
+                | m_bitboards[1][KNIGHT_TYPE] | m_bitboards[1][ROOK_TYPE] 
+                | m_bitboards[1][BISHOP_TYPE] | m_bitboards[1][QUEEN_TYPE];
+        }
+
+        inline Bitboard pieces(bool side)
+        {
+            return m_bitboards[side][KNIGHT_TYPE] | m_bitboards[side][ROOK_TYPE] 
+                | m_bitboards[side][BISHOP_TYPE] | m_bitboards[side][QUEEN_TYPE]; 
         }
 
         inline Bitboard pawns() {
@@ -281,6 +290,7 @@ namespace chess
          * @brief Get the piece at a given index
          */
         inline int& operator[](int index) {return this->board[index]; };
+        
         
         Hash m_hash;
         int board[64];

@@ -136,4 +136,74 @@ namespace chess
         HistoryHeuristic hh;
         TTable<TEntry> tt;
     };
+
+    // Used for 'improving'
+    struct SearchStackEntry
+    {
+        static constexpr Value noValue = (1 << 17);
+        Value static_eval;
+    };
+
+
+    class SearchStack
+    {
+    public:
+        static constexpr auto STACK_SIZE = KillerHeuristic::MAX_PLY + 4;
+
+        SearchStack()
+        {
+            ss.reset(new SearchStackEntry[STACK_SIZE]);
+            _begin = ss.get();
+            _end   = ss.get() + STACK_SIZE;
+            _it    = _begin + 4; // so that (_it - 4) is possible
+        }
+
+        // Get the derefrenced value of the iterator
+        SearchStackEntry& get(Depth ply)
+        {
+            return *(_it + ply);
+        }
+
+        // Get the `SearchStackEntry` pointer from 2 or 4 plies ago, if has it's value set
+        // May return null pointer if the stack has no set values (2 and 4 plies ago)
+        SearchStackEntry* get_improving_it(Depth ply)
+        {
+            SearchStackEntry* imprv = nullptr;
+
+            if ((_it + ply - 2)->static_eval != SearchStackEntry::noValue)
+            {
+                imprv = (_it + ply - 2);
+            }
+            else if ((_it + ply - 4)->static_eval != SearchStackEntry::noValue)
+            {
+                imprv = (_it + ply - 4);
+            }
+
+            return imprv;
+        }
+
+        // Check if the position is improving (better than the one from 2 or 4 plies ago)
+        bool improving(Board& board, Depth ply)
+        {
+            if (board.m_in_check)
+                return false;
+            
+            auto imprv = get_improving_it(ply);
+            return imprv != nullptr ? _it->static_eval > imprv->static_eval : true;
+        }
+        
+        // Set all values of the 'stack' to `SearchStackEntry::noValue`
+        void clear()
+        {
+            for(auto it = _begin; it != _end; it++)
+                it->static_eval = SearchStackEntry::noValue;
+        }
+
+    private:
+        std::unique_ptr<SearchStackEntry[]> ss;
+
+        SearchStackEntry* _it;
+        SearchStackEntry* _begin;
+        SearchStackEntry* _end;
+    };
 }

@@ -125,7 +125,6 @@ namespace chess
                 m_bitboards[i][j] = other.m_bitboards[i][j];
             
         m_castling_rights    = other.m_castling_rights;
-        m_history            = other.m_history;
         m_termination        = other.m_termination;
     
         return *this;
@@ -425,6 +424,23 @@ namespace chess
         
         // If the move is not found, return a null move
         return Move();
+    }
+
+    bool Board::operator==(const Board& other)
+    {        
+        return (
+               m_hash               == other.m_hash
+            && m_in_check           == other.m_in_check
+            && m_side               == other.m_side
+            && m_enpassant_target   == other.m_enpassant_target 
+            && m_halfmove_clock     == other.m_halfmove_clock
+            && m_captured_piece     == other.m_captured_piece
+            && m_history            == other.m_history
+            && m_irreversible_index == other.m_irreversible_index
+            && memcmp(m_bitboards[0], m_bitboards[1], sizeof(m_bitboards[0]))
+            && m_castling_rights    == other.m_castling_rights
+            && m_termination        == other.m_termination
+        );
     }
 
     /**

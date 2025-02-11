@@ -24,6 +24,7 @@ namespace chess
         m_board        = board;
         m_search_cache = &search_cache;
         m_limits       = limits;
+        m_ss.clear();
     }
 
     /**
@@ -249,15 +250,18 @@ namespace chess
      * @brief Priciple variation search
      */
     template <NodeType nType>
-    Value Thread::search(Board& board, Value alpha, Value beta, Depth depth, Depth ply)
+    Value Thread::search(Board& board, Value alpha, Value beta, Depth depth, Depth ply, bool nmp)
     {
         constexpr bool isRoot       = nType == Root;
-        constexpr bool pv           = nType == PV;
-        constexpr NodeType nextType = isRoot ? PV : (pv ? PV : nonPV);
+        constexpr NodeType nextType = isRoot ? nonPV : nType;
+        // constexpr bool isPv         = isRoot || nextType == PV;
+
+        // bool null_window = beta == alpha + 1;
 
         // Update interrupt
         m_interrupt.update();
         
+        // Step 1: Check if this node is terminated
         // Generate legal moves, setup variables for the search
         MoveList moves  = board.generateLegalMoves();
         Value best      = MATE - depth;
@@ -271,6 +275,7 @@ namespace chess
             return best;
         }
 
+        // Step 2:
         // Lookup transposition table and check for possible cutoffs
         Move hash_move = Move::nullMove;
         uint64_t  hash = board.getHash();
@@ -298,22 +303,79 @@ namespace chess
         if (m_interrupt.get())
             return 0;
 
-        // Quiescence search
-        if (depth == 0)
-            return qsearch(board, alpha, beta);
-        
-        Move  bestmove = Move::nullMove;
+        // Step 2a: Check extensions
+        if (board.m_in_check)
+            depth++;
 
-        // Sort the moves using move ordering
-        MoveOrdering::sort(&moves, get_pv_move(ply), &board, m_search_cache, ply);        
+        // Step 3: If depth reaches 0, do non-quiet move search
+        // Quiescence search
+        if (depth <= 0)
+            return qsearch(board, alpha, beta, ply);
         
+        Move  bestmove      = Move::nullMove;        
+        // bool improving      = m_ss.improving(board, ply);
+        // bool in_check       = board.m_in_check;
+        auto static_eval    = Eval::evaluate(board);
+        m_ss.get(ply).static_eval = static_eval;
+
+        // Step 4 (NMP if in null window)
+        // if (nmp && null_window && NMP::valid(depth, board))
+        // {
+        //     // Try NMP if static evaluation is higher than beta
+        //     if (static_eval >= beta)
+        //     {
+        //         int R = NMP::reduce(depth);
+        //         board.makeNullMove();
+        //         Value eval = -search<nonPV>(board, -beta, -alpha, depth - R, ply + 1, false);
+        //         board.undoNullMove();
+
+        //         if (eval >= beta)
+        //             return eval;
+        //     }
+        // }
+
+        // Step 5:
+        // Sort the moves using move ordering
+        MoveOrdering::sort(&moves, get_pv_move(ply), &board, m_search_cache, ply);
+
+        // Step 6:
         // Loop through the rest of the moves
         for (size_t i = 0; i < moves.size(); i++)
         {
             Move m = moves[i];
-            board.makeMove(m);
+            Value eval = best;
 
-            Value eval = -search<nextType>(board, -beta, -alpha, depth - 1, ply + 1);
+            board.makeMove(m);
+    
+            // Step 6a:
+            // LMR + PVS
+            // By the move ordering, we assume that the 1st move is the PV.
+            // So search with full window that move (as well as first 6 moves)
+            // Then try null window search with reduced depth, and see if it fails high
+            // If so, then do a research.
+            if ((i >= 6 && (depth >= 3)))
+            {
+                // int r = 1;
+
+                // if (LMR::valid(ply, m, in_check, improving, m_search_cache))
+                    // r = LMR::reduce(depth, i, null_window);
+                
+                eval = -search<nonPV>(board, -alpha - 1, -alpha, depth - 1, ply + 1, true);
+
+                // Zw search with depth reduction
+                if (eval > alpha)
+
+                    // If it fails high, check if not in null window, then try search with full depth, on zw,
+                    // If THAT fails, then do a full research.
+                //     && (!null_window && -search<nonPV>(board, -alpha - 1, -alpha, depth - 1, ply + 1) > alpha)
+                // )
+                    eval = -search<PV>(board, -beta, -alpha, depth - 1, ply + 1, true);
+            }
+            else
+            {
+                // Do a full search
+                eval = -search<nextType>(board, -beta, -alpha, depth - 1, ply + 1, true);
+            }
 
             board.undoMove(m);
 
@@ -322,21 +384,23 @@ namespace chess
 
             if (eval > best)
             {
-                best = eval;
-                alpha = std::max(alpha, best);
-                bestmove = m;
+                // Update the search best score, best move
+                best           = eval;
+                alpha          = std::max(alpha, best);
+                bestmove       = m;
 
                 // Store the best move, since pv may not be available yet
                 if constexpr (isRoot)
                 {
                     m_bestmove = bestmove;
                 };
-            }            
 
-            if (best >= beta)
-                break;     
+                if (best >= beta)
+                    break; 
+            }            
         }
 
+        // Step 7:
         // Store the best move in the transposition table
         TEntry entry;
         entry.hash      = hash;
