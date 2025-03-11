@@ -25,7 +25,7 @@ POSTFIX = '' if MATCH_NUMBER == 1 else f'_{MATCH_NUMBER}'
 # Paths
 BASE_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
 ENGINE_WHITE_PATH = BASE_DIR / "src" / "engines" / "CEngine_v0"
-ENGINE_BLACK_PATH = BASE_DIR / "src" / "engines" / "CEngine_v31"
+ENGINE_BLACK_PATH = BASE_DIR / "src" / "engines" / "CEngine_v36"
 OPENINGS_PATH     = BASE_DIR / "src" / "utils" / "openings.txt"
 
 # Options

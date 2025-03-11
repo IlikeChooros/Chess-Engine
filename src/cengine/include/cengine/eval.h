@@ -47,19 +47,24 @@ namespace chess
             0xFF00000000000000ULL,
         };
 
-        // Manhatten distance of a squara
-        static int8_t manhattan_distance[64][64];
-
-        static const int white_piece_square_table[2][6][64];
-        static int piece_square_table[2][2][6][64];
-        static Bitboard passed_pawn_masks[2][64];
-        static TTable<int> pawn_table;
-
         typedef struct {
             int material;
             int endgame_factor;
             int middlegame_factor;
         } material_factors_t;
+
+        typedef struct PawnEntry : public BaseTTEntry {
+            int eval;
+        } PawnEntry;
+
+        // Manhatten distance of a squara
+        static int8_t manhattan_distance[64][64];
+
+        static const int white_piece_square_table[2][6][64];
+        static Byte mobility_weights[2][6][64];
+        static int piece_square_table[2][2][6][64];
+        static Bitboard passed_pawn_masks[2][64];
+        static TTable<PawnEntry> pawn_table;
 
         Eval() = delete;
         

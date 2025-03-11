@@ -147,7 +147,7 @@ class Engine:
         """
         Try to read a single line from the engine output
         """
-        if select.select([self.process.stdout], [], [], 0)[0]:
+        if select.select([self.process.stdout], [], [])[0]:
             return self._read_line()
         return None
     

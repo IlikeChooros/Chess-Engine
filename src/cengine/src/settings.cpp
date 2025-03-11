@@ -4,5 +4,5 @@ Settings global_settings = {
     DEBUG_LEVEL,
     DEBUG_PERFORMANCE,
     std::filesystem::current_path(),
-    "3.5-eval-aspwin-ordering"
-}; 
+    "3.5a-eval-aspwin-ordering"
+};

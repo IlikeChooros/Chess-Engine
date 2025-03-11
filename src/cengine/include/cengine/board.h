@@ -59,6 +59,24 @@ namespace chess
         void verify_castling_rights();
         static void init_board();
 
+        typedef Bitboard(*attacks_func_t)(Bitboard, int);
+
+        template<int PieceType>
+        void _gen_sliding_moves_no_check(
+            chess::MoveList* moves, Bitboard piece_bb,
+            Bitboard occupied, Bitboard enemy_pieces, 
+            Bitboard pinned, Bitboard pinners, Square king,
+            attacks_func_t attackFunc
+        );
+
+        template<int PieceType>
+        void _gen_pieces_moves_in_check(
+            chess::MoveList* moves, Bitboard piece_bb,
+            Bitboard occupied, Bitboard attackers, 
+            Bitboard not_pinned, Bitboard block_path, 
+            int attackers_sq, attacks_func_t attackFunc
+        );
+
     public:
         typedef MoveList::move_filter_t MoveFilter;
 
@@ -128,60 +146,65 @@ namespace chess
         bool checkIntegrity();
 
         /**
+         * @brief Get calculated danger by move generation
+         */
+        inline Bitboard getDanger() {return this->m_danger; }
+
+        /**
          * @brief Get the side to move
          * @return bool True if white, false if black
          */
-        inline bool turn() const {return this->m_side == Piece::White; };
+        inline bool turn() const {return this->m_side == Piece::White; }
 
         /**
          * @brief Get the side to move (Piece::Color)
          */
-        inline int& getSide() {return this->m_side; };
+        inline int& getSide() {return this->m_side; }
 
         /**
          * @brief Get the enpassant target square
          */
-        inline int& enpassantTarget() {return this->m_enpassant_target; };
+        inline int& enpassantTarget() {return this->m_enpassant_target; }
         
         /**
          * @brief Get the halfmove clock
          */
-        inline int& halfmoveClock() {return this->m_halfmove_clock; };
+        inline int& halfmoveClock() {return this->m_halfmove_clock; }
 
         /**
          * @brief Get the irreversible index
          */
-        inline int& irreversibleIndex() {return this->m_irreversible_index; };
+        inline int& irreversibleIndex() {return this->m_irreversible_index; }
 
         /**
          * @brief Get the fullmove counter
          */
-        inline int& fullmoveCounter() {return this->m_fullmove_counter; };
+        inline int& fullmoveCounter() {return this->m_fullmove_counter; }
 
         /**
          * @brief Get the castling rights
          */
-        inline CastlingRights& castlingRights() {return this->m_castling_rights; };
+        inline CastlingRights& castlingRights() {return this->m_castling_rights; }
 
         /**
          * @brief Get the captured piece
          */
-        inline int& capturedPiece() {return this->m_captured_piece; };
+        inline int& capturedPiece() {return this->m_captured_piece; }
 
         /**
          * @brief Get bool flag wheter the king is in check
          */
-        inline bool& inCheck() {return this->m_in_check; };
+        inline bool& inCheck() {return this->m_in_check; }
 
         /**
          * @brief Get raw board data
          */
-        inline int* getBoard() {return this->board; };
+        inline int* getBoard() {return this->board; }
 
         /**
          * @brief Get the history of the game
          */
-        inline StateList& history() {return this->m_history; };
+        inline StateList& history() {return this->m_history; }
 
         /**
          * @brief Get the bitboards for a given color
@@ -302,6 +325,9 @@ namespace chess
         int m_captured_piece;
         int m_irreversible_index; // last irreversible move index
         Bitboard m_bitboards[2][6]; // 0: white, 1: black, contains bitboards for each piece type
+        Bitboard m_danger; // All attacked squares by the enemy
+        Bitboard m_activity[6]; // Activity table for each piece (only for this side)
+        Bitboard m_enemy_activity[6];
         CastlingRights m_castling_rights;
         StateList m_history;
         Termination m_termination;

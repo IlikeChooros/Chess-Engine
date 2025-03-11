@@ -53,14 +53,24 @@ namespace chess
             m_data.reset(new T(data));
         }
 
+        // Update the value, if not set, will create a new object
+        void update(const T& data)
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            if (!m_data)
+                m_data.reset(new T(data));
+            else
+                *m_data = data;
+        }
+
         // Check if data is empty
         bool empty() const
         {
             return !m_data;
         }
 
-        // Get stored data, thread safe, may cause undefined behavior if data is empty
-        T& get()
+        // Get a copy of stored data, thread safe, may cause undefined behavior if data is empty
+        T get()
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             return *m_data;
@@ -105,8 +115,8 @@ namespace chess
         Limits m_limits;
         Interrupt m_interrupt;
         Result m_result;
-        Move m_bestmove;
         Depth m_depth;
+        Depth m_root_age;
         MoveList m_root_pv;
 
         std::thread m_thread;

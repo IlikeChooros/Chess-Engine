@@ -6,6 +6,7 @@
 #include <chrono>
 #include <vector>
 #include <queue>
+#include <emmintrin.h>
 
 #include "types.h"
 #include "settings.h"
@@ -24,7 +25,7 @@ inline std::string square_to_str(Square square, bool inverse = true)
     std::string str(2, ' ');
     str[0] = 'a' + (square % 8);
     square = inverse ? 7 - square / 8 : square / 8;
-    str[1] = '1' + square;
+    str[1] = '1' + (char)square;
     return str;
 }
 
@@ -45,11 +46,30 @@ inline Square str_to_square(std::string str, bool inverse = true)
     return row * 8 + str[0] - 'a';
 }
 
+/**
+ * @brief Calculate the dot product (sum of b_i * weight_i, where b_i - is the ith bit (0 <= i < 64))
+ * @param bb the bitboard (most likely the moves of a piece)
+ * @param weights 64 byte array, [0] -> is the top left corner square, [64]-> bottom right corner
+ */
+constexpr int dot_product(Bitboard bb, Byte weights[])
+{
+    int product = 0;
+    for(int sq = 0, bit = 1; sq < 64; sq++, bit += bit)
+    {
+        // Could write:
+        // if (bb & bit == 0) product += weights[sq]
+        // but this is branchless, uses the fact -1 == 111111111...1 (all bits set to 1)
+        // and -0 = 0 = 0000000000...0 (all bits set to 0), 
+        // so weights[sq] & (-1) = weights[sq], and weights[sq] & (-0) = 0.
+        product += weights[sq] & (-((bb & bit) == 0));
+    }
+    return product;
+}
 
 /**
  * @brief Get the LSB1 index (the least significant bit that is 1)
  */
-inline int bitScanForward(Bitboard bb)
+inline int bit_scan_forward(Bitboard bb)
 {
     #if defined(__GNUC__) || defined(__clang__)
         return __builtin_ctzll(bb);
@@ -84,9 +104,16 @@ inline int bitScanForward(Bitboard bb)
  */
 inline int pop_lsb1(uint64_t& b)
 {
-    int lsb1 = b != 0 ? bitScanForward(b) : 0;
+    int lsb1 = b != 0 ? bit_scan_forward(b) : 0;
     b &= b - 1;
     return lsb1;
+}
+
+inline int unsafe_pop_lsb1(Bitboard& b)
+{
+    int lsb = bit_scan_forward(b);
+    b &= b - 1;
+    return lsb;
 }
 
 /**

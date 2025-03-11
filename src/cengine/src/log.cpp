@@ -60,16 +60,8 @@ void Log::logf(const char* format, ...)
 void Log::logTTableInfo(TTable<TEntry>* ttable)
 {
     logf("Transposition Table Info: "
-        "Size: %lu, "
-        "Load factor: %f, "
-        "Max load factor: %f, "
-        "Bucket count: %lu, "
-        "Max bucket count: %lu\n",
-        ttable->getTable().size(),
-        ttable->getTable().load_factor(),
-        ttable->getTable().max_load_factor(),
-        ttable->getTable().bucket_count(),
-        ttable->getTable().max_bucket_count()
+        "Size: %lu, ",
+        ttable->getTable().size()
     );
 }
 

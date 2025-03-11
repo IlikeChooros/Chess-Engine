@@ -40,6 +40,32 @@ public:
     static Magic rookMagics[64];
 };
 
+/**
+ * @brief Get the bishop attacks, based on the magic bitboards
+ */
+inline uint64_t bishopAttacks(uint64_t occupied, int sq)
+{
+    auto& magic = MagicBitboards::bishopMagics[sq];
+    return MagicBitboards::bishopAttacks[sq][((occupied & magic.mask) * magic.magic) >> magic.shift];
+}
+
+/**
+ * @brief Get the rook attacks, calculated using magic bitboards
+ */
+inline uint64_t rookAttacks(uint64_t occupied, int sq)
+{
+    auto& magic = MagicBitboards::rookMagics[sq];
+    return MagicBitboards::rookAttacks[sq][((occupied & magic.mask) * magic.magic) >> magic.shift];
+}
+
+/**
+ * @brief Get the queen attacks, using magic bitboards
+ */
+inline uint64_t queenAttacks(uint64_t occupied, int sq)
+{
+    return rookAttacks(occupied, sq) | bishopAttacks(occupied, sq);
+}
+
 void init_magics(bool recalculate = false);
 
 } // namespace chess

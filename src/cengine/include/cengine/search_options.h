@@ -11,9 +11,9 @@
 namespace chess
 {
 
-constexpr int MIN = -(1 << 29),
-             MAX = 1 << 29,
-             MATE = -(1 << 28) + 1,
+constexpr int MIN = -(1 << 20),
+             MAX = 1 << 20,
+             MATE = -(1 << 19) + 1,
              MATE_THRESHOLD = -MATE;
 
 // Score struct

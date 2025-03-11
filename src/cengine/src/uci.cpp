@@ -340,6 +340,7 @@ namespace uci
         chess::Engine::init();
         m_engine = chess::Engine();
 
+        // Make the output and input have separate buffers
         std::ios_base::sync_with_stdio(false);
         std::cout.setf(std::ios::unitbuf);
     }
@@ -380,7 +381,10 @@ namespace uci
 
             // if the command is exit, then break
             if(command == "quit" || command == "exit" || command == "q")
+            {
+                sendCommand("stop");
                 break;
+            }
 
             sendCommand(command);
         }

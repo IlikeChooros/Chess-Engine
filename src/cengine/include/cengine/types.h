@@ -6,6 +6,7 @@
 namespace chess
 {
 
+typedef char Byte;
 typedef uint64_t Bitboard;
 typedef int Square;
 typedef int16_t IScore;

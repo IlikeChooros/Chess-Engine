@@ -1,0 +1,124 @@
+info depth 1 score cp 50 nodes 21 time 1 nps 21000 pv b1c3 
+info depth 2 score cp 0 nodes 84 time 1 nps 84000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 610 time 3 nps 203333 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 2229 time 10 nps 222900 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 30 nodes 11481 time 59 nps 194593 pv b1c3 b8c6 g1f3 g8f6 d2d4 
+bestmove b1c3
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 699050, info depth 1 score cp 50 nodes 20 time 1 nps 20000 pv b1c3 
+info depth 2 score cp 0 nodes 88 time 2 nps 44000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 786 time 5 nps 157200 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 3240 time 15 nps 216000 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 40 nodes 16661 time 63 nps 264460 pv b1c3 g8f6 g1f3 b8c6 d2d4 
+info depth 6 score cp 0 nodes 92802 time 334 nps 277850 pv b1c3 g8f6 g1f3 b8c6 d2d4 d7d5 
+info depth 7 score cp 35 nodes 827099 time 2207 nps 374761 pv e2e4 g8f6 e4e5 f6d5 b1c3 d5c3 d2c3 
+bestmove e2e4
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 41657, Load factor: 0.080073, Max load factor: 1.000000, Bucket count: 520241, Max bucket count: 192153584101141162
+info depth 1 score cp 50 nodes 20 time 1 nps 20000 pv b1c3 
+info depth 2 score cp 0 nodes 88 time 1 nps 88000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 786 time 3 nps 262000 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 3240 time 13 nps 249230 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 40 nodes 17427 time 65 nps 268107 pv b1c3 g8f6 g1f3 b8c6 d2d4 
+info depth 6 score cp 0 nodes 96446 time 350 nps 275560 pv b1c3 g8f6 g1f3 b8c6 d2d4 d7d5 
+info depth 7 score cp 35 nodes 782864 time 2108 nps 371377 pv e2e4 g8f6 e4e5 f6d5 b1c3 d5c3 d2c3 
+bestmove e2e4
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 37102, Load factor: 0.071317, Max load factor: 1.000000, Bucket count: 520241, Max bucket count: 192153584101141162
+info depth 1 score cp 50 nodes 21 time 1 nps 21000 pv b1c3 
+info depth 2 score cp 0 nodes 84 time 1 nps 84000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 610 time 1 nps 610000 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 2229 time 3 nps 743000 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 30 nodes 11481 time 10 nps 1148100 pv b1c3 b8c6 g1f3 g8f6 d2d4 
+info depth 6 score cp 0 nodes 54801 time 45 nps 1217800 pv b1c3 b8c6 g1f3 g8f6 d2d4 d7d5 
+info depth 7 score cp 20 nodes 233219 time 180 nps 1295661 pv b1c3 b8c6 g1f3 g8f6 d2d4 d7d5 c1f4 
+bestmove b1c3
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 699050, info depth 1 score cp 50 nodes 20 time 1 nps 20000 pv b1c3 
+info depth 2 score cp 0 nodes 88 time 1 nps 88000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 786 time 1 nps 786000 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 3240 time 2 nps 1620000 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 40 nodes 16666 time 11 nps 1515090 pv b1c3 g8f6 g1f3 b8c6 d2d4 
+info depth 6 score cp 0 nodes 92788 time 53 nps 1750716 pv b1c3 g8f6 g1f3 b8c6 d2d4 d7d5 
+info depth 7 score cp 35 nodes 825298 time 455 nps 1813841 pv e2e4 g8f6 e4e5 f6d5 b1c3 d5c3 d2c3 
+bestmove e2e4
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 41643, Load factor: 0.080046, Max load factor: 1.000000, Bucket count: 520241, Max bucket count: 192153584101141162
+info depth 1 score cp 50 nodes 20 time 1 nps 20000 pv b1c3 
+info depth 2 score cp 0 nodes 88 time 1 nps 88000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 786 time 2 nps 393000 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 3240 time 3 nps 1080000 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 40 nodes 16666 time 11 nps 1515090 pv b1c3 g8f6 g1f3 b8c6 d2d4 
+info depth 6 score cp 0 nodes 92788 time 62 nps 1496580 pv b1c3 g8f6 g1f3 b8c6 d2d4 d7d5 
+bestmove b1c3
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 8829, Load factor: 0.016971, Max load factor: 1.000000, Bucket count: 520241, Max bucket count: 192153584101141162
+info depth 1 score cp 50 nodes 21 time 1 nps 21000 pv b1c3 
+info depth 2 score cp 0 nodes 84 time 1 nps 84000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 610 time 1 nps 610000 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 2229 time 2 nps 1114500 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 30 nodes 11481 time 10 nps 1148100 pv b1c3 b8c6 g1f3 g8f6 d2d4 
+info depth 6 score cp 0 nodes 54801 time 49 nps 1118387 pv b1c3 b8c6 g1f3 g8f6 d2d4 d7d5 
+bestmove b1c3
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 699050, info depth 1 score cp 50 nodes 21 time 1 nps 21000 pv b1c3 
+info depth 2 score cp 0 nodes 84 time 1 nps 84000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 610 time 1 nps 610000 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 2229 time 2 nps 1114500 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 30 nodes 11481 time 9 nps 1275666 pv b1c3 b8c6 g1f3 g8f6 d2d4 
+info depth 6 score cp 0 nodes 54801 time 44 nps 1245477 pv b1c3 b8c6 g1f3 g8f6 d2d4 d7d5 
+bestmove b1c3
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 699050, info depth 1 score cp 50 nodes 21 time 1 nps 21000 pv b1c3 
+info depth 2 score cp 0 nodes 84 time 1 nps 84000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 610 time 4 nps 152500 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 2229 time 13 nps 171461 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 30 nodes 11481 time 61 nps 188213 pv b1c3 b8c6 g1f3 g8f6 d2d4 
+info depth 6 score cp 0 nodes 54801 time 259 nps 211586 pv b1c3 b8c6 g1f3 g8f6 d2d4 d7d5 
+bestmove b1c3
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 699050, info depth 1 score cp 50 nodes 20 time 1 nps 20000 pv b1c3 
+info depth 2 score cp 0 nodes 88 time 1 nps 88000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 786 time 2 nps 393000 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 3240 time 3 nps 1080000 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 40 nodes 17432 time 11 nps 1584727 pv b1c3 g8f6 g1f3 b8c6 d2d4 
+info depth 6 score cp 0 nodes 96262 time 66 nps 1458515 pv b1c3 g8f6 g1f3 b8c6 d2d4 d7d5 
+bestmove b1c3
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 8836, Load factor: 0.016984, Max load factor: 1.000000, Bucket count: 520241, Max bucket count: 192153584101141162
+info depth 1 score cp 50 nodes 21 time 1 nps 21000 pv b1c3 
+info depth 2 score cp 0 nodes 84 time 1 nps 84000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 610 time 1 nps 610000 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 2229 time 2 nps 1114500 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 30 nodes 11481 time 10 nps 1148100 pv b1c3 b8c6 g1f3 g8f6 d2d4 
+info depth 6 score cp 0 nodes 54801 time 47 nps 1165978 pv b1c3 b8c6 g1f3 g8f6 d2d4 d7d5 
+bestmove b1c3
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 699050, info depth 1 score cp 50 nodes 20 time 1 nps 20000 pv b1c3 
+info depth 2 score cp 0 nodes 88 time 1 nps 88000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 786 time 1 nps 786000 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 3240 time 3 nps 1080000 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 40 nodes 17432 time 28 nps 622571 pv b1c3 g8f6 g1f3 b8c6 d2d4 
+info depth 6 score cp 0 nodes 96262 time 142 nps 677901 pv b1c3 g8f6 g1f3 b8c6 d2d4 d7d5 
+bestmove b1c3
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 8836, Load factor: 0.016984, Max load factor: 1.000000, Bucket count: 520241, Max bucket count: 192153584101141162
+info depth 1 score cp 50 nodes 21 time 1 nps 21000 pv b1c3 
+info depth 2 score cp 0 nodes 84 time 1 nps 84000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 610 time 1 nps 610000 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 2229 time 2 nps 1114500 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 35 nodes 11491 time 8 nps 1436375 pv b1c3 b8c6 g1f3 g8f6 d2d4 
+info depth 6 score cp 0 nodes 55030 time 38 nps 1448157 pv b1c3 b8c6 g1f3 g8f6 d2d4 d7d5 
+info depth 7 score cp 30 nodes 377015 time 240 nps 1570895 pv e2e4 g8f6 e4e5 b8c6 e5f6 d7d5 f6e7 
+bestmove e2e4
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 699050, info depth 1 score cp 50 nodes 20 time 1 nps 20000 pv b1c3 
+info depth 2 score cp 0 nodes 88 time 1 nps 88000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 786 time 1 nps 786000 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 3240 time 2 nps 1620000 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 40 nodes 16666 time 10 nps 1666600 pv b1c3 g8f6 g1f3 b8c6 d2d4 
+info depth 6 score cp 0 nodes 92788 time 61 nps 1521114 pv b1c3 g8f6 g1f3 b8c6 d2d4 d7d5 
+info depth 7 score cp 35 nodes 825298 time 467 nps 1767233 pv e2e4 g8f6 e4e5 f6d5 b1c3 d5c3 d2c3 
+bestmove e2e4
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 41643, Load factor: 0.080046, Max load factor: 1.000000, Bucket count: 520241, Max bucket count: 192153584101141162

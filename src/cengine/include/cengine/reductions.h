@@ -27,7 +27,8 @@ public:
     // Returns new reduce value of the search depth
     constexpr static int reduce(Depth depth, int n_move, bool null_window)
     {
-        return ((null_window ? 2 : 1) + depth / 3 + n_move / 13) + 1;
+        return ((null_window ? 2 : 1) + depth / 3 + n_move / 13);
+        // return (null_window ? 2 : 1) + 1;
     }
 };
 
@@ -49,7 +50,7 @@ public:
 
     static int reduce(Depth depth)
     {
-        return 3 + depth / 4;
+        return 2 + depth / 4;
     }
 };
 

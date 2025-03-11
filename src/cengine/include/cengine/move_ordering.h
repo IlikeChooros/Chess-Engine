@@ -48,8 +48,7 @@ namespace chess
             inline void set(
                 const Move& m, const Move& pvm, 
                 Board* b, SearchCache* sc, Depth ply,
-                Bitboard danger, int endgame_factor, 
-                int middlegame_factor
+                int endgame_factor, int middlegame_factor
             )
             {
                 constexpr int 
@@ -99,7 +98,9 @@ namespace chess
                         + (end_sq_table[to] - mid_sq_table[from]) * endgame_factor;
                     
                     // Check if we are moving into attacked squares
-                    if ((danger & to) != 0)
+                    if ((b->m_danger & to) != 0)
+                        value -= 50;
+                    if ((b->m_enemy_activity[Board::PAWN_TYPE] & to) != 0)
                         value -= 100;
                 }
 
@@ -112,6 +113,7 @@ namespace chess
             }
         };
 
+        // Get the greater value of two moves
         static constexpr bool greater(const OrderedMove& __x, const OrderedMove& __y)
         {
             return __x.value > __y.value;

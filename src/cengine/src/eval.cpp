@@ -127,6 +127,79 @@ namespace chess
         }
     };
 
+    // [turn][type][sq]
+    Byte Eval::mobility_weights[2][6][64] = {
+        {},
+
+        {
+            // white
+            {
+                1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1,
+            }, // pawn
+            {
+                // knight
+                0,  4,  4,  2,  2,  2,  4,  0,
+                2,  3,  3,  4,  4,  3,  3,  2,
+                1,  4,  4,  4,  4,  4,  3,  1,
+                1,  3,  4,  5,  5,  4,  3,  1,
+                0,  1,  3,  4,  4,  3,  1,  0,
+                0,  1,  1,  1,  1,  1,  1,  0,
+               -1,  0,  0, -1, -1,  0,  0, -1,
+               -4, -2, -2, -2, -2, -2, -2, -4,
+            },
+            {
+                1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1, 1, 1,
+            }, // king
+            {
+                // bishop 
+                2,  4,  2,  2,  2,  2,  4,  2,
+                3,  4,  3,  4,  4,  3,  4,  3,
+                1,  2,  4,  4,  4,  4,  2,  1,
+                1,  3,  4,  5,  5,  4,  3,  1,
+                0,  2,  3,  5,  5,  3,  2,  0,
+                0,  1,  1,  2,  2,  1,  1,  0,
+               -1,  0,  0, -1, -1,  0,  0, -1,
+               -4, -2, -2, -2, -2, -2, -2, -4,
+            },
+            {
+                // rook (max 44)
+                0,  5,  5,  5,  5,  5,  5,  0,
+                2,  3,  3,  5,  5,  3,  3,  2,
+                1,  2,  3,  4,  4,  3,  2,  1,
+                1,  3,  4,  5,  5,  4,  3,  1,
+                0,  2,  2,  4,  4,  2,  2,  0,
+                0,  1,  2,  2,  2,  2,  1,  0,
+               -1,  0,  0,  0,  0,  0,  0, -1,
+               -1, -1, -1, -1, -1, -1, -1, -1,
+            },
+            {
+                // queen
+                2,  4,  2,  2,  2,  2,  4,  2,
+                3,  4,  3,  4,  4,  3,  4,  3,
+                1,  2,  4,  4,  4,  4,  2,  1,
+                1,  3,  4,  5,  5,  4,  3,  1,
+                0,  2,  3,  5,  5,  3,  2,  0,
+                0,  1,  1,  2,  2,  1,  1,  0,
+               -1,  0,  0, -1, -1,  0,  0, -1,
+               -4, -2, -2, -2, -2, -2, -2, -4,
+            }
+        }
+    };
+
     // Modifiable piece values
     // evaluate piece based on it's position, [turn][state][type][square]
     int Eval::piece_square_table[2][2][6][64] = {0};
@@ -137,20 +210,26 @@ namespace chess
     // manhattan distance [from|to][to|from] (symetrical)
     int8_t Eval::manhattan_distance[64][64] = {0};
 
-    // Hash table for pawn structure
-    TTable<int> Eval::pawn_table = TTable<int>(4);
+    // Hash table for pawn structure 
+    TTable<Eval::PawnEntry> Eval::pawn_table = TTable<Eval::PawnEntry>(1);
 
     /**
      * @brief Initialize the boards for evaluation
      */
     void Eval::init()
     {
-        // Initialize the pieces tables
+        // Initialize the pieces tables and mobility weights
         for (int state = 0; state < 2; state++){
             for (int type = 0; type < 6; type++){
                 for (int j = 0; j < 64; j++){
                     piece_square_table[1][state][type][j] = white_piece_square_table[state][type][j];
                     piece_square_table[0][state][type][j] = white_piece_square_table[state][type][63 - j];
+                    
+                    if (state == 0)
+                    {
+                        mobility_weights[0][type][j] = mobility_weights[1][type][63 - j];
+                    }
+                    
                 }
             }
         }
@@ -253,30 +332,50 @@ namespace chess
     /**
      * @brief Calculate king safety based on pawn structure near king
      */
-    int eval_king_safety(Bitboard pawns, Square king_sq, bool is_white)
+    int eval_king_safety(Board& board)
     {
-        int      eval        = 0;
-        int      offset_file = 0;
-        Square   file        = king_sq % 8;
-        Square   rank        = king_sq >> 3;
-        Bitboard rank_off    = is_white ? 
-            (rank > 0 ? Eval::rank_bitboards[rank - 1] : 0) 
-            : (rank < 8 ? Eval::rank_bitboards[rank + 1] : 0);
+        constexpr int tropism_weights[6] = {0, 1, 0, 1, 1, 4};
 
-        // Cut off the area below the king (based on the side)
-        Bitboard safety      = (Board::pieceAttacks[Board::KING_TYPE][king_sq] & (~rank_off)) & pawns;
+        bool turn              = board.turn();
+        Square king_squares[2] = {
+            bit_scan_forward(board.m_bitboards[0][Board::KING_TYPE]), 
+            bit_scan_forward(board.m_bitboards[1][Board::KING_TYPE])
+        };
 
-        for (int i = -1; i < 2; ++i)
+        // Calculate tropism for both kings
+        int tropism = 0;
+        auto iboard = board.board;
+        for(int sq = 0; sq < 64; ++sq)
         {
-            offset_file = file + i;
-            if ((offset_file >= 0 && offset_file < 8) 
-                && (safety & Eval::file_bitboards[offset_file]) != 0)
-            {
-                eval += 5;
-            }
+            int type         = Piece::getType(iboard[sq]);
+            bool is_enemy    = !Piece::isWhite(iboard[sq]);
+
+            if (iboard[sq] == Piece::Empty || type == Piece::Pawn || type == Piece::King)
+                continue;
+    
+            tropism += (
+                14 - Eval::manhattan_distance[sq][king_squares[is_enemy]]
+            ) * tropism_weights[type - 1] * (is_enemy == turn ? -1 : 1);
         }
-        
-        return eval;
+        tropism /= 11;
+
+        // Evaluate pawn structure near the king
+        int eval_safety = 0;
+        bool king_turn  = turn;
+        for (int i = 0; i < 2; i++, king_turn = !king_turn)
+        {
+            Square king_sq          = king_squares[king_turn];
+            Bitboard area_near_king = 
+                (Board::pieceAttacks[Board::KING_TYPE][king_sq] 
+                & (Eval::passed_pawn_masks[king_turn][king_sq] 
+                    | Eval::rank_bitboards[king_sq >> 3])
+                )
+                & board.m_bitboards[king_turn][Board::PAWN_TYPE];
+
+            eval_safety += pop_count(area_near_king) * (king_turn == turn ? 5 : -5);
+        }
+
+        return tropism + eval_safety;
     }
 
     // Old evaluation function
@@ -285,8 +384,8 @@ namespace chess
         int eval        = 0;
         bool is_white   = board.getSide() == Piece::White;
         bool is_enemy   = !is_white;
-        Square king_sq  = bitScanForward(board.bitboards(is_white)[Piece::King - 1]);
-        // Square eking_sq = bitScanForward(board.bitboards(is_enemy)[Piece::King - 1]);
+        Square king_sq  = bit_scan_forward(board.bitboards(is_white)[Piece::King - 1]);
+        // Square eking_sq = bit_scan_forward(board.bitboards(is_enemy)[Piece::King - 1]);
 
         // Count the material & piece square tables
         for (int type = 0; type < 6; type++){
@@ -322,7 +421,7 @@ namespace chess
         Bitboard pawn_hash = board.pawnHash();
         if (Eval::pawn_table.contains(pawn_hash))
         {
-            eval += Eval::pawn_table.get(pawn_hash);
+            eval += Eval::pawn_table.get(pawn_hash).eval;
         } 
         else 
         {
@@ -368,9 +467,9 @@ namespace chess
             }
 
             // Store the pawn hash
-            Eval::pawn_table.store(pawn_hash, pawn_eval);
+            Eval::pawn_table.store({pawn_hash, pawn_eval});
             eval += pawn_eval;
-        }        
+        }
 
         // King square tables
         bool is_endgame = false;
@@ -385,7 +484,6 @@ namespace chess
         return eval;
     }
 
-    
     Eval::material_factors_t Eval::get_factors(Board& board)
     {
         bool is_white   = board.getSide() == Piece::White;
@@ -456,10 +554,10 @@ namespace chess
         eval += square_table_eval;
         
         // Bonus for having the bishop pair
-        if (pop_count(board.bitboards(is_white)[Piece::Bishop - 1]) >= 2){
+        if (pop_count(board.m_bitboards[is_white][Piece::Bishop - 1]) >= 2){
             eval += 50;
         }
-        if (pop_count(board.bitboards(is_enemy)[Piece::Bishop - 1]) >= 2){
+        if (pop_count(board.m_bitboards[is_enemy][Piece::Bishop - 1]) >= 2){
             eval -= 50;
         }
 
@@ -468,8 +566,8 @@ namespace chess
         Bitboard pawn_hash = board.pawnHash();
         if (Eval::pawn_table.contains(pawn_hash))
         {
-            eval += Eval::pawn_table.get(pawn_hash);
-        } 
+            eval += Eval::pawn_table.get(pawn_hash).eval;
+        }
         else 
         {
             int pawn_eval = 0;
@@ -484,9 +582,27 @@ namespace chess
             }
 
             // Store the pawn hash
-            Eval::pawn_table.store(pawn_hash, pawn_eval);
+            Eval::pawn_table.store({pawn_hash, pawn_eval});
             eval += pawn_eval;
         }
+
+        // Step 4: Calculate mobility
+        // Value mobility = 0;
+        // for(int type = 1; type < 6; ++type)
+        // {
+        //     if (type == Piece::King - 1)
+        //         continue;
+
+        //     Bitboard sqs = board.m_activity[type];
+        //     while (sqs) mobility += mobility_weights[is_white][type][unsafe_pop_lsb1(sqs)];
+
+        //     sqs = board.m_enemy_activity[type];
+        //     while (sqs) mobility -= mobility_weights[is_enemy][type][unsafe_pop_lsb1(sqs)];
+        // }
+        // eval += mobility;
+
+        // Step 5: Calculate king safety
+        // eval += eval_king_safety(board);
 
         return eval;
 
@@ -584,8 +700,8 @@ namespace chess
         //     eval += pawn_eval;
         // }
 
-        // Square king       = bitScanForward(board.m_bitboards[is_white][Piece::King - 1]);
-        // Square enemy_king = bitScanForward(board.m_bitboards[is_enemy][Piece::King - 1]);
+        // Square king       = bit_scan_forward(board.m_bitboards[is_white][Piece::King - 1]);
+        // Square enemy_king = bit_scan_forward(board.m_bitboards[is_enemy][Piece::King - 1]);
 
         // // Step 4: Evaluate the king safety
         // eval += eval_king_safety(board.m_bitboards[is_white][Board::PAWN_TYPE], king, is_white);

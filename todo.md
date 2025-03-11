@@ -95,8 +95,8 @@ if (
     && ((board.rooks(is_white) | board.queens(is_white)) != 0 
         && (board.rooks(is_enemy) | board.queens(is_enemy)) == 0))
 {
-    Square king       = bitScanForward(board.m_bitboards[is_white][Piece::King - 1]);
-    Square enemy_king = bitScanForward(board.m_bitboards[is_enemy][Piece::King - 1]);
+    Square king       = bit_scan_forward(board.m_bitboards[is_white][Piece::King - 1]);
+    Square enemy_king = bit_scan_forward(board.m_bitboards[is_enemy][Piece::King - 1]);
 
     // If it's winning side, apply bonus for being close to the enemy king
     eval += 6 * (14 - manhattan_distance[king][enemy_king]);

@@ -18,13 +18,13 @@ namespace chess
      */
     void Thread::setup(Board& board, SearchCache& search_cache, Limits& limits)
     {
-        m_bestmove     = Move();
         m_best_result  = Result{};
         m_interrupt    = Interrupt(limits);
         m_board        = board;
         m_search_cache = &search_cache;
         m_limits       = limits;
         m_ss.clear();
+        m_root_pv.clear();
     }
 
     /**
@@ -116,7 +116,11 @@ namespace chess
         Value delta           = 50;
         m_depth               = 1;
         m_result              = {};
+        m_root_age            = m_board.halfmoveClock();
         int whotomove         = m_board.turn() ? 1 : -1;
+
+        // Ignoring the signal, so that I will always get pv from searching
+        m_interrupt.set_ignore(); 
 
         // Check if the game is over
         if (m_board.isTerminated())
@@ -160,7 +164,7 @@ namespace chess
             
             // Save the pv
             m_root_pv         = m_result.pv;
-            m_result.bestmove = m_result.pv.size() > 0 ? m_result.pv[0] : m_bestmove;
+            m_result.bestmove = m_result.pv[0];
 
             // Update alpha beta
             alpha  = eval - delta;
@@ -168,11 +172,6 @@ namespace chess
 
             if (m_interrupt.get())
             {
-                if (m_result.pv.empty())
-                {
-                    update_score(m_result.score, eval, whotomove);
-                    m_best_result = m_result;
-                }
                 break;
             }
 
@@ -188,6 +187,10 @@ namespace chess
             // Check if mate has been found
             if (m_result.score.type == Score::mate && m_depth > 3)
                 break;
+
+            // Update the interrupt ignore flag
+            if (m_interrupt.is_ignoring())
+                m_interrupt.restore_state(m_depth);
 
             // Update depth & alpha beta
             m_depth += 1;
@@ -215,8 +218,8 @@ namespace chess
     Value Thread::qsearch(Board& board, Value alpha, Value beta, Depth ply = 0)
     {   
         // Evaluate the position
+        MoveList moves  = board.generateLegalCaptures(); 
         Value     eval  = Eval::evaluate(board);
-        MoveList moves  = board.generateLegalCaptures();        
 
         // Alpha beta pruning, if the evaluation is greater or equal to beta
         // that means the position is 'too good' for the side to move
@@ -250,13 +253,13 @@ namespace chess
      * @brief Priciple variation search
      */
     template <NodeType nType>
-    Value Thread::search(Board& board, Value alpha, Value beta, Depth depth, Depth ply, bool nmp)
+    Value Thread::search(Board& board, Value alpha, Value beta, Depth depth, Depth ply, bool)
     {
         constexpr bool isRoot       = nType == Root;
-        constexpr NodeType nextType = isRoot ? nonPV : nType;
+        constexpr NodeType nextType = isRoot ? PV : nType;
         // constexpr bool isPv         = isRoot || nextType == PV;
 
-        // bool null_window = beta == alpha + 1;
+        bool null_window = beta == alpha + 1;
 
         // Update interrupt
         m_interrupt.update();
@@ -312,10 +315,10 @@ namespace chess
         if (depth <= 0)
             return qsearch(board, alpha, beta, ply);
         
-        Move  bestmove      = Move::nullMove;        
-        // bool improving      = m_ss.improving(board, ply);
-        // bool in_check       = board.m_in_check;
-        auto static_eval    = Eval::evaluate(board);
+        Move  bestmove            = Move::nullMove;        
+        // bool improving            = m_ss.improving(board, ply);
+        // bool in_check             = board.m_in_check;
+        auto static_eval          = Eval::evaluate(board);
         m_ss.get(ply).static_eval = static_eval;
 
         // Step 4 (NMP if in null window)
@@ -353,33 +356,31 @@ namespace chess
             // So search with full window that move (as well as first 6 moves)
             // Then try null window search with reduced depth, and see if it fails high
             // If so, then do a research.
-            if ((i >= 6 && (depth >= 3)))
+            if ((i >= 3))
             {
                 // int r = 1;
-
                 // if (LMR::valid(ply, m, in_check, improving, m_search_cache))
                     // r = LMR::reduce(depth, i, null_window);
                 
-                eval = -search<nonPV>(board, -alpha - 1, -alpha, depth - 1, ply + 1, true);
+                eval = -search<nonPV>(board, -alpha - 1, -alpha, depth - 1, ply + 1);
 
                 // Zw search with depth reduction
-                if (eval > alpha)
-
+                if (eval > alpha && !(null_window)
                     // If it fails high, check if not in null window, then try search with full depth, on zw,
                     // If THAT fails, then do a full research.
-                //     && (!null_window && -search<nonPV>(board, -alpha - 1, -alpha, depth - 1, ply + 1) > alpha)
-                // )
-                    eval = -search<PV>(board, -beta, -alpha, depth - 1, ply + 1, true);
+                    // && (!null_window && -search<nonPV>(board, -alpha - 1, -alpha, depth - 1, ply + 1) > alpha)
+                )
+                    eval = -search<PV>(board, -beta, -alpha, depth - 1, ply + 1);
             }
             else
             {
                 // Do a full search
-                eval = -search<nextType>(board, -beta, -alpha, depth - 1, ply + 1, true);
+                eval = -search<nextType>(board, -beta, -alpha, depth - 1, ply + 1);
             }
 
             board.undoMove(m);
 
-            if (m_interrupt.get() && m_bestmove)
+            if (m_interrupt.get())
                 return 0;
 
             if (eval > best)
@@ -389,15 +390,9 @@ namespace chess
                 alpha          = std::max(alpha, best);
                 bestmove       = m;
 
-                // Store the best move, since pv may not be available yet
-                if constexpr (isRoot)
-                {
-                    m_bestmove = bestmove;
-                };
-
                 if (best >= beta)
                     break; 
-            }            
+            }
         }
 
         // Step 7:
@@ -407,6 +402,7 @@ namespace chess
         entry.depth     = depth;
         entry.score     = best;
         entry.bestMove  = bestmove;
+        entry.age       = m_root_age;
 
         if (best <= old_alpha)
             entry.nodeType = TEntry::UPPERBOUND;
@@ -415,7 +411,7 @@ namespace chess
             entry.nodeType = TEntry::LOWERBOUND;
             
             // Beta-cutoff, add that to the history and update killers
-            if (!bestmove.isPromotionCapture())
+            if (bestmove.isQuiet())
             {
                 m_search_cache->getHH().update(board.turn(), bestmove, depth);
                 m_search_cache->getKH().update(bestmove, ply);
@@ -424,7 +420,7 @@ namespace chess
         else
             entry.nodeType = TEntry::EXACT;
         
-        m_search_cache->getTT().store(hash, entry);
+        m_search_cache->getTT().store(entry);
 
         return best;
     }
