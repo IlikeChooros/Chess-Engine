@@ -7,7 +7,7 @@
 namespace uci
 {
     // Help map
-    std::map<std::string, std::string> help_map = {
+    std::map<std::string, const char*> help_map = {
         {"perft", 
             "perft <depth> - Run perft test at given depth, board should be already initialized\n\n"
         },
@@ -142,6 +142,14 @@ namespace uci
         while (iss >> command && command != "value")
             name += " " + command;
 
+        // No value just name provided, assuming that's a button
+        if (iss.eof() && command != "value")
+        {
+            m_options.call(name, m_engine);
+            return;
+        }
+
+        // That's an invalid command, abort
         if (command != "value")
             fail("(setoption): 'value' not found\n");
         
@@ -247,9 +255,9 @@ namespace uci
         std::string command, output;
         iss >> command;
 
-        if (command_map.find(command) == command_map.end()){
-            return "Unknown command: '" + command + "', type 'help' for a list of commands\n";
-        }
+        if (command_map.find(command) == command_map.end())
+            return output;
+            // return "Unknown command: '" + command + "', type 'help' for a list of commands\n";
 
         Commands comm = command_map[command];
         
@@ -300,8 +308,8 @@ namespace uci
                 {
                     if (m_engine.board().isLegal(move))
                         m_engine.board().makeMove(move);
-                    else
-                        output = "Invalid move: " + move + "\n";
+                    // else
+                        // output = "Invalid move: " + move + "\n";
                 }
             }
                 break;
@@ -309,13 +317,14 @@ namespace uci
             case Help: {
                 // Check if there is a command after help
                 std::string help_command;
-                if (iss >> help_command){
-                    if (help_map.find(help_command) != help_map.end()){
+                if (iss >> help_command)
+                {
+                    if (help_map.find(help_command) != help_map.end())
                         output = help_map[help_command];
-                    } else {
-                        output = "Unknown command: '" + help_command + "', type 'help' for a list of commands\n";
-                    }
-                } else {
+                    // else 
+                        // output = "Unknown command: '" + help_command + "', type 'help' for a list of commands\n";
+                } 
+                else {
                     // Just a help command
                     output = help_map["help"];
                 }
@@ -323,11 +332,7 @@ namespace uci
                 break;
 
             case Quit:
-                output = "Bye!\n";
-                break;
-
             default:
-                output = "Unknown command: '" + command + "', type 'help' for a list of commands\n";
                 break;
         }
         return output;
@@ -401,9 +406,10 @@ namespace uci
             std::string output;
             try{
                 output = processCommand(comm);
-            } 
+            }
             catch(std::exception& e){
-                output = e.what();
+                // output = e.what();
+                output.clear();
             }
             
             // Print the output

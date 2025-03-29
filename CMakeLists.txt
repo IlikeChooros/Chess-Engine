@@ -2,25 +2,27 @@ cmake_minimum_required(VERSION 3.4)
 
 project(CEngine)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
-# Set GNU compiler flags for debug and release
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    # Debug: no optimizations, include debug symbols
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
-    # Release: optimize for speed with full optimizations
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native")
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    # MSVC debug flags and release flags (adjust as needed)
-    set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Od")
-    set(CMAKE_CXX_FLAGS_RELEASE "/O2")
-endif()
 
 # Optionally set the build type if not specified externally
 if(NOT CMAKE_BUILD_TYPE)
-   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
 endif()
+
+# Set GNU compiler flags for debug and release
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+   # Debug: no optimizations, include debug symbols
+   set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+   # Release: optimize for speed with full optimizations
+   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+   # MSVC debug flags and release flags (adjust as needed)
+   set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Od")
+   set(CMAKE_CXX_FLAGS_RELEASE "/O2")
+endif()
+
+
 
 # Download gtest
 include(FetchContent)

@@ -42,11 +42,15 @@ struct TEntry : public DepthBasedEntry
 
 // Transposition table class, implemented as a fixed size vector
 // T: Type of the entry (default is TEntry)
-template <typename T = TEntry, std::enable_if_t<std::is_base_of<BaseTTEntry, T>::value, bool> = true>
+
+template <typename T>
+concept isTTEntry = std::is_base_of<BaseTTEntry, T>::value;
+
+
+template <isTTEntry T>
 class TTable
 {
 public:
-    typedef typename std::is_base_of<BaseTTEntry, T> IsBase;
     typedef typename std::is_base_of<DepthBasedEntry, T> isDepthBased; 
     typedef typename std::vector<T> TableType;
 

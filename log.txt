@@ -1,0 +1,9 @@
+info depth 1 score cp 50 nodes 21 time 1 nps 21000 pv b1c3 
+info depth 2 score cp 0 nodes 84 time 1 nps 84000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 610 time 3 nps 203333 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 2229 time 10 nps 222900 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 35 nodes 11491 time 51 nps 225313 pv b1c3 b8c6 g1f3 g8f6 d2d4 
+info depth 6 score cp 0 nodes 55030 time 228 nps 241359 pv b1c3 b8c6 g1f3 g8f6 d2d4 d7d5 
+bestmove b1c3
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 699050, 

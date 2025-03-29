@@ -1,4 +1,9 @@
 /build
+/cmake-build-relwithdebinfo
+/cmake-build-release
+/cmake-build-debug
 /.vscode
 .env
+/.idea
+/.venv
 analysis.txt

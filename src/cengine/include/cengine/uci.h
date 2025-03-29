@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <variant>
 
 #include "engine.h"
 #include "threads.h"
@@ -38,79 +39,80 @@ namespace uci
                 int max;
             } SpinRange;
 
-            // Value of the option
-            typedef union 
-            {
-                SpinRange spin;
-                bool boolean;
-                std::string *string;
-            } Value;
+            typedef std::string* StringPointer;
+            typedef std::variant<SpinRange, bool, StringPointer> Value;
+            typedef std::function<void(chess::Engine&)> Callback;
 
             // Fields
-            Type type;
-            Value value;
+            Type type{Unknown};
+            Value value{};
+            Callback callback{nullptr};
 
             // Constructors
             Option() = default;
 
             Option(Type type, Value value)
-                : type(type), value(value) {};
+                : type(type), value(value) {}
             
             // Set option as spin
             Option(int default_value, int min, int max)
                 : type(Spin)
             {
-                this->value.spin.value = default_value;
-                this->value.spin.def = default_value;
-                this->value.spin.min = min;
-                this->value.spin.max = max;
-            };
+                this->value = SpinRange{default_value, default_value, min, max};
+            }
 
             // Set option as check
-            Option(bool value)
-                : type(Check)
-            {
-                this->value.boolean = value;
-            };
+            explicit Option(bool value)
+                : type(Check), value(value) {}
+
+            // Create button option with given callback
+            explicit Option(Callback callback) 
+            : type(Button), value(), callback(callback) {}
 
             // Set option as string
             Option(std::string value)
                 : type(String)
             {
-                this->value.string = new std::string(value);
-            };
+                this->value = new std::string(value);
+            }
 
             // Destructor
             ~Option()
             {
                 if (type == String)
-                    delete value.string;
-            };
+                    delete std::get<StringPointer>(value);
+            }
+
+            std::string& string() const { return *std::get<StringPointer>(value); }
+            bool& boolean() { return std::get<bool>(value); }
+            SpinRange& spin() { return std::get<SpinRange>(value); }
 
             // Copy constructor
             Option& operator=(const Option& other)
             {
-                type = other.type;
+                callback    = other.callback;
+                type        = other.type;
                 if (type == String)
-                    value.string = new std::string(*other.value.string);
+                    value = new std::string(other.string());
                 else
                     value = other.value;
                 return *this;
-            };
+            }
 
             // Assigne value, based on the option type
             Option& operator=(std::string value)
             {
                 if (type == String)
-                    *this->value.string = value;
+                    string() = value;
 
                 else if (type == Check)
-                    this->value.boolean = value == "true";
+                    this->value = value == "true";
                 
                 else if (type == Spin)
                 {
-                    this->value.spin.value = this->value.spin.def;
-                    std::sscanf(value.c_str(), "%d", &this->value.spin.value);
+                    SpinRange& spinv = spin();
+                    spinv.value = spinv.def;
+                    std::sscanf(value.c_str(), "%d", &spinv.value);
                 }
                 return *this;
             }
@@ -123,15 +125,17 @@ namespace uci
                 {
                     case Check:
                         str += "check default ";
-                        str += (value.boolean ? "true" : "false");
+                        str += (boolean() ? "true" : "false");
                         break;
-                    case Spin:
+                    case Spin: {
+                        SpinRange& spin = this->spin();
                         str += "spin default ";
-                        str += std::to_string(value.spin.value);
+                        str += std::to_string(spin.value);
                         str += " min ";
-                        str += std::to_string(value.spin.min);
+                        str += std::to_string(spin.min);
                         str += " max ";
-                        str += std::to_string(value.spin.max);
+                        str += std::to_string(spin.max);
+                        }
                         break;
                     case Combo:
                         str += "combo";
@@ -141,10 +145,10 @@ namespace uci
                         break;
                     case String:
                         str += "string default ";
-                        if (value.string->empty())
+                        if (string().empty())
                             str += "<empty>";
                         else
-                            str += *value.string;
+                            str += string();
                         break;
                     case Unknown:
                         str += "unknown";
@@ -162,6 +166,14 @@ namespace uci
             options["Log File"]        = Option(std::string(Log::LOG_FILE));
             options["Hash"]            = Option(chess::SearchCache::DEFAULT_HASH_SIZE, 1, 128);
             options["UCI_AnalyseMode"] = Option(false);
+            options["Threads"]         = Option(1, 1, 1);
+            options["MultiPV"]         = Option(1, 1, 1);
+
+            options["Clear Hash"]      = Option(
+                Option::Callback(
+                    [](chess::Engine& e){ e.reset(); }
+                )
+            );
         }
 
         // Get option
@@ -188,8 +200,8 @@ namespace uci
         // Parse UCI options
         void apply(chess::Engine& engine)
         {
-            engine.setHash(options["Hash"].value.spin.value);
-            engine.setLogFile(*options["Log File"].value.string);
+            engine.setHash(options["Hash"].spin().value);
+            engine.setLogFile(options["Log File"].string());
         }
 
         // Set option
@@ -197,6 +209,14 @@ namespace uci
         {
             if (options.find(key) != options.end())
                 options[key] = value;
+        }
+
+        // Envoke the button callback
+        void call(std::string key, chess::Engine& e)
+        {
+            if (options.find(key) != options.end() 
+                && options[key].type == Option::Button)
+                options[key].callback(e);
         }
     };
 
