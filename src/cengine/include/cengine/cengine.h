@@ -70,6 +70,10 @@ namespace chess
      */
     inline void init()
     {    
+        // Make the output and input have separate buffers
+        std::ios_base::sync_with_stdio(false);
+        std::cin.tie(nullptr);
+        std::cout.setf(std::ios::unitbuf);
         Engine::base_init();
     }
 }

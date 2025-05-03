@@ -122,7 +122,9 @@ void Log::printInfo(int depth, int score, bool cp, uint64_t nodes, uint64_t time
     }
 
     str += "\n";
-    std::cout << str;
+    if (m_print_enabled)
+        std::cout << str;
+
     log(str);
 }
 
@@ -138,6 +140,8 @@ void Log::printf(const char* str, ...)
     va_end(args);
 
     std::string s(buffer);
-    std::cout << s;
+    if (m_print_enabled)
+        std::cout << s;
+        
     log(s);
 }

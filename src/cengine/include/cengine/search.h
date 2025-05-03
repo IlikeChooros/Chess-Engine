@@ -94,7 +94,7 @@ namespace chess
         void join();
 
         // Returns true if the thread is thinking
-        bool is_thinking() { return m_thinking; }
+        bool is_thinking() { return m_thinking.load(); }
 
         // Get the atomic Result object
         shared_data<Result>& get_result() { return m_best_result; }

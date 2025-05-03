@@ -36,6 +36,7 @@ namespace chess
             stop();
         
         setup(board, search_cache, limits);
+        m_thinking = true;
         m_thread = std::thread(&Thread::iterative_deepening, this);
     }
 
@@ -175,7 +176,10 @@ namespace chess
                 break;
             }
 
+            // Update the result object
             update_score(m_result.score, eval, whotomove, m_result.pv.size());
+            m_result.depth = m_depth;
+            m_result.nodes = m_interrupt.nodes();
             m_best_result = m_result;
 
             // Print info

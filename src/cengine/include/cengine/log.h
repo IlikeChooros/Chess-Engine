@@ -14,6 +14,7 @@
 // Logging class, every log message is written to a file
 class Log
 {
+    bool m_print_enabled;
     bool m_log_enabled;
     std::string m_log_file;
     std::ofstream m_log_stream;
@@ -24,6 +25,16 @@ public:
 
     Log(std::string logfile = LOG_FILE);
     ~Log();
+
+    /**
+     * @brief Set the print state flage, if enabled, all log messages are printed to the console
+     */
+    void setPrint(bool enabled) { m_print_enabled = enabled; }
+
+    /**
+     * @brief Set the log state flag, if enabled, all log messages are written to the log file
+     */
+    void setLog(bool enabled) { m_log_enabled = enabled; }
 
     void setLogFile(std::string logfile);
     void logf(const char* format, ...);

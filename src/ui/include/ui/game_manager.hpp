@@ -15,7 +15,7 @@ private:
     void M_render();
     void M_process_param_input();
     void M_engine_move();
-    vodd M_player_move();
+    void M_player_move();
 
     chess::Engine m_engine;
     chess::SearchOptions m_options;

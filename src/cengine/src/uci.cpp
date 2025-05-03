@@ -355,10 +355,6 @@ namespace uci
     {
         chess::Engine::base_init();
         m_engine = chess::Engine();
-
-        // Make the output and input have separate buffers
-        std::ios_base::sync_with_stdio(false);
-        std::cout.setf(std::ios::unitbuf);
     }
 
     UCI& UCI::operator=(UCI&& other)

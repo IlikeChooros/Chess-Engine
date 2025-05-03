@@ -20,7 +20,7 @@ void BoardRenderer::render(const chess::Board& board, std::ostream& os)
         os << i + 1 << "|";
         for (int j = 0; j < 8; ++j)
         {
-            int piece = board[i * 8 + j];
+            int piece = board[(7 - i) * 8 + j];
             
             if (piece == Piece::Empty)
             {

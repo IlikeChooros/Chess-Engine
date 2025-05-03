@@ -59,6 +59,8 @@ struct Result
     Score score        = {Score::cp, 0};
     MoveList pv        = {};
     Termination status = NONE;
+    Depth depth        = 0;
+    uint64_t nodes     = 0;
 };
 
 // Contains search limits
