@@ -1,8 +1,9 @@
-add_library(ui "")
+add_library(ui)
 
 target_sources(ui 
 PRIVATE
-    "src/"
+    "src/board_renderer.cpp"
+    "src/game_manager.cpp"
 )
 
 target_include_directories(ui PUBLIC include)

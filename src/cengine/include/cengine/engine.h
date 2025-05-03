@@ -21,19 +21,19 @@ namespace chess
     {
     public:
 
-        Engine();
+        Engine() = default;
         Engine& operator=(Engine&& other);
         Engine(const Engine&) = delete;
         ~Engine();
 
-        static void init();
+        static void base_init();
         void reset();
         uint64_t perft(int depth, bool print = true);
         shared_data<Result>& go(const SearchOptions& options);
         void join();
         void stop();
-        void setPosition(const std::string& fen = Board::START_FEN);
-        void setPosition(std::istringstream& fen);
+        bool setPosition(const std::string& fen = Board::START_FEN);
+        bool setPosition(std::istringstream& fen);
         void setPosition(const Board& board);
 
         // uci options

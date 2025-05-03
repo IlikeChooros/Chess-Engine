@@ -1,5 +1,5 @@
 ## Move generation
-- [ ] Generate all possible moves for a given board state:
+- [x] Generate all possible moves for a given board state:
   - [x] Pawn moves:
     - [x] Valid pinned pawn moves -> when a pawn is pinned to the king, and tries to enpassant capture
     - [x] Promotion moves (-.-)
@@ -18,7 +18,7 @@
   - [x] `go` (perft, search)
   - [x] `stop`
   - [x] `quit`
-- [ ] Search
+- [x] Search
   - [x] Quiescence search
   - [x] Move ordering
     - [x] History heuristic (for quiet moves)
@@ -32,8 +32,8 @@
   - [x] BUG: King sometimes can be captured:
     - 6k1/5pp1/1Q2b2p/4P3/7P/8/3r2PK/3q4 w - - 1 34
     - r4rk1/pppb1p2/3bq2p/3NN2Q/2B3p1/8/PP1R2PP/4R2K b - - 0 23
-- [ ] Evaluation
-  - [ ] Pawn structure (phalanx) 
+- [x] Evaluation
+  - [x] Pawn structure (phalanx) 
 
 Code related:
 - [x] refactor `search` function, it's a mess
@@ -56,6 +56,11 @@ Code related:
       - CEngine_v0: 33
       - CEngine_v3: 31
       - Draw: 36
+
+
+### May 3
+- [ ] new console ui option as an argument (--ui), play against the computer
+- [ ] On startup with the --ui option, set the fen position (same as position arg), side of the player, and engine limits (without infinite)
 
 
 # New matches

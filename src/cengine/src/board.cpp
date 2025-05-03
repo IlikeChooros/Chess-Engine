@@ -177,7 +177,7 @@ namespace chess
      * 
      * @param ss The stream to read from
      */
-    void Board::_read_base_fen(std::istringstream& ss)
+    bool Board::_read_base_fen(std::istringstream& ss)
     {
         std::unordered_map<char, int> mapping({
             {'p', Piece::Pawn},
@@ -224,7 +224,7 @@ namespace chess
             }
             // Invalid character
             else {
-                return;
+                return false;
             }
         }
 
@@ -242,35 +242,7 @@ namespace chess
 
         // If there are no castling rights and it isn't '-', then that's invalid
         if (m_castling_rights.none() && castling_rights != "-")
-            return;
-        
-
-        // CastlingRights cr_obj;
-
-        // std::unordered_map<int, int> castling = {
-        //     {'k', CastlingRights::BLACK_KING},
-        //     {'q', CastlingRights::BLACK_QUEEN},
-        //     {'K', CastlingRights::WHITE_KING},
-        //     {'Q', CastlingRights::WHITE_QUEEN},
-        // };
-
-        // while(c != ' ' && i < castling_rights.size())
-        // {
-        //     c = castling_rights[i++];
-        //     if (c == '-')
-        //     { // no castling for both sides
-        //         i++;
-        //         cr_obj = CastlingRights::NONE;
-        //         break;
-        //     }
-
-        //     if(castling.find(c) == castling.end())
-        //         return;
-            
-        //     cr_obj.add(castling[c]);
-        // }
-        // // Set the castling rights
-        // m_castling_rights = cr_obj;
+            return false;
 
         // Read enpassant target square
         std::string s_target;
@@ -298,9 +270,11 @@ namespace chess
         verify_castling_rights();
         (void)hash();
         push_state(Move());
+
+        return true;
     }
 
-    void Board::loadFen(std::istringstream& ss)
+    bool Board::loadFen(std::istringstream& ss)
     {
         memset(board, Piece::Empty, sizeof(board));
         
@@ -311,13 +285,15 @@ namespace chess
         {
             // Create another stream to read the base fen
             std::istringstream base_fen(START_FEN);
-            _read_base_fen(base_fen);
+            if (!_read_base_fen(base_fen))
+                return false;
         }
         else
         {
             // If the base fen is not found, set the stream back to the original position
             ss.seekg(pos);
-            _read_base_fen(ss);
+            if (!_read_base_fen(ss))
+                return false;
         }
 
 
@@ -332,22 +308,25 @@ namespace chess
                 Move move = match(Move::fromUci(moves));
 
                 if (!isLegal(move))
-                    break;
+                    return false;
 
                 makeMove(move);
             }
         }
+
+        return true;
     }
 
     /**
      * @brief Load a fen string into the board
      * 
      * @param fen The fen string to load
+     * @return true if the fen was loaded successfully, false otherwise
      */
-    void Board::loadFen(std::string fen)
+    bool Board::loadFen(std::string fen)
     {
         std::istringstream ss(fen);
-        loadFen(ss);
+        return loadFen(ss);
     }
 
     /**

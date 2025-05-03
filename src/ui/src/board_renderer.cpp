@@ -1,4 +1,4 @@
-#include <ui/board_reneder.hpp>
+#include <ui/board_renderer.hpp>
 
 
 UI_NAMESPACE_BEGIN
@@ -24,13 +24,17 @@ void BoardRenderer::render(const chess::Board& board, std::ostream& os)
             
             if (piece == Piece::Empty)
             {
-                os << " ";
+                // print either black or white square
+                if ((i + j) % 2 == 0)
+                    os << "░░";
+                else
+                    os << "▒▒";
             }
             else
             {
                 bool color = Piece::isWhite(piece);
                 int type = Piece::getType(piece);
-                os << pieceSymbols[color][type];
+                os << pieceSymbols[color][type] << " ";
             }
         }
         os << "\n";
@@ -39,4 +43,5 @@ void BoardRenderer::render(const chess::Board& board, std::ostream& os)
 }
 
 UI_NAMESPACE_END
+
 

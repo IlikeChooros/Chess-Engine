@@ -7,8 +7,6 @@
 #include "engine.h"
 #include "threads.h"
 
-#include <ui/ui.hpp>
-
 // Universal Chess Interface
 namespace uci
 {
@@ -225,6 +223,13 @@ namespace uci
     class UCI
     {
     public:
+
+        static chess::SearchOptions parseGoOptions(
+            std::istringstream& iss,
+            bool allow_infinite = true, 
+            bool allow_perft = true
+        );
+
         UCI();
         ~UCI();
         UCI& operator=(UCI&&);
@@ -236,17 +241,14 @@ namespace uci
 
         void sendCommand(std::string comm);
         void loop(int argc = 0, char** argv = nullptr);
+
+        
         
     private:
         void setoption(std::istringstream& iss);
         void position(std::istringstream& iss);
         void go(std::istringstream& iss);
-        bool parseSide(std::istringstream& iss);
-        chess::SearchOptions parseGoOptions(
-            std::istringstream& iss, 
-            bool allow_infinite = true, 
-            bool allow_perft = true
-        );
+        
         std::string processCommand(std::string comm);
 
         UCIOptions    m_options;

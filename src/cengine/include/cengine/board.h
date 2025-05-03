@@ -77,7 +77,7 @@ namespace chess
             int attackers_sq, attacks_func_t attackFunc
         );
 
-        void _read_base_fen(std::istringstream& fen);
+        bool _read_base_fen(std::istringstream& fen);
 
     public:
         typedef MoveList::move_filter_t MoveFilter;
@@ -105,8 +105,8 @@ namespace chess
         bool operator==(const Board& other);
         
         Board& init();
-        void loadFen(std::string fen);
-        void loadFen(std::istringstream& fen);
+        bool loadFen(std::string fen);
+        bool loadFen(std::istringstream& fen);
         std::string fen();
         void updateBitboards();
         void makeNullMove();

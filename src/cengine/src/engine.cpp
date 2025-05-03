@@ -7,17 +7,12 @@ namespace chess
  * @brief Initialize the boards, search and evaluation,
  * same as `chess::init()`
  */
-void Engine::init()
+void Engine::base_init()
 {
     Board::init_board();
     Eval::init();
     init_hashing();
     init_magics(false);
-}
-
-Engine::Engine()
-{
-    m_board.init();
 }
 
 Engine::~Engine()
@@ -88,18 +83,18 @@ void Engine::stop()
  * @brief Set the position of the board, using FEN notation
  * @param fen FEN string, has uci full support ('startpos', FEN, FEN + moves)
  */
-void Engine::setPosition(const std::string& fen)
+bool Engine::setPosition(const std::string& fen)
 {
-    m_board.loadFen(fen);
+    return m_board.loadFen(fen);
 }
 
 /**
  * @brief Set the position of the board, but in a stream
  * @param fen stream with the FEN string, will stop parsing when the fen becomes invalid (or reads the whole fen section)
  */
-void Engine::setPosition(std::istringstream& fen)
+bool Engine::setPosition(std::istringstream& fen)
 {
-    m_board.loadFen(fen);
+    return m_board.loadFen(fen);
 }
 
 /**

@@ -156,6 +156,12 @@ public:
      */
     void setOption(const std::string& name, Option::value_t value)
     {
+        if (name == "perft")
+        {
+            m_perft = value;
+            return;
+        }
+
         auto it = m_options.find(name);
         if (it != m_options.end())
             it->second(value);
@@ -177,6 +183,16 @@ public:
         return name == "infinite" || name == "ponder";
     }
 
+    bool is_perft() const
+    {
+        return m_perft != 0;
+    }
+
+    Depth perft() const
+    {
+        return m_perft;
+    }
+
     /**
      * @brief Get the `Limits` object
      */
@@ -196,6 +212,7 @@ public:
     }
 
 private:
+    Depth m_perft = 0;
     Limits m_limits;
     std::map<std::string, Option> m_options;
 

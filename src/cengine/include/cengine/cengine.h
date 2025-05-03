@@ -70,6 +70,6 @@ namespace chess
      */
     inline void init()
     {    
-        Engine::init();
+        Engine::base_init();
     }
 }

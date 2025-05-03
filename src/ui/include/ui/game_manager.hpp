@@ -1,21 +1,25 @@
 #pragma once
 
-#include "namespaces.hpp"
-
-#include <cengine/engine.h>
+#include "board_renderer.hpp"
+#include <cengine/cengine.h>
 
 UI_NAMESPACE_BEGIN
 
-class GameManager
+class GameManager : public BoardRenderer
 {
 public:
-    GameManager();
-
-    void init(chess::Engine& engine);
-    bool makeMove(const std::string& move);
-
+    GameManager() = default;
+    void loop();
 private:
-    chess::Engine& m_engine;
+    void M_init();
+    void M_render();
+    void M_process_param_input();
+    void M_engine_move();
+    vodd M_player_move();
+
+    chess::Engine m_engine;
+    chess::SearchOptions m_options;
+    bool m_player_side{false}; // true for white, false for black
 };
 
 

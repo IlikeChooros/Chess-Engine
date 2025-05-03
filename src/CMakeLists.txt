@@ -6,5 +6,6 @@ add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
     ${CMAKE_SOURCE_DIR}/src/utils $<TARGET_FILE_DIR:${PROJECT_NAME}>/utils)
 
 add_subdirectory(cengine)
+add_subdirectory(ui)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC cengine) 
+target_link_libraries(${PROJECT_NAME} PUBLIC cengine ui) 

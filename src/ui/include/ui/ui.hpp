@@ -1,4 +1,4 @@
 #pragma once
 
-#include "board_reneder.hpp"
-
+#include "board_renderer.hpp"
+#include "game_manager.hpp"

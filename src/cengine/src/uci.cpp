@@ -51,16 +51,16 @@ namespace uci
         {"isready", "isready - Check if the engine is ready\n\n"},
         {"stop", "stop - Stop the search\n\n"},
         {"getfen", "getfen - Get the current FEN (unofficial)\n\n"},
-        {"playgame",
-            "playgame <position> <your-side> <constraints> (unofficial)\n"
-            " - Play a game against the engine with simple console ui (see 'makemove' how to make moves')\n"
-            " - <position>: The position to play from, same as 'position' command\n"
-            " - <your-side>: The side to play as, by default it's current side, (w | white, b | black)\n"
-            " - <constraints>: The constraints for the engine, same as 'go' command, \n"
-            " by default set as 'movetime 3000' (infinite is illegal)\n"
-            "\tExample: 'playgame startpos w', play a game from the start position as white\n"
-            "Another one: 'playgame rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8 moves d7c8q b depth 5'\n"
-        },
+        // {"playgame",
+        //     "playgame <position> <your-side> <constraints> (unofficial)\n"
+        //     " - Play a game against the engine with simple console ui (see 'makemove' how to make moves')\n"
+        //     " - <position>: The position to play from, same as 'position' command\n"
+        //     " - <your-side>: The side to play as, by default it's current side, (w | white, b | black)\n"
+        //     " - <constraints>: The constraints for the engine, same as 'go' command, \n"
+        //     " by default set as 'movetime 3000' (infinite is illegal)\n"
+        //     "\tExample: 'playgame startpos w', play a game from the start position as white\n"
+        //     "Another one: 'playgame rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8 moves d7c8q b depth 5'\n"
+        // },
         {
             "makemove",
                 "makemove <move>\n"
@@ -104,7 +104,6 @@ namespace uci
         Quit,
         Debug,
         SetOption,
-        PlayGame,
     };
 
     std::map<std::string, Commands> command_map = {
@@ -118,7 +117,6 @@ namespace uci
         {"stop", Stop},
         {"getfen", GetFen},
         {"makemove", MakeMove},
-        {"playgame", PlayGame},
         {"help", Help},
         {"quit", Quit},
     };
@@ -195,22 +193,6 @@ namespace uci
         m_engine.setPosition(iss);
     }
 
-    bool UCI::parseSide(std::istringstream& iss)
-    {
-        std::string side;
-        iss >> side;
-
-        // Should be either 'w', 'b', 'white' or 'black'
-        if (side == "w" || side == "white")
-            return true;
-        else if (side == "b" || side == "black")
-            return false;
-        
-        // Fail - invalid side
-        fail("(playgame): Invalid side: %s\n", side.c_str());
-        return false;
-    }
-
     /**
      * Parse the go command, start the search or run perft 
      * 
@@ -234,8 +216,8 @@ namespace uci
         {
             if (command == "perft" && allow_perft)
             {
-                m_engine.perft(readInt(iss, "(go): Perft depth not specified or invalid\n"));
-                return options;
+                options.setOption("perft", readInt(iss, "(go): Invalid value for perft: " + command));
+                return options;;
             }
 
             if (command == "infinite" && allow_infinite)
@@ -263,7 +245,14 @@ namespace uci
     void UCI::go(std::istringstream& iss)
     {
         // Start the search
-        m_engine.go(parseGoOptions(iss, true, true));
+        auto opts = parseGoOptions(iss, true, true);
+        if (opts.is_perft())
+        {
+            m_engine.perft(opts.perft(), true);
+            return;
+        }
+
+        m_engine.go(opts);
     }
 
     /**
@@ -336,17 +325,6 @@ namespace uci
                 }
             }
                 break;
-
-            case PlayGame: {
-                // plagame <position> <your-side> <constraints>
-                position(iss);
-                auto side = parseSide(iss);
-                auto search_options = parseGoOptions(iss, false, false);
-                
-                
-                
-            }
-                break;
             case Help: {
                 // Check if there is a command after help
                 std::string help_command;
@@ -375,7 +353,7 @@ namespace uci
 
     UCI::UCI(): m_queue(1), m_ready(true)
     {
-        chess::Engine::init();
+        chess::Engine::base_init();
         m_engine = chess::Engine();
 
         // Make the output and input have separate buffers
