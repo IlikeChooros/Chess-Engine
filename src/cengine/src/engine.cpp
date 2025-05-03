@@ -61,7 +61,7 @@ uint64_t Engine::perft(int depth, bool print)
  * @brief Start the search in async mode, call `join()` to make this function synchronous
  * @return Atomic like result object, use `get()` to get the result
  */
-shared_data<Result>& Engine::go(SearchOptions& options)
+shared_data<Result>& Engine::go(const SearchOptions& options)
 {
     m_main_thread.stop();
     m_main_thread.start_thinking(m_board, m_search_cache, options.limits());
@@ -90,8 +90,16 @@ void Engine::stop()
  */
 void Engine::setPosition(const std::string& fen)
 {
-    std::string FEN = fen == "startpos" ? std::string(Board::START_FEN) : fen;
-    m_board.loadFen(FEN);
+    m_board.loadFen(fen);
+}
+
+/**
+ * @brief Set the position of the board, but in a stream
+ * @param fen stream with the FEN string, will stop parsing when the fen becomes invalid (or reads the whole fen section)
+ */
+void Engine::setPosition(std::istringstream& fen)
+{
+    m_board.loadFen(fen);
 }
 
 /**
@@ -108,9 +116,9 @@ void Engine::setPosition(const Board& board)
  * @brief Set the hash size
  * @param hash Size of the hash table in MB
  */
-void Engine::setHash(size_t hash)
+void Engine::setHashSize(size_t size)
 {
-    m_search_cache.getTT() = TTable<TEntry>(hash);
+    m_search_cache.getTT() = TTable<TEntry>(size);
 }
 
 /**

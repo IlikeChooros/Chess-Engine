@@ -29,15 +29,16 @@ namespace chess
         static void init();
         void reset();
         uint64_t perft(int depth, bool print = true);
-        shared_data<Result>& go(SearchOptions& options);
+        shared_data<Result>& go(const SearchOptions& options);
         void join();
         void stop();
         void setPosition(const std::string& fen = Board::START_FEN);
+        void setPosition(std::istringstream& fen);
         void setPosition(const Board& board);
 
         // uci options
 
-        void setHash(size_t hash);
+        void setHashSize(size_t hash);
         void setLogFile(const std::string& file);
 
         /**

@@ -172,15 +172,13 @@ namespace chess
     }
 
     /**
-     * @brief Load a fen string into the board
+     * @brief Read the base fen string, meaning the piece placement, side to move, castling rights, 
+     * enpassant target square, halfmove clock and fullmove counter
      * 
-     * @param fen The fen string to load
+     * @param ss The stream to read from
      */
-    void Board::loadFen(std::string fen)
+    void Board::_read_base_fen(std::istringstream& ss)
     {
-        memset(board, Piece::Empty, sizeof(board));
-        std::stringstream ss(fen);
-        
         std::unordered_map<char, int> mapping({
             {'p', Piece::Pawn},
             {'r', Piece::Rook},
@@ -192,7 +190,7 @@ namespace chess
 
         std::string piece_placement;
         ss >> piece_placement;
-
+        
         // Read piece placement
         char c = 0;
         size_t i = 0, pos = 0;
@@ -240,32 +238,39 @@ namespace chess
         i = 0;
         std::string castling_rights;
         ss >> castling_rights;
-        CastlingRights cr_obj;
+        m_castling_rights = CastlingRights(castling_rights);
 
-        std::unordered_map<int, int> castling = {
-            {'k', CastlingRights::BLACK_KING},
-            {'q', CastlingRights::BLACK_QUEEN},
-            {'K', CastlingRights::WHITE_KING},
-            {'Q', CastlingRights::WHITE_QUEEN},
-        };
+        // If there are no castling rights and it isn't '-', then that's invalid
+        if (m_castling_rights.none() && castling_rights != "-")
+            return;
+        
 
-        while(c != ' ' && i < castling_rights.size())
-        {
-            c = castling_rights[i++];
-            if (c == '-')
-            { // no castling for both sides
-                i++;
-                cr_obj = CastlingRights::NONE;
-                break;
-            }
+        // CastlingRights cr_obj;
 
-            if(castling.find(c) == castling.end())
-                return;
+        // std::unordered_map<int, int> castling = {
+        //     {'k', CastlingRights::BLACK_KING},
+        //     {'q', CastlingRights::BLACK_QUEEN},
+        //     {'K', CastlingRights::WHITE_KING},
+        //     {'Q', CastlingRights::WHITE_QUEEN},
+        // };
+
+        // while(c != ' ' && i < castling_rights.size())
+        // {
+        //     c = castling_rights[i++];
+        //     if (c == '-')
+        //     { // no castling for both sides
+        //         i++;
+        //         cr_obj = CastlingRights::NONE;
+        //         break;
+        //     }
+
+        //     if(castling.find(c) == castling.end())
+        //         return;
             
-            cr_obj.add(castling[c]);
-        }
-        // Set the castling rights
-        m_castling_rights = cr_obj;
+        //     cr_obj.add(castling[c]);
+        // }
+        // // Set the castling rights
+        // m_castling_rights = cr_obj;
 
         // Read enpassant target square
         std::string s_target;
@@ -293,6 +298,28 @@ namespace chess
         verify_castling_rights();
         (void)hash();
         push_state(Move());
+    }
+
+    void Board::loadFen(std::istringstream& ss)
+    {
+        memset(board, Piece::Empty, sizeof(board));
+        
+        // Read the base fen, might be set to 'startpos' instead of actual fen
+        auto pos = ss.tellg();
+        std::string piece_placement;
+        if ((ss >> piece_placement) && piece_placement == "startpos")
+        {
+            // Create another stream to read the base fen
+            std::istringstream base_fen(START_FEN);
+            _read_base_fen(base_fen);
+        }
+        else
+        {
+            // If the base fen is not found, set the stream back to the original position
+            ss.seekg(pos);
+            _read_base_fen(ss);
+        }
+
 
         // Read the 'moves' part
         std::string moves;
@@ -310,6 +337,17 @@ namespace chess
                 makeMove(move);
             }
         }
+    }
+
+    /**
+     * @brief Load a fen string into the board
+     * 
+     * @param fen The fen string to load
+     */
+    void Board::loadFen(std::string fen)
+    {
+        std::istringstream ss(fen);
+        loadFen(ss);
     }
 
     /**

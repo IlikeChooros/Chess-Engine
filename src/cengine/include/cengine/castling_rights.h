@@ -28,6 +28,32 @@ namespace chess
         CastlingRights() : m_rights(ALL) {};
         CastlingRights(uint32_t rights) : m_rights(rights) {};
         CastlingRights(const CastlingRights& other) : m_rights(other.m_rights) {};
+        CastlingRights(std::string rights) : m_rights(0)
+        {
+            // Create from string
+            for (char c : rights)
+            {
+                switch (c)
+                {
+                    case 'K':
+                        m_rights |= WHITE_KING;
+                        break;
+                    case 'Q':
+                        m_rights |= WHITE_QUEEN;
+                        break;
+                    case 'k':
+                        m_rights |= BLACK_KING;
+                        break;
+                    case 'q':
+                        m_rights |= BLACK_QUEEN;
+                        break;
+                    case '-':
+                    default:
+                        m_rights = NONE; // Invalid castling rights or empty
+                        return;
+                }
+            }
+        }
 
         CastlingRights& operator=(const CastlingRights& other){
             m_rights = other.m_rights;

@@ -88,7 +88,7 @@ namespace chess
         ~Thread();
 
         void setup(Board& board, SearchCache& search_cache, Limits& limits);
-        void start_thinking(Board& board, SearchCache& search_cache, Limits& limits);
+        void start_thinking(Board& board, SearchCache& search_cache, Limits limits);
         void iterative_deepening();
         void stop();
         void join();

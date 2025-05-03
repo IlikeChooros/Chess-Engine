@@ -50,6 +50,8 @@ class Move
     static const uint32_t FLAG_ROOK_PROMOTION_CAPTURE = 0b1110;
     static const uint32_t FLAG_QUEEN_PROMOTION_CAPTURE = 0b1111;
     
+    // CONSTEXPR FUNCTIONS FOR MOVES
+
     // Fast move creation
     static constexpr uint16_t fmove(uint32_t from, uint32_t to, uint32_t flags) {
         return (flags << 12) | (from << 6) | to;
@@ -65,9 +67,38 @@ class Move
         return ((move >> 12) & FLAG_CAPTURE) != 0 || ((move >> 12) & FLAG_PROMOTION) != 0;
     }
 
+    // STATIC FUNCTIONS
+
     // Check if the move is a capture
     static bool capture(Move move) {return fcapture(move.m_move);};
 
+    // Get the move in UCI notation, (e.g. e2e4) (no promotion info)
+    static std::string notation(int from, int to)
+    {
+        return square_to_str(from) + square_to_str(to);
+    }
+
+    static bool isMove(std::string move) 
+    {
+        if (move.size() < 4)
+            return false;
+
+        int from = str_to_square(move.substr(0, 2));
+        int to   = str_to_square(move.substr(2, 2));
+
+        if (from == -1 || to == -1)
+            return false;
+        
+        if (move.size() == 5)
+        {
+            int promotion = getPromotionPiece(move[4]);
+            if (promotion == -1)
+                return false;
+        }
+        
+        return true;
+        
+    }
 
     /**
      * @brief Create a move from a string notation (e.g. e2e4, a7a8q),
@@ -94,6 +125,8 @@ class Move
         }
         return Move(from, to, FLAG_NONE);
     }
+
+    // CONSTRUCTORS
 
     Move() : m_move(0) {};
     Move(uint32_t from, uint32_t to, uint32_t flags) :
@@ -205,11 +238,6 @@ class Move
         }
     };
 
-    // Get the move in UCI notation, (e.g. e2e4) (no promotion info)
-    static std::string notation(int from, int to)
-    {
-        return square_to_str(from) + square_to_str(to);
-    }
 
     /**
      * @brief Get the move in UCI notation, (e.g. e2e4, a7a8q)

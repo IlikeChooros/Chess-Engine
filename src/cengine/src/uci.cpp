@@ -51,12 +51,34 @@ namespace uci
         {"isready", "isready - Check if the engine is ready\n\n"},
         {"stop", "stop - Stop the search\n\n"},
         {"getfen", "getfen - Get the current FEN (unofficial)\n\n"},
+        {"playgame",
+            "playgame <position> <your-side> <constraints> (unofficial)\n"
+            " - Play a game against the engine with simple console ui (see 'makemove' how to make moves')\n"
+            " - <position>: The position to play from, same as 'position' command\n"
+            " - <your-side>: The side to play as, by default it's current side, (w | white, b | black)\n"
+            " - <constraints>: The constraints for the engine, same as 'go' command, \n"
+            " by default set as 'movetime 3000' (infinite is illegal)\n"
+            "\tExample: 'playgame startpos w', play a game from the start position as white\n"
+            "Another one: 'playgame rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8 moves d7c8q b depth 5'\n"
+        },
+        {
+            "makemove",
+                "makemove <move>\n"
+                " - Make a move in the current position (used in playgame command)\n"
+                " - <move>: The move to make, in the format <from><to><promotion>\n"
+                "\tExample: makemove d7c8q (in given position, move the pawn from d7 to c8 and promote to queen)\n"
+                "\tAnother one: makemove e2e4 (move the piece from e2 to e4)\n"
+        },
         {"help", 
             "\nAvaible commands:\n"
             "uci\n"
             "ucinewgame\n"
             "isready\n"
+            "setoption name <id> [value <x>]\n"
+            "debug\n"
             "position [startpos|fen <fen> [moves <move1> ... <moveN>]]\n"
+            "makemove <move>\n"
+            "playgame <position> <your-side> <constraints>\n"
             "go [depth <depth> | nodes <nodes> | movetime <time> | wtime <time> | btime <time> | winc <time> | binc <time> | ponder | infinite]\n"
             "perft <depth>\n"
             "stop\n"
@@ -82,6 +104,7 @@ namespace uci
         Quit,
         Debug,
         SetOption,
+        PlayGame,
     };
 
     std::map<std::string, Commands> command_map = {
@@ -95,6 +118,7 @@ namespace uci
         {"stop", Stop},
         {"getfen", GetFen},
         {"makemove", MakeMove},
+        {"playgame", PlayGame},
         {"help", Help},
         {"quit", Quit},
     };
@@ -168,39 +192,23 @@ namespace uci
      */
     void UCI::position(std::istringstream& iss)
     {
-        std::string fen;
-        std::string command;
-        iss >> command;
+        m_engine.setPosition(iss);
+    }
 
-        if (command == "startpos")
-        {
-            // Start from the initial position and possibly parse 'moves'
-            fen = chess::Board::START_FEN;
-            if(iss >> command && command == "moves")
-            {
-                fen += " moves ";
-                while (iss >> command)
-                    fen += command + " ";
-            }
-        }
-        else if (command == "fen")
-        {
-            int n_section = 0;
-            while (iss >> command)
-            {
-                fen += command + " ";
-                n_section++;
-            }
+    bool UCI::parseSide(std::istringstream& iss)
+    {
+        std::string side;
+        iss >> side;
 
-            if (n_section < 6)
-                fail("(position): Not enough sections in FEN: %s\n", fen.c_str());
-        }
-        else 
-        {
-            fail("(position): Invalid command: %s\n", command.c_str());
-        }
-
-        m_engine.setPosition(fen);
+        // Should be either 'w', 'b', 'white' or 'black'
+        if (side == "w" || side == "white")
+            return true;
+        else if (side == "b" || side == "black")
+            return false;
+        
+        // Fail - invalid side
+        fail("(playgame): Invalid side: %s\n", side.c_str());
+        return false;
     }
 
     /**
@@ -216,21 +224,27 @@ namespace uci
      * - binc <time>: Black increment in milliseconds (not supprted yet)
      * - ponder: Ponder the best move (not supported yet)
      * - infinite: Search indefinitely
-     */
-    void UCI::go(std::istringstream& iss)
+    */
+    chess::SearchOptions UCI::parseGoOptions(std::istringstream& iss, bool allow_infinite, bool allow_perft)
     {
         chess::SearchOptions options;
         std::string command;
 
         while (iss >> command)
         {
-            if (command == "perft")
+            if (command == "perft" && allow_perft)
             {
                 m_engine.perft(readInt(iss, "(go): Perft depth not specified or invalid\n"));
-                return;
+                return options;
             }
 
-            if (options.is_boolean(command))
+            if (command == "infinite" && allow_infinite)
+            {
+                options["infinite"] = true;
+                continue;
+            }
+
+            if (options.is_boolean(command) && command != "infinite")
             {
                 options[command] = true;
                 continue;
@@ -238,9 +252,18 @@ namespace uci
 
             options[command] = readInt(iss, "(go): Invalid value for option: " + command);
         }
+        return options;
+    }
 
+
+
+    /**
+     * @brief Parse the go command and start the search/perft
+     */
+    void UCI::go(std::istringstream& iss)
+    {
         // Start the search
-        m_engine.go(options);
+        m_engine.go(parseGoOptions(iss, true, true));
     }
 
     /**
@@ -256,8 +279,8 @@ namespace uci
         iss >> command;
 
         if (command_map.find(command) == command_map.end())
-            return output;
-            // return "Unknown command: '" + command + "', type 'help' for a list of commands\n";
+            // return output;
+            return "Unknown command: '" + command + "', type 'help' for a list of commands\n";
 
         Commands comm = command_map[command];
         
@@ -314,6 +337,16 @@ namespace uci
             }
                 break;
 
+            case PlayGame: {
+                // plagame <position> <your-side> <constraints>
+                position(iss);
+                auto side = parseSide(iss);
+                auto search_options = parseGoOptions(iss, false, false);
+                
+                
+                
+            }
+                break;
             case Help: {
                 // Check if there is a command after help
                 std::string help_command;
@@ -408,8 +441,8 @@ namespace uci
                 output = processCommand(comm);
             }
             catch(std::exception& e){
-                // output = e.what();
-                output.clear();
+                output = e.what();
+                // output.clear();
             }
             
             // Print the output

@@ -77,6 +77,8 @@ namespace chess
             int attackers_sq, attacks_func_t attackFunc
         );
 
+        void _read_base_fen(std::istringstream& fen);
+
     public:
         typedef MoveList::move_filter_t MoveFilter;
 
@@ -104,6 +106,7 @@ namespace chess
         
         Board& init();
         void loadFen(std::string fen);
+        void loadFen(std::istringstream& fen);
         std::string fen();
         void updateBitboards();
         void makeNullMove();
@@ -313,6 +316,7 @@ namespace chess
          * @brief Get the piece at a given index
          */
         inline int& operator[](int index) {return this->board[index]; };
+        inline int operator[](int index) const {return this->board[index]; };
         
         
         Hash m_hash;

@@ -88,7 +88,7 @@ public:
     {
     public:
         typedef int value_t;
-        typedef std::function<void(Limits&, value_t value)> Setter;
+        typedef std::function<void(Limits&, value_t value)> fn_setter_t;
 
         // Default setters
         static void defaultSetter(Limits&, value_t) {}
@@ -105,8 +105,8 @@ public:
         static void setBinc(Limits& params, value_t value) { params.time.inc[0] = value; }
 
         // Constructors
-        Option(Setter setter = defaultSetter) : m_setter(setter), m_limits(nullptr) {}
-        Option(Setter setter, Limits* param): m_setter(setter), m_limits(param) {}
+        Option(fn_setter_t setter = defaultSetter) : m_setter(setter), m_limits(nullptr) {}
+        Option(fn_setter_t setter, Limits* param): m_setter(setter), m_limits(param) {}
         Option(const Option& other): m_setter(other.m_setter), m_limits(other.m_limits) {}
 
         Option& operator=(const Option& other) 
@@ -117,7 +117,7 @@ public:
         }
 
         // Set the setter
-        Option& operator=(Setter setter) { m_setter = setter; return *this; }
+        Option& operator=(fn_setter_t setter) { m_setter = setter; return *this; }
 
         // Calls the setter for given value
         void operator=(value_t value) const 
@@ -134,7 +134,7 @@ public:
         }
 
     private:
-        Setter m_setter;
+        fn_setter_t m_setter;
         Limits *m_limits;
     };
 
@@ -181,10 +181,46 @@ public:
      * @brief Get the `Limits` object
      */
     Limits& limits() { return m_limits; }
+    const Limits& limits() const { return m_limits; }
+
+\
+    friend bool operator==(const SearchOptions& lhs, const Limits& rhs)
+    {
+        return M_eq_limits(lhs.limits(), rhs);
+    }
+
+    // Compare the search options (only the limits)
+    friend bool operator==(const SearchOptions& lhs, const SearchOptions& rhs)
+    {
+        return M_eq_limits(lhs.limits(), rhs.limits());
+    }
 
 private:
     Limits m_limits;
     std::map<std::string, Option> m_options;
+
+    // Compare the limits
+    static bool M_eq_limits(const Limits& lhs_limits, const Limits& rhs_limits)
+    {
+        // Basic cmp of depth, nodes, mate, movetime, infinite
+        if (lhs_limits.depth != rhs_limits.depth ||
+            lhs_limits.nodes != rhs_limits.nodes ||
+            lhs_limits.mate != rhs_limits.mate ||
+            lhs_limits.ponder != rhs_limits.ponder ||
+            lhs_limits.time.movetime != rhs_limits.time.movetime ||
+            lhs_limits.time.infinite != rhs_limits.time.infinite )
+            return false;
+        
+        // Compare the time & increment limits
+        if (lhs_limits.time.time[0] != rhs_limits.time.time[0] ||
+            lhs_limits.time.time[1] != rhs_limits.time.time[1] ||
+            lhs_limits.time.inc[0] != rhs_limits.time.inc[0] ||
+            lhs_limits.time.inc[1] != rhs_limits.time.inc[1])
+            return false;
+        
+        // Limits are equal
+        return true;
+    }
 };
 
 } // namespace chess

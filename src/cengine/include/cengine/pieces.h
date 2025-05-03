@@ -57,7 +57,7 @@ namespace chess
         }
 
         /**
-         * @brief Get the type of a piece
+         * @brief Get the type of a piece (0 - empty, 1 - pawn, 2 - knight, 3 - king, 4 - bishop, 5 - rook, 6 - queen)
          */
         static constexpr int getType(const int& piece){
             return piece & pieceMask;

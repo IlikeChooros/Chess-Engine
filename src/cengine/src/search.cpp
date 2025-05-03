@@ -30,7 +30,7 @@ namespace chess
     /**
      * @brief Launch the search thread
      */
-    void Thread::start_thinking(Board& board, SearchCache& search_cache, Limits& limits)
+    void Thread::start_thinking(Board& board, SearchCache& search_cache, Limits limits)
     {
         if (m_thinking)
             stop();

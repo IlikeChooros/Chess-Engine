@@ -6,4 +6,21 @@ info depth 5 score cp 35 nodes 11491 time 51 nps 225313 pv b1c3 b8c6 g1f3 g8f6 d
 info depth 6 score cp 0 nodes 55030 time 228 nps 241359 pv b1c3 b8c6 g1f3 g8f6 d2d4 d7d5 
 bestmove b1c3
 Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 699050, info depth 1 score cp 50 nodes 21 time 1 nps 21000 pv b1c3 
+info depth 2 score cp 0 nodes 84 time 1 nps 84000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 610 time 3 nps 203333 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 2229 time 4 nps 557250 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 35 nodes 11491 time 14 nps 820785 pv b1c3 b8c6 g1f3 g8f6 d2d4 
+bestmove b1c3
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
+Transposition Table Info: Size: 699050, info depth 1 score cp 50 nodes 21 time 1 nps 21000 pv b1c3 
+info depth 2 score cp 0 nodes 84 time 1 nps 84000 pv b1c3 b8c6 
+info depth 3 score cp 50 nodes 610 time 3 nps 203333 pv b1c3 b8c6 g1f3 
+info depth 4 score cp 0 nodes 2229 time 5 nps 445800 pv b1c3 b8c6 g1f3 g8f6 
+info depth 5 score cp 35 nodes 11491 time 14 nps 820785 pv b1c3 b8c6 g1f3 g8f6 d2d4 
+info depth 6 score cp 0 nodes 55030 time 50 nps 1100600 pv b1c3 b8c6 g1f3 g8f6 d2d4 d7d5 
+info depth 7 score cp 30 nodes 377015 time 270 nps 1396351 pv e2e4 g8f6 e4e5 b8c6 e5f6 d7d5 f6e7 
+info depth 8 score cp 5 nodes 3188038 time 1988 nps 1603640 pv e2e4 b8c6 g1f3 e7e5 d2d4 e5d4 f3d4 g8f6 
+bestmove e2e4
+Board Info: FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1, Side to move: White, Fullmoves: 1, Halfmoves: 0, En passant: a8
 Transposition Table Info: Size: 699050, 
