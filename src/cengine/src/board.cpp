@@ -259,6 +259,7 @@ namespace chess
         std::string full_move;
         ss >> full_move;
         m_fullmove_counter = std::stoi(full_move);
+        m_fullmove_counter = std::max(1, m_fullmove_counter);
 
         m_captured_piece     = Piece::Empty;
         m_termination        = Termination::NONE;

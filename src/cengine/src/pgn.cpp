@@ -146,22 +146,23 @@ std::string PGN::pgn(chess::Board board)
     chess::StateList& history = board.history();
     chess::Board copy;
 
-    if (history.size() == 0)
+    if (history.size() <= 1)
         return pgn;
     
     // Setup the copy
     if (fields["FEN"] != "")
-        copy.loadFen(fields["FEN"]);
+        copy.loadFen(fields["FEN"].value);
     else
         copy.init();
 
     auto it = history.begin();
+    it++; // Null move
 
     // If the game started with black (the position was setup and black is to move)
     if (board.getSide() == chess::Piece::Black)
     {
         pgn += std::to_string(copy.fullmoveCounter()) + "... "; // skip for white
-        pgn += get_move_notation(copy, it->move); // black move
+        pgn += get_move_notation(copy, it->move) + " "; // black move
         it++;
     }
     
@@ -169,7 +170,7 @@ std::string PGN::pgn(chess::Board board)
     for(; it != history.end();)
     {
         // White move
-        pgn += std::to_string(copy.fullmoveCounter()) + ". ";
+        pgn += std::to_string(it->fullmove_counter) + ". ";
         pgn += get_move_notation(copy, it->move) + " ";
         it++;
 
@@ -182,7 +183,7 @@ std::string PGN::pgn(chess::Board board)
     }
 
     // Add the game result
-    pgn += fields["Result"];
+    pgn += fields["Result"].value;
 
     return pgn;
 }

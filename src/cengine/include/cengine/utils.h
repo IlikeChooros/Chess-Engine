@@ -6,6 +6,9 @@
 #include <chrono>
 #include <vector>
 #include <queue>
+#include <functional>
+#include <map>
+#include <list>
 #include <emmintrin.h>
 
 #include "types.h"
@@ -13,6 +16,125 @@
 
 namespace chess
 {
+
+// Argument parser class
+// This class is used to parse command line arguments for the chess engine
+class ArgParser
+{
+public:
+    typedef std::function<bool(std::string)>    validator_t;
+    typedef struct {
+        std::string name; 
+        std::string value;
+        validator_t validator; 
+        std::string description{};
+    } arg_t;
+    typedef std::list<arg_t>::iterator          arg_it_t;
+    typedef std::map<std::string, std::string>  arg_map_t;
+
+    static bool defaultValidator(std::string value) { return true; }
+
+    ArgParser() = default;
+    ArgParser(int argc, char** argv) : m_argc(argc), m_argv(argv) {}
+    
+    /**
+     * @brief Set the command line arguments
+     * @param argc Number of arguments
+     * @param argv Array of arguments
+     */
+    void setArgs(int argc, char** argv)
+    {
+        m_argc = argc;
+        m_argv = argv;
+    }
+    
+    /**
+     * @brief Add an argument to the parser
+     * @param name The name of the argument (e.g., "--fen")
+     * @param value The default value of the argument
+     * @param validator A function to validate the argument value
+     * @param description A description of the argument
+     */
+    void addArg(const std::string& name, const std::string& value = "", 
+                std::function<bool(std::string)> validator = defaultValidator, 
+                const std::string& description = "")
+    {
+        arg_t arg{name, value, validator, description};
+        m_args.push_back(arg);
+    }
+
+    /**
+     * @brief Parse the command line arguments, when '--help' is passed the program exits
+     * @return A vector of parsed arguments
+     */
+    std::map<std::string, std::string> parse()
+    {
+        m_args.push_back({"--help", "", defaultValidator, "Show this help message"});
+        for (int i = 1; i < m_argc; i++)
+        {
+            std::string arg = m_argv[i];
+            if (arg[0] == '-')
+            {
+                // Check if the argument is valid
+                auto it = std::find_if(m_args.begin(), m_args.end(), 
+                    [&arg](const arg_t& a) { return a.name == arg; });
+                
+                if (it != m_args.end())
+                {
+                    // Check if the argument has a value
+                    if (i + 1 < m_argc && m_argv[i + 1][0] != '-')
+                    {
+                        it->value = m_argv[++i];
+                        if (!it->validator(it->value))
+                        {
+                            std::cerr << "Invalid value for argument " << arg << ": " << it->value << "\n";
+                            exit(1);
+                        }
+                    }
+                    // boolean argument
+                    else
+                    {
+                        it->value = "true";
+                    }
+                }
+                else
+                {
+                    std::cerr << "Unknown argument: " << arg << "\n";
+                }
+            }
+        }
+
+        // Print help message if --help is passed
+        auto help_it = std::find_if(m_args.begin(), m_args.end(), 
+            [](const arg_t& a) { return a.name == "--help"; });
+
+        if (help_it != m_args.end() && !help_it->value.empty())
+        {
+            std::cout << "Usage: " << m_argv[0] << " [options]\n";
+            std::cout << "Options:\n";
+            
+            for (const auto& arg : m_args)
+            {
+                std::cout << "  " << arg.name << ": " << arg.description 
+                        << " (default="<< arg.value <<")" << "\n";
+            }
+            exit(0);
+        }
+
+        // Store the arguments in a map
+        std::map<std::string, std::string> parsed_args;
+        for (const auto& arg : m_args)
+            if (!arg.value.empty())
+                parsed_args[arg.name] = arg.value;
+        
+        return parsed_args;
+    }
+
+private:
+    int m_argc{0};
+    char** m_argv{nullptr};
+    std::list<arg_t> m_args;
+};
 
 /**
  * @brief Converts a square index to a string representation

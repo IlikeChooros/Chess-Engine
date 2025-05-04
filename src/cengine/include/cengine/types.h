@@ -24,5 +24,14 @@ enum NodeType
     nonPV
 };
 
+class squares
+{
+public:
+    static constexpr Square getSquare(int file, int rank)
+    {
+        return ((7 - rank) << 3) + file;
+    }
+};
+
 }
 

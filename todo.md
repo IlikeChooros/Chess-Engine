@@ -59,9 +59,10 @@ Code related:
 
 
 ### May 3
-- [ ] new console ui option as an argument (--ui), play against the computer
-- [ ] On startup with the --ui option, set the fen position (same as position arg), side of the player, and engine limits (without infinite)
-
+- [x] new console ui option as an argument (--ui), play against the computer
+- [x] On startup with the --ui option, set the fen position (same as position arg), side of the player, and engine limits (without infinite)
+- [x] Add arguments to the cmd line for --ui, --ui-fen, --ui-side, --ui-limits
+- [x] Way more interesting ui, with ansi escape codes
 
 # New matches
 
