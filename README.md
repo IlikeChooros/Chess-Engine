@@ -36,6 +36,26 @@ make -C build
 ./build/bin/ChessEngine
 ```
 
+You may also play with the `--ui` option to start the engine in a UI mode.
+(right now it is a console UI and you can only play against the engine)
+
+```sh
+./build/bin/ChessEngine --ui
+```
+
+You can also specify ahead `--fen`, `--side`, and `--limits` options to set the initial position, side of the player, and engine limits respectively, all of which are optional.
+
+For example:
+
+```sh
+./build/bin/ChessEngine --ui --fen startpos --side w --limits "movetime 1000"
+```
+
+Will result in a starting position, where your side is white, and the engine will have a time limit of 1 second.
+
+See the uci protocol for more details on these options.
+
+
 ## Test
 
 First build the project, only then run the tests.

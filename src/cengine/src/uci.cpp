@@ -51,16 +51,6 @@ namespace uci
         {"isready", "isready - Check if the engine is ready\n\n"},
         {"stop", "stop - Stop the search\n\n"},
         {"getfen", "getfen - Get the current FEN (unofficial)\n\n"},
-        // {"playgame",
-        //     "playgame <position> <your-side> <constraints> (unofficial)\n"
-        //     " - Play a game against the engine with simple console ui (see 'makemove' how to make moves')\n"
-        //     " - <position>: The position to play from, same as 'position' command\n"
-        //     " - <your-side>: The side to play as, by default it's current side, (w | white, b | black)\n"
-        //     " - <constraints>: The constraints for the engine, same as 'go' command, \n"
-        //     " by default set as 'movetime 3000' (infinite is illegal)\n"
-        //     "\tExample: 'playgame startpos w', play a game from the start position as white\n"
-        //     "Another one: 'playgame rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8 moves d7c8q b depth 5'\n"
-        // },
         {
             "makemove",
                 "makemove <move>\n"
@@ -78,7 +68,6 @@ namespace uci
             "debug\n"
             "position [startpos|fen <fen> [moves <move1> ... <moveN>]]\n"
             "makemove <move>\n"
-            "playgame <position> <your-side> <constraints>\n"
             "go [depth <depth> | nodes <nodes> | movetime <time> | wtime <time> | btime <time> | winc <time> | binc <time> | ponder | infinite]\n"
             "perft <depth>\n"
             "stop\n"
