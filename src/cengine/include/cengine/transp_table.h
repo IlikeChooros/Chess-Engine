@@ -40,13 +40,12 @@ struct TEntry : public DepthBasedEntry
     chess::Move bestMove;
 };
 
-// Transposition table class, implemented as a fixed size vector
-// T: Type of the entry (default is TEntry)
 
 template <typename T>
 concept isTTEntry = std::is_base_of<BaseTTEntry, T>::value;
 
-
+// Transposition table class, implemented as a fixed size vector
+// T: Type of the entry (default is TEntry)
 template <isTTEntry T>
 class TTable
 {
@@ -137,7 +136,7 @@ public:
 
 private:
 
-    // Will store the entry, based on age and depth replacment policy
+    // Will store the entry, based on age and depth replacement policy
     void M_store_depthbased(T& entry)
     {
         T& prev = get(entry.hash);

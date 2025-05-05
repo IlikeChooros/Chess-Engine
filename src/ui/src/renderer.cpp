@@ -116,7 +116,7 @@ void Renderer::render_engine_outputs(const chess::Result& result)
 
     // Print the engine move
     print(FG_LIGHT_GRAY, 
-        "Engine move: ", result.bestmove.uci()
+        "Engine move: ", result.bestmove.uci(), cursor_down(1)
     );
     flush();
 }

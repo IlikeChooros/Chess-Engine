@@ -58,11 +58,15 @@ Code related:
       - Draw: 36
 
 
-### May 3
+### May 3, 4, 5 2025
 - [x] new console ui option as an argument (--ui), play against the computer
 - [x] On startup with the --ui option, set the fen position (same as position arg), side of the player, and engine limits (without infinite)
 - [x] Add arguments to the cmd line for --ui, --ui-fen, --ui-side, --ui-limits
 - [x] Way more interesting ui, with ansi escape codes
+
+
+### Bugs
+- [ ] Detected a bug in the search, there is a chance that the engine will not find the best move, and make a clear blunder (losing a queen or a piece for no reason)
 
 # New matches
 

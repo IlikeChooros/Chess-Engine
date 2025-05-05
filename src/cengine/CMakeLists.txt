@@ -16,6 +16,7 @@ target_sources(cengine
         src/perft.cpp
         src/mailbox.cpp
         src/zobrist.cpp
+        src/utils.cpp
 )
 
 target_include_directories(cengine PUBLIC include)

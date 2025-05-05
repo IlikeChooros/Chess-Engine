@@ -1,37 +1,25 @@
 #pragma once
 
-#include "renderer.hpp"
-#include <cengine/cengine.h>
+#include "single_player.hpp"
+#include "analysis.hpp"
 
 UI_NAMESPACE_BEGIN
 
-class GameManager : public Renderer
+class GameManager : public BaseManager
 {
 public:
     GameManager() = default;
     void loop(int argc = 0, char** argv = nullptr);
 
 private:
-    typedef std::function<void(std::string)> callback_t;
+    typedef std::unique_ptr<BaseManager> manager_t;
 
-    std::string M_read_input();
-    void M_process_input(
-        const char* prompt, 
-        const char* error_msg,
-        callback_t validator 
-    );
-    void M_init();
-    void M_render();
+    void M_init() override;
+    void M_render() {} // empty
     void M_process_param_input(int argc = 0, char** argv = nullptr);
-    chess::ArgParser::arg_map_t M_process_arguments(int argc, char** argv);
-    void M_engine_move();
-    void M_player_move();
-    void M_render_gamesummary();
-
-    chess::Engine m_engine;
-    chess::SearchOptions m_options;
-    chess::Result m_result;
-    bool m_player_side{false}; // true for white, false for black
+    chess::ArgParser::arg_map_t M_process_arguments(int argc = 0, char** argv = nullptr);
+    
+    manager_t m_manager{nullptr};
 };
 
 

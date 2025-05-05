@@ -18,7 +18,6 @@ UI_NAMESPACE_BEGIN
 class Ansi
 {
     // Helper function to format strings with variable arguments
-    // Not thread-safe, use with caution
     static std::string FORMAT(const char* format, ...) {
         va_list args;
         va_start(args, format);
