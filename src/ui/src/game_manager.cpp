@@ -16,7 +16,7 @@ void GameManager::loop(int argc, char** argv)
         M_engine_move();
         std::cout << Ansi::CURSOR_HIDE;
         M_render();
-        M_render_engine_outputs();
+        render_engine_outputs(m_result);
     }
     
     // Main game loop
@@ -27,7 +27,7 @@ void GameManager::loop(int argc, char** argv)
         M_player_move();
         std::cout << Ansi::CURSOR_HIDE;
         M_render();
-        std::cout.flush(); // flush the output
+        flush(); // flush the output
         
         if (m_engine.m_board.isTerminated())
             break;
@@ -35,7 +35,7 @@ void GameManager::loop(int argc, char** argv)
         // Make the engine move
         M_engine_move();
         M_render();
-        M_render_engine_outputs();
+        render_engine_outputs(m_result);
     }
 
     // Print the final result
@@ -55,12 +55,22 @@ void GameManager::M_init()
 }
 
 /**
+ * @brief Read from standard input
+ */
+std::string GameManager::M_read_input()
+{
+    std::string input;
+    std::getline(std::cin, input);
+    return input;
+}
+
+/**
  * @brief Make the engine move
  */
 void GameManager::M_engine_move()
 {
     auto& res = m_engine.go(m_options);
-    int count = 0, inc = 1;
+    int count = 0, prevcount = 0, direction = 1;
 
     // Start the timer for the loading bar
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -69,30 +79,37 @@ void GameManager::M_engine_move()
 
         // Get the result
         m_result = m_engine.m_main_thread.get_result().get();
-        M_render_engine_line();
+        render_engine_line(m_result);
 
         // Print dots as a loading bar
+        // clear the previous dot
+        if (count != prevcount)
+            print<false, false>(
+                "\r[", cursor_forward(prevcount), ' ', '\r',
+                cursor_forward(max_dots_count + 1), ']');
+        
+        print<false, false>(
+            "\r[", cursor_forward(count), '.', '\r',
+            cursor_forward(max_dots_count + 1), ']');
+
+
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::high_resolution_clock::now() - start_time
         ).count();
-
+        
         // Check if the elapsed time is greater than the wait time
         if (elapsed > wait_dot_time)
         {
-            count += inc;
+            prevcount = count;
+            count += direction;
             start_time = std::chrono::high_resolution_clock::now();
         }
         
         // Change the direction of the dots
         if (count == max_dots_count - 1)
-            inc = -1;
+            direction = -1;
         else if (count == 0)
-            inc = 1;
-
-        // Print the moving dot
-        std::cout << "\r[" << std::string(count, ' ') << "." 
-                  << std::string(max_dots_count - count - 1, ' ') << "]";
-        std::cout.flush(); // flush the output
+            direction = 1;
     }
 
     // Make the move
@@ -103,20 +120,21 @@ void GameManager::M_render_gamesummary()
 {
     using namespace chess;
 
-    std::cout << "\n\n" << Ansi::BOLD << (
-        (!m_engine.m_board.turn() == m_player_side) ?  
-        Ansi::fg_rgb(157, 249, 169) + "You" : 
-        Ansi::fg_rgb(247, 140, 131) + "Engine")
-        << " won the game!\n" << Ansi::RESET;
+    print("\n", Ansi::BOLD, Ansi::UNDERLINE, "Game Summary\n\n");
+    print(Ansi::BOLD, 
+        ((!m_engine.m_board.turn() == m_player_side) ?
+        std::string(OK_FG) + "You" : 
+        std::string(ERROR_FG) + "Engine"),
+        " won the game!\n"
+    );
     
     // Ask if the user wants to see PGN 
     std::cout << "\nDo you want to see the PGN? (y/n) ";
-    std::string answer;
-    std::getline(std::cin, answer);
+    auto answer = M_read_input();
 
     if (answer == "y" || answer == "Y")
     {
-        std::cout << Ansi::BOLD << "\nPGN:\n\n" << Ansi::RESET;
+        print(Ansi::BOLD, "\nPGN:\n\n");
 
         PGN pgn;
         pgn.generate_fields(m_engine.m_board);
@@ -130,94 +148,25 @@ void GameManager::M_render_gamesummary()
 }
 
 /**
- * @brief Render the engine line: depth, eval, bestmove
- */
-void GameManager::M_render_engine_line()
-{
-    using namespace chess;
-    std::cout << "\r" << Ansi::fg_rgb(192, 192, 192) << std::string(max_dots_count + 3, ' ') << ": depth "
-        << m_result.depth << " eval ";
-
-    if (m_result.score.type == Score::mate)
-    {
-        std::cout << (m_result.score.value > 0 ? "M" : "-M") 
-            << std::abs(m_result.score.value);
-    }
-    else
-    {
-        std::cout << std::setprecision(2) << m_result.score.value / 100.0;
-    }
-
-    // Print the current best move
-    std::cout << " bestmove " << m_result.bestmove.uci() 
-        << Ansi::CLEAR_LINE_FROM_CURSOR << Ansi::RESET;
-}
-
-void GameManager::M_render_engine_outputs()
-{
-    if (m_result.bestmove == chess::Move::nullMove)
-        return;
-
-    // Print the final result with centered OK
-    M_render_engine_line();
-    std::cout << "\r" << Ansi::bg_rgb(4, 86, 15) << Ansi::fg_rgb(157, 249, 169) 
-        << "[" << std::string(max_dots_count / 2 - 1, ' ') 
-        << "OK" << std::string(max_dots_count / 2 - 1, ' ') << "]" 
-        << Ansi::RESET << "\n";
-
-    std::cout << Ansi::fg_rgb(192, 192, 192) 
-        << "Engine move: " << m_result.bestmove.uci() 
-        << Ansi::RESET << std::endl;
-}
-
-/**
  * @brief Read the input and make the valid move
  */
 void GameManager::M_player_move()
 {
     using namespace chess;
-    std::string move_input; // Renamed to avoid confusion with chess::Move
-    std::string error_msg = "";
+    M_process_input(
+        ">>> ",
+        "Invalid move:",
+        [this](std::string move_input) {
+            // Make the move if it's legal
+            Move m = m_engine.m_board.match(move_input);
+            if (m != Move::nullMove && m_engine.m_board.isLegal(m))
+                m_engine.m_board.makeMove(m);
 
-    do {
-        // Print prompt, move cursor to start, clear rest of line
-        std::cout << "\r>>> " << CLEAR_LINE_FROM_CURSOR;
-        std::cout.flush(); // Make sure prompt appears before waiting for input
-
-        if (!std::getline(std::cin, move_input)) {
-             // Handle EOF or input error if necessary
-             std::cerr << "\nInput stream error or EOF detected. Exiting." << std::endl;
-             exit(1);
+            // Else, throw an exception
+            else
+                throw std::invalid_argument(move_input);
         }
-
-        // Handle exit commands first
-        if (move_input == "exit" || move_input == "quit" || move_input == "q")
-        {
-            std::cout << "\nExiting...\n"; // Ensure newline before exit message
-            exit(0);
-        }
-
-        // Attempt to parse and validate the move
-        Move m = m_engine.board().match(move_input);
-        if (m != Move::nullMove && m_engine.board().isLegal(m))
-        {
-            m_engine.board().makeMove(m);
-            // Valid move made. Clear the input line entirely before returning.
-            std::cout << "\r" << CLEAR_LINE_FROM_CURSOR;
-            std::cout.flush();
-            break; // Exit the loop
-        }
-        else
-        {
-            // Invalid move. Print message. The cursor stays after the message.
-            // The next loop iteration will overwrite it starting with \r>>>
-            std::cout << Ansi::fg_rgb(247, 140, 131) << Ansi::bg_rgb(86, 11, 4) << "Invalid move:" <<
-                Ansi::BG_DEFAULT << " " << move_input << CLEAR_LINE_FROM_CURSOR << Ansi::RESET;
-            
-            // Go back up one line to overwrite the prompt
-            std::cout << "\r" << Ansi::cursor_up();
-        }
-    } while(true);
+    );
 }
 
 /**
@@ -257,135 +206,111 @@ chess::ArgParser::arg_map_t GameManager::M_process_arguments(int argc, char** ar
 }
 
 /**
+ * @brief Process the standard input, with messages
+ * @param prompt The prompt to display, e.g. "Enter your move: "
+ * @param validator The function to validate the input, should throw an exception on error
+ * @param error_msg The error message to display on invalid input
+ */
+void GameManager::M_process_input(
+    const char* prompt, 
+    const char* error_msg,
+    callback_t validator 
+)
+{
+    bool valid = true;
+    do 
+    {
+        valid = true;
+        print("\r", Ansi::BOLD, prompt);
+        flush();
+
+        auto input = M_read_input();
+        if (input == "exit" || input == "quit" || input == "q")
+        {
+            std::cout << "Exiting...\n"; // Ensure newline before exit message
+            exit(0);
+        }
+
+        // Call the validator function
+        try {
+            validator(input);
+        }
+        // Catch the error on invalid input, and display the error message
+        catch(const std::exception& e) {
+            valid = false;
+            print_error(error_msg, e.what());
+            // Go back up one line to overwrite the prompt
+            move_cursor_up();
+        }
+    } while(!valid);
+
+    move_cursor_up(1, true); // Clear the invalid input line
+}
+
+/**
  * @brief Process the input parameters (FEN, side, engine constraints)
  */
 void GameManager::M_process_param_input(int argc, char** argv)
 {
+    // Process the command line arguments
     auto args = M_process_arguments(argc, argv);
+
+    // Helper lambda function to check if an argument exists
     auto exists = [](chess::ArgParser::arg_map_t& args, const std::string& name) {
         return args.find(name) != args.end();
     };
 
-    if (exists(args, "--fen"))
-        m_engine.setPosition(args["--fen"]);
-
-    if (exists(args, "--side"))
-        m_player_side = (args["--side"] == "w");
-
-    if (exists(args, "--limits"))
-    {
-        std::istringstream iss(args["--limits"]);
-        m_options = uci::UCI::parseGoOptions(iss, false, false);
-    }
-
-    const auto error_fg = Ansi::fg_rgb(247, 140, 131);
-    const auto error_bg = Ansi::bg_rgb(86, 11, 4);
-
+    // Print out the version
     std::cout << "CEngine UCI ver " << global_settings.version << " with UI\n";
-    bool valid = true;
+
+    // Check if the user specified given parameters
     if (!exists(args, "--fen"))
     {
-        do 
-        {
-            std::cout << "\r" << Ansi::BOLD 
-                << "Enter the FEN string (or 'startpos' for the initial position): "
-                << CLEAR_LINE_FROM_CURSOR << Ansi::RESET;
-            std::cout.flush(); // flush the output
-
-            std::string fen;
-            std::getline(std::cin, fen);
-            valid = m_engine.setPosition(fen);
-
-            if (!valid)
-            {
-                std::cout << error_fg << error_bg 
-                    << "\rInvalid FEN string:" << Ansi::BG_DEFAULT 
-                    << " " << fen << CLEAR_LINE_FROM_CURSOR << Ansi::RESET;
-                
-                // Go back up one line to overwrite the prompt
-                std::cout << "\r" << Ansi::cursor_up();
+        // Use a lambda function to validate the FEN string
+        M_process_input(
+            "Enter the FEN string (or 'startpos' for the initial position): ", 
+            "Invalid FEN string:",
+            [this](std::string fen) {
+                if (!m_engine.setPosition(fen))
+                    throw std::runtime_error(fen);
             }
-
-        } while(!valid);
-
-        // Clear the invalid input line
-        std::cout << "\r" << Ansi::CLEAR_LINE_FROM_CURSOR;
-        std::cout << Ansi::cursor_up();
-        std::cout.flush(); // flush the output
+        );
+    } else {
+        m_engine.setPosition(args["--fen"]);
     }
 
     if (!exists(args, "--side"))
     {
-        do
-        {
-            valid = true;
-            std::cout << "\r" << Ansi::BOLD 
-                << "Enter your side (w/b): " 
-                << CLEAR_LINE_FROM_CURSOR << Ansi::RESET;
-            std::cout.flush(); // flush the output
-
-            std::string side;
-            std::getline(std::cin, side);
-
-            // Should be either 'w', 'b', 'white' or 'black'
-            if (side == "w" || side == "white")
-                m_player_side = 1;
-            else if (side == "b" || side == "black")
-                m_player_side = 0;
-            else
-            {
-                valid = false;
-
-                // Print error message
-                std::cout << error_fg << error_bg 
-                    << "\rInvalid side:" << Ansi::BG_DEFAULT 
-                    << " " << side << CLEAR_LINE_FROM_CURSOR << Ansi::RESET;
-                
-                // Go back up one line to overwrite the prompt
-                std::cout << "\r" << Ansi::cursor_up();
+        M_process_input(
+            "Enter your side (w/b): ",
+            "Invalid side:",
+            [this](std::string side) {
+                if (side == "w" || side == "white")
+                    m_player_side = 1;
+                else if (side == "b" || side == "black")
+                    m_player_side = 0;
+                else
+                    throw std::runtime_error(side);
             }
-        } while (!valid);
-
-        std::cout << "\r" << Ansi::CLEAR_LINE_FROM_CURSOR;
-        std::cout << Ansi::cursor_up();
-        std::cout.flush(); // flush the output
+        );
+    } else {
+        m_player_side = (args["--side"] == "w");
     }
 
     if (!exists(args, "--limits"))
     {
-        do
-        {
-            valid = true;
-            std::cout << "\r" << BOLD << "Enter the constraints: " 
-                << CLEAR_LINE_FROM_CURSOR << Ansi::RESET;
-            std::cout.flush(); // flush the output
-            
-            std::string constraints;
-            std::getline(std::cin, constraints);
-            std::istringstream iss(constraints);
-            
-            try {
+        M_process_input(
+            "Enter the constraints: ",
+            "Invalid constraints:",
+            [this](std::string constraints) {
+                std::istringstream iss(constraints);
                 m_options = uci::UCI::parseGoOptions(iss, false, false);
             }
-            catch(std::exception& e) {
-
-                std::cout << error_fg << error_bg 
-                    << "\rInvalid constraints:" << Ansi::BG_DEFAULT 
-                    << " " << e.what() << CLEAR_LINE_FROM_CURSOR << Ansi::RESET;
-                
-                // Go back up one line to overwrite the prompt
-                std::cout << "\r" << Ansi::cursor_up();
-                
-                valid = false;
-            }
-            
-        } while (!valid);
-
-        // Clear the invalid input line
-        std::cout << "\r" << Ansi::CLEAR_LINE_FROM_CURSOR;
-        std::cout << Ansi::cursor_up();
-        std::cout.flush(); // flush the output
-    } 
+        );
+    } else {
+        std::istringstream iss(args["--limits"]);
+        m_options = uci::UCI::parseGoOptions(iss, false, false);
+    }
 }
 
 /**
@@ -393,7 +318,7 @@ void GameManager::M_process_param_input(int argc, char** argv)
  */
 void GameManager::M_render()
 {
-    render(m_engine.board(), m_player_side);
+    render_board(m_engine.board(), m_player_side);
 }
 
 

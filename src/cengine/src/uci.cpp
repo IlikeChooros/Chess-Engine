@@ -195,6 +195,8 @@ namespace uci
      * - binc <time>: Black increment in milliseconds (not supprted yet)
      * - ponder: Ponder the best move (not supported yet)
      * - infinite: Search indefinitely
+     * 
+     * Throws `std::runtime_error` if the command is invalid
     */
     chess::SearchOptions UCI::parseGoOptions(std::istringstream& iss, bool allow_infinite, bool allow_perft)
     {

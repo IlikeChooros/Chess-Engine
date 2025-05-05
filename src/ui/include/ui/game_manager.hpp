@@ -1,25 +1,30 @@
 #pragma once
 
-#include "board_renderer.hpp"
+#include "renderer.hpp"
 #include <cengine/cengine.h>
 
 UI_NAMESPACE_BEGIN
 
-class GameManager : public BoardRenderer
+class GameManager : public Renderer
 {
 public:
     GameManager() = default;
     void loop(int argc = 0, char** argv = nullptr);
-private:
-    static constexpr int max_dots_count = 6, wait_dot_time = 150; // in ms
 
+private:
+    typedef std::function<void(std::string)> callback_t;
+
+    std::string M_read_input();
+    void M_process_input(
+        const char* prompt, 
+        const char* error_msg,
+        callback_t validator 
+    );
     void M_init();
     void M_render();
     void M_process_param_input(int argc = 0, char** argv = nullptr);
     chess::ArgParser::arg_map_t M_process_arguments(int argc, char** argv);
     void M_engine_move();
-    void M_render_engine_line();
-    void M_render_engine_outputs();
     void M_player_move();
     void M_render_gamesummary();
 

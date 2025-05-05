@@ -1,4 +1,4 @@
-#include <ui/board_renderer.hpp>
+#include <ui/renderer.hpp>
 
 
 UI_NAMESPACE_BEGIN
@@ -8,30 +8,30 @@ const char* CURSOR_HOME = "\033[H";
 // Optional: ANSI escape code to clear the entire screen
 const char* CLEAR_SCREEN = "\033[2J";
 
-void BoardRenderer::render(const chess::Board& board, bool side, std::ostream& os)
+void Renderer::render_board(const chess::Board& board, bool side)
 {
     using namespace chess;
 
     // --- Add this at the beginning ---
     // Option 1: Move cursor home (less flicker)
-    os << CURSOR_HOME;
+    std::cout << CURSOR_HOME;
     // Option 2: Clear screen and move cursor home
-    // os << CLEAR_SCREEN << CURSOR_HOME;
+    // std::cout << CLEAR_SCREEN << CURSOR_HOME;
     // ---------------------------------
 
     int increment = side ? -1 : 1;
     int start = side ? 7 : 0;
 
-    os << (side ? "  a b c d e f g h  \n" : "  h g f e d c b a  \n"); // Added padding for potential overwrite issues ); // Added padding for potential overwrite issues
-    os << " +----------------+ \n";
+    std::cout << (side ? "  a b c d e f g h  \n" : "  h g f e d c b a  \n"); // Added padding for potential overwrite issues ); // Added padding for potential overwrite issues
+    std::cout << " +----------------+ \n";
     for (int i = start; (side) ? i >= 0 : i <= 7; i += increment)
     {
-        renderLine(board, i, side, os);
+        renderLine(board, i, side, std::cout);
     }
-    os << " +----------------+ \n";
+    std::cout << " +----------------+ \n";
 }
 
-void BoardRenderer::renderLine(const chess::Board& board, int row, bool side, std::ostream& os)
+void Renderer::renderLine(const chess::Board& board, int row, bool side, std::ostream& os)
 {
     using namespace chess;
 
@@ -75,6 +75,50 @@ void BoardRenderer::renderLine(const chess::Board& board, int row, bool side, st
         }
     }
     os << "| \n";
+}
+
+void Renderer::render_engine_line(const chess::Result& result)
+{
+    using namespace chess;
+    print<false, false>('\r', M_make_spaces(max_dots_count + 3), FG_LIGHT_GRAY, ": depth ", result.depth, " eval ");
+
+    if (result.score.type == Score::mate)
+    {
+        print<false, false>(
+            (result.score.value > 0 ? "M" : "-M"), 
+            std::abs(result.score.value)
+        );
+    }
+    else
+    {
+        print<false, false>(
+            " ", std::setprecision(2), 
+            result.score.value / 100.0
+        );
+    }
+
+    // Print the current best move
+    print(" bestmove ", result.bestmove.uci());
+}
+
+void Renderer::render_engine_outputs(const chess::Result& result)
+{
+    if (result.bestmove == chess::Move::nullMove)
+        return;
+
+    // Print the final result with centered OK
+    render_engine_line(result);
+    print<false, false>('\r', OK_BG, OK_FG, "[", M_make_spaces(max_dots_count), "]");
+
+    // move the cursor to the center, print OK, and move down
+    print<false>('\r', cursor_forward(max_dots_count / 2), "OK");
+    print<false, false>('\r', cursor_down(1));
+
+    // Print the engine move
+    print(FG_LIGHT_GRAY, 
+        "Engine move: ", result.bestmove.uci()
+    );
+    flush();
 }
 
 UI_NAMESPACE_END
