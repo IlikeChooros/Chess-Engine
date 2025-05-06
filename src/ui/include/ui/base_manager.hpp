@@ -78,6 +78,9 @@ protected:
     // Checks if the --limits and --fen options are set
     void M_process_game_options(arg_map_t& args);
 
+    // Ask the user for a move
+    void M_player_move();
+
     chess::Engine m_engine;
     chess::SearchOptions m_options;
     chess::Result m_result;

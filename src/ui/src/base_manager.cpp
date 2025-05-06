@@ -10,17 +10,7 @@ UI_NAMESPACE_BEGIN
  */
 void ChessManager::M_add_base_engine_options(arg_parser_t& parser)
 {
-    // parser.addArg("--hash", "16", 
-    //     chess::ArgParser::intValidator, 
-    //         "Hash size in MB (default: 128)");
 
-    // parser.addArg("--logfile", "", 
-    //     chess::ArgParser::stringValidator, 
-    //         "Log file name");
-
-    // parser.addArg("--threads", "1", 
-    //     chess::ArgParser::intValidator, 
-    //         "Number of threads (default: 1)");
 }
 
 void ChessManager::M_process_engine_options(chess::ArgParser::arg_map_t& args)
@@ -69,8 +59,6 @@ void ChessManager::M_add_base_game_options(arg_parser_t& parser)
  */
 void ChessManager::M_process_game_options(arg_map_t& args)
 {
-    using namespace chess;
-
     // Check if the user specified given parameters
     if (!args.exists("--fen"))
     {
@@ -103,6 +91,28 @@ void ChessManager::M_process_game_options(arg_map_t& args)
         std::istringstream iss(args.get<std::string>("--limits"));
         m_options = uci::UCI::parseGoOptions(iss, false, false);
     }
+}
+
+/**
+ * @brief Ask the user for a move and makes it, if invalid displays an error
+ */
+void ChessManager::M_player_move()
+{
+    using namespace chess;
+    M_process_input(
+        ">>> ",
+        "Invalid move:",
+        [this](std::string move_input) {
+            // Make the move if it's legal
+            Move m = m_engine.m_board.match(move_input);
+            if (m != Move::nullMove && m_engine.m_board.isLegal(m))
+                m_engine.m_board.makeMove(m);
+
+            // Else, throw an exception
+            else
+                throw std::invalid_argument(move_input);
+        }
+    );
 }
 
 // BASE MANAGER

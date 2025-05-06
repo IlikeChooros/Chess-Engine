@@ -3,11 +3,6 @@
 
 UI_NAMESPACE_BEGIN
 
-// ANSI escape code to move cursor to top-left corner
-const char* CURSOR_HOME = "\033[H";
-// Optional: ANSI escape code to clear the entire screen
-const char* CLEAR_SCREEN = "\033[2J";
-
 void Renderer::render_board(const chess::Board& board, bool side)
 {
     using namespace chess;
@@ -31,6 +26,9 @@ void Renderer::render_board(const chess::Board& board, bool side)
     std::cout << " +----------------+ \n";
 }
 
+/**
+ * @brief Render a single line (row) of the chess board
+ */
 void Renderer::renderLine(const chess::Board& board, int row, bool side, std::ostream& os)
 {
     using namespace chess;
@@ -77,13 +75,19 @@ void Renderer::renderLine(const chess::Board& board, int row, bool side, std::os
     os << "| \n";
 }
 
-void Renderer::render_engine_line(const chess::Result& result)
+/**
+ * @brief Render engine search result with left padding. Prints
+ * the depth, evaluation score, and best move
+ */
+void Renderer::render_engine_line(const chess::Result& result, bool pv)
 {
     using namespace chess;
     print<false, false>('\r', M_make_spaces(max_dots_count + 3), FG_LIGHT_GRAY, ": depth ", result.depth, " eval ");
 
+    // Format the score
     if (result.score.type == Score::mate)
     {
+        // Mate score, print as "M" or "-M"
         print<false, false>(
             (result.score.value > 0 ? "M" : "-M"), 
             std::abs(result.score.value)
@@ -91,6 +95,7 @@ void Renderer::render_engine_line(const chess::Result& result)
     }
     else
     {
+        // Centipawn score, print as a decimal value
         print<false, false>(
             " ", std::setprecision(2), 
             result.score.value / 100.0
@@ -98,16 +103,28 @@ void Renderer::render_engine_line(const chess::Result& result)
     }
 
     // Print the current best move
-    print(" bestmove ", result.bestmove.uci());
+    if (!pv)
+        print(" bestmove ", result.bestmove.uci());
+    else
+    {
+        // Print the principal variation
+        print<false, false>(" pv ");
+        for(auto i = 0; i < result.pv.size(); i++) {
+            print<false, false>(result.pv[i].uci(), ' ');
+        }
+    }
 }
 
-void Renderer::render_engine_outputs(const chess::Result& result)
+/**
+ * @brief Render engine outputs after successful search.
+ */
+void Renderer::render_engine_outputs(const chess::Result& result, bool pv)
 {
     if (result.bestmove == chess::Move::nullMove)
         return;
 
     // Print the final result with centered OK
-    render_engine_line(result);
+    render_engine_line(result, pv);
     print<false, false>('\r', OK_BG, OK_FG, "[", M_make_spaces(max_dots_count), "]");
 
     // move the cursor to the center, print OK, and move down

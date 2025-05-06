@@ -172,28 +172,6 @@ void SinglePlayer::M_render_gamesummary()
 }
 
 /**
- * @brief Read the input and make the valid move
- */
-void SinglePlayer::M_player_move()
-{
-    using namespace chess;
-    M_process_input(
-        ">>> ",
-        "Invalid move:",
-        [this](std::string move_input) {
-            // Make the move if it's legal
-            Move m = m_engine.m_board.match(move_input);
-            if (m != Move::nullMove && m_engine.m_board.isLegal(m))
-                m_engine.m_board.makeMove(m);
-
-            // Else, throw an exception
-            else
-                throw std::invalid_argument(move_input);
-        }
-    );
-}
-
-/**
  * @brief Process the input parameters (FEN, side, engine constraints)
  */
 void SinglePlayer::M_process_param_input(chess::ArgParser::arg_map_t& args)
@@ -224,8 +202,7 @@ void SinglePlayer::M_process_param_input(chess::ArgParser::arg_map_t& args)
     }
 
     // Remove 3 lines (version, input, error msg)
-    std::cout << CURSOR_HOME;
-    print<false, false>('\r', 
+    print<false, false>(CURSOR_HOME, '\r', 
         CLEAR_LINE_FROM_CURSOR, '\n', 
         CLEAR_LINE_FROM_CURSOR, '\n', 
         CLEAR_LINE_FROM_CURSOR, '\n', 

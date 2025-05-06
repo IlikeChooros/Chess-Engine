@@ -428,6 +428,7 @@ public:
      * @brief Get the move at the given index
      */
     inline Move operator[](size_t i) {return Move(moves[i]);}
+    inline Move operator[](size_t i) const {return Move(moves[i]);}
 
     // Iterator functions
     inline iterator begin() {return iterator(moves);}

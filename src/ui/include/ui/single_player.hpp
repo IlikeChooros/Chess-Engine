@@ -20,7 +20,6 @@ private:
     void M_process_param_input(arg_map_t& map) override;
 
     void M_engine_move();
-    void M_player_move();
     void M_render_gamesummary();
 
     bool m_player_side{false};

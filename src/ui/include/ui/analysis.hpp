@@ -9,7 +9,6 @@ class Analysis : public ChessManager
 public:
     Analysis() = default;
     void loop(chess::ArgParser::arg_map_t&) override;
-    void clear() override;
 
     static void add_args(chess::ArgParser& parser);
 private:

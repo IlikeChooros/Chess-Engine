@@ -24,8 +24,8 @@ public:
     ~Renderer() = default;
 
     static void render_board(const chess::Board& board, bool side = 1);
-    static void render_engine_line(const chess::Result& result);
-    static void render_engine_outputs(const chess::Result& result);
+    static void render_engine_line(const chess::Result& result, bool pv = false);
+    static void render_engine_outputs(const chess::Result& result, bool pv = false);
 
     // Flush the output
     static void flush()
