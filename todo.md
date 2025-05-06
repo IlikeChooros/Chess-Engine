@@ -63,10 +63,13 @@ Code related:
 - [x] On startup with the --ui option, set the fen position (same as position arg), side of the player, and engine limits (without infinite)
 - [x] Add arguments to the cmd line for --ui, --ui-fen, --ui-side, --ui-limits
 - [x] Way more interesting ui, with ansi escape codes
-
+- [x] Make a better arg parser, with new types: boolean, int, string, list
+- [ ] Analysis mode
+- [ ] Fix the Game Summary in single player mode (wait for the user to press enter or smth)
 
 ### Bugs
 - [ ] Detected a bug in the search, there is a chance that the engine will not find the best move, and make a clear blunder (losing a queen or a piece for no reason)
+
 
 # New matches
 

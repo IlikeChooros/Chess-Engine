@@ -3,24 +3,9 @@
 
 UI_NAMESPACE_BEGIN
 
-void Analysis::loop(int argc, char** argv)
+void Analysis::loop(arg_map_t& args)
 {
-    M_loop_setup(argc, argv);
-}
-
-void Analysis::M_init()
-{
-    BaseManager::M_init();
-
-    // Add the default argument
-    m_parser.addArg("--analysis", "true", 
-        chess::ArgParser::defaultValidator, 
-            "Enable the single player mode (default: true)");
-}
-
-void Analysis::M_render()
-{
-    // Empty implementation
+    M_loop_setup(args);
 }
 
 void Analysis::clear()
@@ -28,21 +13,32 @@ void Analysis::clear()
     BaseManager::clear();
 }
 
-void Analysis::M_process_param_input(int argc, char** argv)
+void Analysis::add_args(chess::ArgParser& parser)
 {
-    // Process the command line arguments
-    auto args = M_process_arguments(argc, argv);
+    // Add --fen, --limits
+    M_add_base_game_options(parser);
+}
 
+void Analysis::M_render()
+{
+    // Empty implementation
+}
+
+
+
+
+void Analysis::M_process_param_input(chess::ArgParser::arg_map_t& map)
+{
     // Check if --fen or --limits were specified
-    M_process_game_options(args);
+    M_process_game_options(map);
 }
 
-chess::ArgParser::arg_map_t Analysis::M_process_arguments(int argc, char** argv)
-{
-    m_parser.setArgs(argc, argv);
-    // Adds --fen and --limits
-    M_add_base_game_options();
-    return m_parser.parse();
-}
+// chess::ArgParser::arg_map_t Analysis::M_process_arguments(int argc, char** argv)
+// {
+//     m_parser.setArgs(argc, argv);
+//     // Adds --fen and --limits
+//     M_add_base_game_options();
+//     return m_parser.parse();
+// }
 
 UI_NAMESPACE_END

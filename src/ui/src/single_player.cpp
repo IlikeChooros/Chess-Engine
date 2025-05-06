@@ -3,9 +3,9 @@
 
 UI_NAMESPACE_BEGIN
 
-void SinglePlayer::loop(int argc, char** argv)
+void SinglePlayer::loop(arg_map_t& args)
 {
-    M_loop_setup(argc, argv);
+    M_loop_setup(args);
 
     if (m_player_side != m_engine.m_board.turn())
     {
@@ -41,6 +41,41 @@ void SinglePlayer::loop(int argc, char** argv)
 }
 
 /**
+ * @brief Clear the screen
+ */
+void SinglePlayer::clear()
+{
+    BaseManager::clear();
+}
+
+/**
+ * @brief Add the command line arguments (--fen, --limits, --side)
+ */
+void SinglePlayer::add_args(chess::ArgParser& parser)
+{
+    // Add --fen, --limits
+    M_add_base_game_options(parser);
+
+
+    parser.add_argument({"--side"}, {
+        .required = false,
+        .help_message = "Set the player side (w/b)",
+        .default_value = "",
+        .type = chess::ArgParser::STRING,
+        .validator = [](std::string value) {
+            return value == "w" || value == "b" || 
+                   value == "white" || value == "black";
+        },
+        .action = [](chess::ArgParser::arg_value_t& value, std::string arg) {
+            if (arg == "w" || arg == "white")
+                value = true;
+            else if (arg == "b" || arg == "black")
+                value = false;
+        }
+    });
+}
+
+/**
  * @brief Render the board
  */
 void SinglePlayer::M_render()
@@ -48,13 +83,6 @@ void SinglePlayer::M_render()
     render_board(m_engine.board(), m_player_side);
 }
 
-/**
- * @brief Clear the screen
- */
-void SinglePlayer::clear()
-{
-    BaseManager::clear();
-}
 
 /**
  * @brief Make the engine move
@@ -167,39 +195,17 @@ void SinglePlayer::M_player_move()
 
 /**
  * @brief Process the input parameters (FEN, side, engine constraints)
- * @param argc Number of arguments
- * @param argv Array of arguments
  */
-chess::ArgParser::arg_map_t SinglePlayer::M_process_arguments(int argc, char** argv)
-{
-    m_parser.setArgs(argc, argv);
-
-    // Add --fen, --limits
-    M_add_base_game_options();
-
-    m_parser.addArg("--side", "", 
-        [](std::string side) { return side == "w" || side == "b"; }, 
-            "Player side (w/b)");
-
-    return m_parser.parse(); 
-}
-
-/**
- * @brief Process the input parameters (FEN, side, engine constraints)
- */
-void SinglePlayer::M_process_param_input(int argc, char** argv)
+void SinglePlayer::M_process_param_input(chess::ArgParser::arg_map_t& args)
 {
     using namespace chess;
-
-    // Process the command line arguments
-    auto args = M_process_arguments(argc, argv);
 
     // Print out the version
     std::cout << "CEngine UCI ver " << global_settings.version << " with UI\n";
 
     M_process_game_options(args);
 
-    if (!ArgParser::exists("--side", args))
+    if (!args.exists("--side"))
     {
         M_process_input(
             "Enter your side (w/b): ",
@@ -214,7 +220,7 @@ void SinglePlayer::M_process_param_input(int argc, char** argv)
             }
         );
     } else {
-        m_player_side = (args["--side"] == "w");
+        m_player_side = args.get<bool>("--side");
     }
 
     // Remove 3 lines (version, input, error msg)

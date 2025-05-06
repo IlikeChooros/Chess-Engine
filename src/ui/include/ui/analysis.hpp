@@ -8,14 +8,14 @@ class Analysis : public ChessManager
 {
 public:
     Analysis() = default;
-    void loop(int argc = 0, char** argv = nullptr) override;
+    void loop(chess::ArgParser::arg_map_t&) override;
     void clear() override;
+
+    static void add_args(chess::ArgParser& parser);
 private:
 
-    void M_init() override;
     void M_render();
-    void M_process_param_input(int argc = 0, char** argv = nullptr);
-    chess::ArgParser::arg_map_t M_process_arguments(int argc, char** argv);
+    void M_process_param_input(arg_map_t& map) override;
 };
 
 UI_NAMESPACE_END

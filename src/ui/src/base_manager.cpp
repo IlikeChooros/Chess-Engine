@@ -8,14 +8,19 @@ UI_NAMESPACE_BEGIN
 /**
  * @brief Adds --hash, --logfile, --threads options to the parser
  */
-void ChessManager::M_add_base_engine_options()
+void ChessManager::M_add_base_engine_options(arg_parser_t& parser)
 {
-    m_parser.addArg("--hash", "16", 
-        chess::ArgParser::intValidator, 
-            "Hash size in MB (default: 16)");
-    m_parser.addArg("--logfile", "", 
-        chess::ArgParser::stringValidator, 
-            "Log file path");
+    // parser.addArg("--hash", "16", 
+    //     chess::ArgParser::intValidator, 
+    //         "Hash size in MB (default: 128)");
+
+    // parser.addArg("--logfile", "", 
+    //     chess::ArgParser::stringValidator, 
+    //         "Log file name");
+
+    // parser.addArg("--threads", "1", 
+    //     chess::ArgParser::intValidator, 
+    //         "Number of threads (default: 1)");
 }
 
 void ChessManager::M_process_engine_options(chess::ArgParser::arg_map_t& args)
@@ -26,35 +31,48 @@ void ChessManager::M_process_engine_options(chess::ArgParser::arg_map_t& args)
 /**
  * @brief Adds --limits and --fen options to the parser
  */
-void ChessManager::M_add_base_game_options()
+void ChessManager::M_add_base_game_options(arg_parser_t& parser)
 {
-    m_parser.addArg("--limits", "",
-        [](std::string limits) { 
-            std::istringstream iss(limits);
+    // Add the limits argument
+    parser.add_argument({"--limits", "-l"}, {
+        .required = false,
+        .help_message = "Set the engine search limits (e.g. \"movetime 1000 depth 5\")",
+        .default_value = "",
+        .type = arg_parser_t::STRING,
+        .validator = [](std::string value) {
+            // Check if the value is valid
+            std::istringstream iss(value);
             try {
                 uci::UCI::parseGoOptions(iss, false, false);
                 return true;
-            }
-            catch(...) {}
+            } catch (...) {}
             return false;
-         }, 
-            "Engine constraints (e.g. \"movetime 1000 depth 5\")");
+        }
+    });
 
-    m_parser.addArg("--fen", "", 
-        [](std::string fen) { return chess::Board().loadFen(fen); }, 
-            "FEN string or 'startpos', support moves as well");
+    // Add the FEN argument
+    parser.add_argument({"--fen", "-f"}, {
+        .required = false,
+        .help_message = "Set the FEN string (or 'startpos' for the initial position)",
+        .default_value = "",
+        .type = arg_parser_t::STRING,
+        .validator = [](std::string value) {
+            // Check if the value is valid
+            return chess::Board().loadFen(value);
+        }
+    });
 }
 
 /**
  * @brief Process the input parameters (FEN, engine constraints), if one of them is not set,
  * ask the user for input
  */
-void ChessManager::M_process_game_options(chess::ArgParser::arg_map_t& args)
+void ChessManager::M_process_game_options(arg_map_t& args)
 {
     using namespace chess;
 
     // Check if the user specified given parameters
-    if (!ArgParser::exists("--fen", args))
+    if (!args.exists("--fen"))
     {
         // Use a lambda function to validate the FEN string
         M_process_input(
@@ -66,11 +84,11 @@ void ChessManager::M_process_game_options(chess::ArgParser::arg_map_t& args)
             }
         );
     } else {
-        m_engine.setPosition(args["--fen"]);
+        m_engine.setPosition(args.get<std::string>("--fen"));
     }
 
     // Check if limits were specified
-    if (!ArgParser::exists("--limits", args))
+    if (!args.exists("--limits"))
     {
         M_process_input(
             "Enter the constraints: ",
@@ -82,7 +100,7 @@ void ChessManager::M_process_game_options(chess::ArgParser::arg_map_t& args)
             }
         );
     } else {
-        std::istringstream iss(args["--limits"]);
+        std::istringstream iss(args.get<std::string>("--limits"));
         m_options = uci::UCI::parseGoOptions(iss, false, false);
     }
 }
@@ -90,25 +108,11 @@ void ChessManager::M_process_game_options(chess::ArgParser::arg_map_t& args)
 // BASE MANAGER
 
 /**
- * @brief Initialize the engine with base position
- */
-void BaseManager::M_init()
-{
-    m_engine.setPosition();
-
-    // Add the default argument
-    m_parser.addArg("--ui", "true", 
-        chess::ArgParser::defaultValidator, 
-            "Enable the UI (default: true)");
-}
-
-/**
  * @brief Setup the game loop with the given parameters
  */
-void BaseManager::M_loop_setup(int argc, char** argv)
+void BaseManager::M_loop_setup(arg_map_t& args)
 {
-    M_init();
-    M_process_param_input(argc, argv);
+    M_process_param_input(args);
     M_render();
 }
 

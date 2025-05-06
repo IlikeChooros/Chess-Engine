@@ -4,12 +4,18 @@ UI_NAMESPACE_BEGIN
 
 void GameManager::loop(int argc, char** argv)
 {
-    M_loop_setup(argc, argv);
+    // Initialize the UI
+    M_init();
+    m_parser.setArgs(argc, argv);
+    auto args = m_parser.parse();
+    M_process_param_input(args);
     clear();
 
     // Run the manager
     if (m_manager)
-        m_manager->loop(argc, argv);
+    {
+        m_manager->loop(args);
+    }
     else
         throw std::runtime_error("No manager selected");
 }
@@ -23,58 +29,57 @@ void GameManager::M_init()
     glogger.setPrint(false);
     glogger.setLog(false);
 
-    BaseManager::M_init();
+    m_parser.add_argument({"--ui"}, {
+        .required = true,
+        .help_message = "Enable the UI (default: false)",
+        .default_value = "",
+        .type = chess::ArgParser::BOOL,
+        .validator = chess::ArgParser::booleanValidator,
+        .action = chess::ArgParser::storeTrue
+    });
 
-    m_parser.addArg("--singleplayer", "",
-        chess::ArgParser::booleanValidator,
-        "Play against the engine");
+    m_parser.add_argument({"--singleplayer", "-s"}, {
+        .required = false,
+        .help_message = "Play against the engine",
+        .default_value = "",
+        .type = chess::ArgParser::BOOL,
+        .validator = chess::ArgParser::booleanValidator,
+        .action = chess::ArgParser::storeTrue
+    });
 
-    m_parser.addArg("--analysis", "",
-        chess::ArgParser::booleanValidator,
-        "Analyze the position with the engine");
-}
+    m_parser.add_argument({"--analysis", "-a"}, {
+        .required = false,
+        .help_message = "Analyze the position with the engine",
+        .default_value = "",
+        .type = chess::ArgParser::BOOL,
+        .validator = chess::ArgParser::booleanValidator,
+        .action = chess::ArgParser::storeTrue
+    });
 
-/**
- * @brief Process the command line arguments
- */
-chess::ArgParser::arg_map_t GameManager::M_process_arguments(int argc, char** argv)
-{
-    m_parser.setArgs(argc, argv);
-
-    m_parser.addArg("--singleplayer", "",
-        chess::ArgParser::booleanValidator,
-        "Play against the engine");
-
-    m_parser.addArg("--analysis", "",
-        chess::ArgParser::booleanValidator,
-        "Analyze the position with the engine");
-
-    return m_parser.parse();
+    Analysis::add_args(m_parser);
+    SinglePlayer::add_args(m_parser);
 }
 
 /**
  * @brief Process the input parameters (FEN, side, engine constraints)
  */
-void GameManager::M_process_param_input(int argc, char** argv)
+void GameManager::M_process_param_input(arg_map_t& args)
 {
     using namespace chess;
-
-    // Process the command line arguments
-    auto args = M_process_arguments(argc, argv);
 
     // Print out the version
     std::cout << "CEngine UCI ver " << global_settings.version << " with UI\n";
 
     // Check if the user specified given parameters
-    if (ArgParser::exists("--singleplayer", args))
+    if (args.exists("--singleplayer"))
         m_manager = std::make_unique<SinglePlayer>();
-    else if (ArgParser::exists("--analysis", args))
+    else if (args.exists("--analysis"))
         m_manager = std::make_unique<Analysis>();
     else 
     {
         // Ask the user for the mode
         M_process_input(
-            "Select the mode (singleplayer/analysis (s/a)): ",
+            "Select the mode (singleplayer/analysis, s/a): ",
             "Invalid mode",
             [this](std::string input) {
                 if (input == "a" || input == "analysis")

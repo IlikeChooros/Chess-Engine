@@ -14,6 +14,8 @@ UI_NAMESPACE_BEGIN
 class BaseManager : public Renderer
 {
 public:
+    typedef chess::ArgParser::arg_map_t arg_map_t;
+    typedef chess::ArgParser arg_parser_t;
 
     BaseManager() = default;
     BaseManager(const BaseManager&) = delete;
@@ -25,7 +27,7 @@ public:
     /**
      * @brief Main loop of the UI, should first call the `M_loop_setup` method
      */
-    virtual void loop(int argc = 0, char** argv = nullptr) = 0;
+    virtual void loop(arg_map_t& map) = 0;
 
     /**
      * @brief Clear the screen and reset the cursor
@@ -39,14 +41,13 @@ public:
 protected:
     typedef std::function<void(std::string)> callback_t;
 
-    void M_process_input(
+    static void M_process_input(
         const char* prompt, 
         const char* error_msg,
         callback_t validator 
     );
-    virtual void M_init();
-    std::string M_read_input();
-    void M_loop_setup(int argc, char** argv);
+    static std::string M_read_input();
+    void M_loop_setup(arg_map_t& args);
 
     /**
      * @brief Main rendering function (for example displaying the board)
@@ -56,15 +57,7 @@ protected:
     /**
      * @brief Process the command line arguments with ArgParser, or standard input
      */
-    virtual void M_process_param_input(int argc = 0, char** argv = nullptr) = 0;
-
-    /**
-     * @brief Process the command line arguments
-     */
-    virtual chess::ArgParser::arg_map_t M_process_arguments(int argc, char** argv) = 0;
-
-    chess::Engine m_engine;
-    chess::ArgParser m_parser;
+    virtual void M_process_param_input(arg_map_t& map) = 0;
 };
 
 // Adds SearachOptions and Result to the BaseManager
@@ -74,17 +67,18 @@ public:
     ChessManager() = default;
 protected:
     // Adds --hash, --logfile, --threads options
-    void M_add_base_engine_options();
+    static void M_add_base_engine_options(arg_parser_t& parser);
 
     // Checks if the --hash, --logfile, --threads options are set
-    void M_process_engine_options(chess::ArgParser::arg_map_t& args);
+    void M_process_engine_options(arg_map_t& args);
 
     // Adds --limits & --fen options
-    void M_add_base_game_options();
+    static void M_add_base_game_options(arg_parser_t& parser);
 
     // Checks if the --limits and --fen options are set
-    void M_process_game_options(chess::ArgParser::arg_map_t& args);
+    void M_process_game_options(arg_map_t& args);
 
+    chess::Engine m_engine;
     chess::SearchOptions m_options;
     chess::Result m_result;
 };
