@@ -24,6 +24,13 @@ void Renderer::render_board(const chess::Board& board, bool side)
         renderLine(board, i, side, std::cout);
     }
     std::cout << " +----------------+ \n";
+
+
+    // Clear 3 lines below the board
+    print<false, false>('\r', CLEAR_LINE_FROM_CURSOR, '\n', 
+        CLEAR_LINE_FROM_CURSOR, '\n', 
+        CLEAR_LINE_FROM_CURSOR, '\n', 
+        cursor_up(3));
 }
 
 /**

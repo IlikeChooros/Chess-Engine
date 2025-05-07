@@ -22,7 +22,6 @@ public:
     BaseManager& operator=(const BaseManager&) = delete;
     BaseManager(BaseManager&&) = default;
     BaseManager& operator=(BaseManager&&) = default;
-    ~BaseManager() { clear(); }
 
     /**
      * @brief Main loop of the UI, should first call the `M_loop_setup` method

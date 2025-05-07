@@ -190,11 +190,27 @@ std::string PGN::pgn(chess::Board board)
 
 std::string PGN::pgn_game_status(chess::Termination status, bool white)
 {
-    if (status == chess::Termination::NONE)
+
+    switch (status)
+    {
+    // No termination
+    case chess::Termination::NONE:
         return "*";
     
-    if (status == chess::Termination::CHECKMATE)
+    // Win conditions
+    case chess::Termination::CHECKMATE:
+    case chess::Termination::TIME:
+    case chess::Termination::RESIGNATION:
         return white ? "1-0" : "0-1";
-    
-    return "1/2-1/2";
+
+    // Draw conditions
+    case chess::Termination::STALEMATE:
+    case chess::Termination::DRAW:
+    case chess::Termination::FIFTY_MOVES:
+    case chess::Termination::THREEFOLD_REPETITION:
+    case chess::Termination::FIVEFOLD_REPETITION:
+    case chess::Termination::SEVENTYFIVE_MOVES:
+    default:
+        return "1/2-1/2";
+    }
 }
