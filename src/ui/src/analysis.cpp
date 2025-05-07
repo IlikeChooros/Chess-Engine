@@ -69,7 +69,7 @@ void Analysis::loop(arg_map_t& args)
  */
 void Analysis::add_args(chess::ArgParser& parser)
 {
-    M_add_base_game_options(parser);
+    // M_add_base_game_options(parser);
 }
 
 /**

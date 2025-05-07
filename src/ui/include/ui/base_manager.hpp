@@ -72,6 +72,11 @@ public:
         M_add_base_game_options(parser);
     }
 protected:
+
+    void M_undo_lastmove();
+    void M_undo_turn();
+    void M_forfeit_game();
+
     // Adds --hash, --logfile, --threads options
     static void M_add_base_engine_options(arg_parser_t& parser);
 
@@ -87,6 +92,7 @@ protected:
     // Ask the user for a move
     void M_player_move();
 
+    bool m_engine_should_think{false};
     chess::Engine m_engine;
     chess::SearchOptions m_options;
     chess::Result m_result;

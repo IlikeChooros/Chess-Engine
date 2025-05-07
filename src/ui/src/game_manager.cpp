@@ -56,9 +56,9 @@ void GameManager::M_init()
         .action = chess::ArgParser::storeTrue
     });
 
-    ChessManager::add_args(m_parser); // add base engine options (hash, logfile)
-    Analysis::add_args(m_parser); // add (--limits, --fen) options
-    SinglePlayer::add_args(m_parser); // add (--limits, --fen, --side) options
+    ChessManager::add_args(m_parser); // add base engine options (hash, logfile, limits, fen)
+    // Analysis::add_args(m_parser); 
+    SinglePlayer::add_args(m_parser); // add (--side) option
 }
 
 /**

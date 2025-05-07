@@ -126,6 +126,12 @@ namespace chess
          */
         Hash getHash() const {return this->m_hash; };
 
+
+        // Termination checks
+        void setTermination(Termination t = Termination::RESIGNATION) {
+            m_termination = t;
+        }
+
         bool isTerminated();
         bool isTerminated(MoveList* ml);
         template <RepetitionType type = Threefold>

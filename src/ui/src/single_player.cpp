@@ -6,30 +6,26 @@ UI_NAMESPACE_BEGIN
 void SinglePlayer::loop(arg_map_t& args)
 {
     M_loop_setup(args);
-
-    if (m_player_side != m_engine.m_board.turn())
-    {
-        // Make the first engine move
-        M_engine_move();
-        std::cout << Ansi::CURSOR_HIDE;
-        M_render();
-        render_engine_outputs(m_result);
-    }
     
     // Main game loop
     while(!m_engine.m_board.isTerminated()) 
     {
         // Ask the player for a move
-        std::cout << Ansi::CURSOR_SHOW;
-        M_player_move();
-        std::cout << Ansi::CURSOR_HIDE;
-        M_render();
-        flush(); // flush the output
+        while ((m_engine.m_board.turn() == m_player_side) && 
+            (!m_engine.m_board.isTerminated()))
+        {
+            std::cout << Ansi::CURSOR_SHOW;
+            M_player_move();
+            std::cout << Ansi::CURSOR_HIDE;
+            M_render();
+            flush(); // flush the output
+        }
         
         if (m_engine.m_board.isTerminated())
             break;
         
         // Make the engine move
+        std::cout << Ansi::CURSOR_HIDE;
         M_engine_move();
         M_render();
         render_engine_outputs(m_result);

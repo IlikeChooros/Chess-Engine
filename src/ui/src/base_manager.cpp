@@ -130,12 +130,59 @@ void ChessManager::M_player_move()
             Move m = m_engine.m_board.match(move_input);
             if (m != Move::nullMove && m_engine.m_board.isLegal(m))
                 m_engine.m_board.makeMove(m);
-
+            else if (move_input == "ff")
+                M_forfeit_game();
+            else if (move_input == "undomove")
+                M_undo_lastmove();
+            else if (move_input == "undoturn")
+                M_undo_turn();
             // Else, throw an exception
             else
                 throw std::invalid_argument(move_input);
         }
     );
+}
+
+/**
+ * @brief Undo the last move
+ */
+void ChessManager::M_undo_lastmove()
+{
+    // If the movestack is empty, do nothing
+    auto& board = m_engine.m_board;
+    if(board.history().size() <= 1) // First is always the initial position
+        return;
+
+    // Else undo the last move
+    auto lastmove = board.history().back().move;
+    board.undoMove(lastmove);
+}
+
+/**
+ * @brief Undo the last turn (last 2 moves)
+ */
+void ChessManager::M_undo_turn()
+{
+    auto& board = m_engine.m_board;
+    if (board.history().size() <= 2) // There should be at least 2 moves in the history
+        return;
+
+    // Undo last 2 moves
+    board.undoMove(
+        board.history().back().move
+    );
+    board.undoMove(
+        board.history().back().move
+    );
+}
+
+/**
+ * @brief Forfeit the game
+ */
+void ChessManager::M_forfeit_game()
+{
+    // Forfeit the game
+    m_engine.m_board.setTermination(chess::RESIGNATION);
 }
 
 // BASE MANAGER
