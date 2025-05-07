@@ -49,14 +49,11 @@ void SinglePlayer::clear()
 }
 
 /**
- * @brief Add the command line arguments (--fen, --limits, --side)
+ * @brief Add the command line arguments (--side), --limits and --fen should 
+ * be already added to the parser
  */
 void SinglePlayer::add_args(chess::ArgParser& parser)
 {
-    // Add --fen, --limits
-    M_add_base_game_options(parser);
-
-
     parser.add_argument({"--side"}, {
         .required = false,
         .help_message = "Set the player side (w/b)",

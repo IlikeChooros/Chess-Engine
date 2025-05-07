@@ -103,7 +103,7 @@ public:
 
         // Checks if the argument is set
         bool exists(const std::string& name) const {
-            return M_find(name) != m_args.end();
+            return M_find(m_args, name) != m_args.end();
         }
 
         /**
@@ -116,7 +116,7 @@ public:
         template <typename T>
         const T& get(const std::string& name) const 
         {
-            auto it = M_find(name);
+            auto it = M_find(m_args, name);
 
             // Check if it exists
             if (it == m_args.end())
@@ -144,26 +144,6 @@ public:
                 return "bool";
             else
                 return "unknown";
-        }
-
-        // Find the argument by name, but const
-        arg_const_it_t M_find(const std::string& name) const
-        {
-            return std::find_if(m_args.begin(), m_args.end(), 
-                [&name](const new_arg_t& prop){
-                    // Check if the name is in the flags
-                    return std::find(prop.flags.begin(), prop.flags.end(), name) != prop.flags.end();
-            });
-        }
-    
-        // Check if the argument is set
-        arg_it_t M_find(const std::string& name)
-        {
-            return std::find_if(m_args.begin(), m_args.end(), 
-                [&name](const new_arg_t& prop){
-                    // Check if the name is in the flags
-                    return std::find(prop.flags.begin(), prop.flags.end(), name) != prop.flags.end();
-            });
         }
 
         arg_list_t m_args; // list of arguments
@@ -233,20 +213,6 @@ public:
         m_argc = argc;
         m_argv = argv;
     }
-    
-    /**
-     * @brief Add an argument to the parser
-     * @param name The name of the argument (e.g., "--fen")
-     * @param value The default value of the argument
-     * @param validator A function to validate the argument value
-     * @param description A description of the argument
-     */
-    void addArg(const std::string& name, const std::string& value = "", 
-                std::function<bool(std::string)> validator = defaultValidator, 
-                const std::string& description = "")
-    {
-        
-    }
 
     /**
      * @brief Print the help message for the parser
@@ -287,6 +253,32 @@ public:
     arg_map_t parse();
 
 private:
+
+    // Find the argument by name
+    static arg_list_t::iterator M_find(
+        arg_list_t& args, 
+        const std::string& name
+    )
+    {
+        return std::find_if(args.begin(), args.end(), 
+            [&name](const new_arg_t& prop){
+                // Check if the name is in the flags
+                return std::find(prop.flags.begin(), prop.flags.end(), name) != prop.flags.end();
+        });
+    }
+
+    // Find the argument by name, but const
+    static arg_list_t::const_iterator M_find(
+        const arg_list_t& args, 
+        const std::string& name
+    )
+    {
+        return std::find_if(args.begin(), args.end(), 
+            [&name](const new_arg_t& prop){
+                // Check if the name is in the flags
+                return std::find(prop.flags.begin(), prop.flags.end(), name) != prop.flags.end();
+        });
+    }
 
     /**
      * @brief Initialize the parser with help message

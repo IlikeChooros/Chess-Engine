@@ -37,10 +37,17 @@ void ArgParser::ParsedArguments::process(const arg_list_t& args)
 void ArgParser::add_argument(
     const std::vector<std::string>& flags, const arg_props_t& props)
 {
+    // Check if the flags weren't already added
+    for (const auto& flag : flags)
+    {
+        // Check if the flag exists in the list
+        if (M_find(m_args, flag) != m_args.end())
+            throw std::runtime_error("Flag already exists: " + flag);
+    }
+
     arg_value_props_t value_props(props);
 
     // Set the default value, check if it matches the type
-
     if (!props.default_value.empty())
     {
         if (props.type == INT) {

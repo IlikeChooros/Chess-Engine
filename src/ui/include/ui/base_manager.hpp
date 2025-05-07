@@ -65,6 +65,12 @@ class ChessManager : public BaseManager
 {
 public:
     ChessManager() = default;
+
+    static void add_args(arg_parser_t& parser)
+    {
+        M_add_base_engine_options(parser);
+        M_add_base_game_options(parser);
+    }
 protected:
     // Adds --hash, --logfile, --threads options
     static void M_add_base_engine_options(arg_parser_t& parser);

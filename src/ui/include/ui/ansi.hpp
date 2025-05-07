@@ -4,6 +4,7 @@
 #include <string>
 #include <stdarg.h>
 #include <vector>
+#include <algorithm> // for std::clamp
 
 #include "namespaces.hpp"
 

@@ -346,6 +346,7 @@ namespace uci
     {
         chess::Engine::base_init();
         m_engine = chess::Engine();
+        m_engine.setPosition(); // set the start position
     }
 
     UCI& UCI::operator=(UCI&& other)

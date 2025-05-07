@@ -10,12 +10,35 @@ UI_NAMESPACE_BEGIN
  */
 void ChessManager::M_add_base_engine_options(arg_parser_t& parser)
 {
+    parser.add_argument({"--logfile"}, {
+        .required = false,
+        .help_message = "Set the log file",
+        .default_value = "",
+        .type = arg_parser_t::STRING,
+        .validator = chess::ArgParser::stringValidator,
+        .action = [](chess::ArgParser::arg_value_t& value, std::string sval) {
+            glogger.setLogFile(sval);
+            // glogger.setLog(true);
+        }
+    });
 
+    parser.add_argument({"--hash"}, {
+        .required = false,
+        .help_message = "Set the hash size (in MB)",
+        .default_value = "16",
+        .type = arg_parser_t::INT,
+        .validator = chess::ArgParser::intValidator,
+        .action = [](chess::ArgParser::arg_value_t& value, std::string sval) {
+            value = std::stoi(sval);
+            if (std::get<int>(value) < 1)
+                throw std::invalid_argument("Hash size must be greater than 0");
+        }
+    });
 }
 
 void ChessManager::M_process_engine_options(chess::ArgParser::arg_map_t& args)
 {
-
+    m_engine.setHashSize(args.get<int>("--hash"));
 }
 
 /**
