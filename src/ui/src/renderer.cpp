@@ -79,7 +79,7 @@ void Renderer::renderLine(const chess::Board& board, int row, bool side, std::os
             os << pieces[type] << " " << Ansi::RESET;
         }
     }
-    os << "| \n";
+    os << "|" << CLEAR_LINE_FROM_CURSOR << '\n';
 }
 
 /**
