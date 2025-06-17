@@ -4,6 +4,7 @@ Log glogger = Log((global_settings.base_path / "log.txt").string());
 
 Log::Log(std::string logfile)
 {
+    m_print_enabled = true; // Print to console by default
     m_log_enabled = true;
     m_log_file    = logfile;
     m_log_stream.open(m_log_file, std::ios::out | std::ios::app);
